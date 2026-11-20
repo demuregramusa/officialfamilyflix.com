@@ -45,7 +45,7 @@ import { Hero } from "@/components/familyflix/hero";
 import { BrowseHeader, GenreChips, PosterGrid } from "@/components/familyflix/browse";
 import { PosterCard, posterSize } from "@/components/familyflix/poster-card";
 import { TitleRow } from "@/components/familyflix/title-row";
-import type { Title as CatalogTitle } from "@/lib/catalog";
+import type { Title as CatalogTitle } from "@/lib/catalog-types";
 
 const genres = ["Adventure", "Animation", "Comedy", "Documentary", "Drama", "Family", "Fantasy", "History", "Mystery", "Music", "Science fiction"];
 const ADMIN_NAV: [string, string, typeof LayoutDashboard][] = [
@@ -60,9 +60,9 @@ const stamp = (s?: string | null) => s ? new Date(s).toLocaleDateString() : "Not
 const errorText = (e: unknown) => e instanceof Error ? e.message : "Something went wrong. Please try again.";
 const isoDateTime = (value: FormDataEntryValue | null) => value ? new Date(String(value)).toISOString() : null;
 function Brand() {
-  return <Link href="/" className="brand-lockup" data-testid="link-familyflix-home" aria-label="DemureGram home">
-    <span className="brand-mark"><Play size={16} fill="currentColor" /></span>
-    <span><span className="brand-word">Demure<b>Gram</b></span><span className="platform-label">FamilyFlix film &amp; TV catalog</span></span>
+  return <Link href="/" className="brand-lockup" data-testid="link-familyflix-home" aria-label="FamilyFlix home, by DemureGram">
+    <span className="brand-mark"><Play size={15} fill="currentColor" /></span>
+    <span><span className="brand-word">family<b>flix</b></span><span className="platform-label">by DemureGram</span></span>
   </Link>;
 }
 function Header() {
@@ -72,7 +72,7 @@ function Header() {
   const { data: sessionData } = authClient.useSession();
   const session = sessionData as unknown as { user?: { name?: string; role?: string } } | null | undefined;
   const user = session?.user;
-  const links = [["/", "Discover"], ["/movies", "Movies"], ["/tv-shows", "TV shows"], ["/my-list", "My list"]];
+  const links = [["/", "Home"], ["/movies", "Movies"], ["/tv-shows", "TV Shows"], ["/my-list", "My List"]];
   return <header className="topbar">
     <Brand />
     <nav className="main-nav" aria-label="Main navigation">
@@ -90,12 +90,19 @@ function Header() {
 }
 function Footer() {
   return <footer className="app-footer">
-     <span>DemureGram · FamilyFlix film &amp; TV catalog. Third-party titles remain the property of their respective rights holders. <span className="legal-draft">Copyright © 2026 DEMUREGRAM LLC — legal draft for counsel review; entity details require confirmation.</span></span>
-     <span className="feature-line"><Link href="/about" data-testid="link-footer-about">About</Link><Link href="/contact" data-testid="link-footer-contact">Contact</Link><Link href="/terms" data-testid="link-footer-terms">Terms</Link><Link href="/repeat-infringer-policy" data-testid="link-footer-repeat-policy">Repeat-infringer policy</Link><Link href="/privacy" data-testid="link-footer-privacy">Privacy</Link><Link href="/copyright/report" data-testid="link-footer-copyright">Copyright</Link></span>
+    <div className="footer-brand">
+      <Link href="/" className="footer-wordmark" aria-label="FamilyFlix by DemureGram home">family<span>flix</span></Link>
+      <p>Films and series, with rights information shown before playback.</p>
+      <small>© 2026 DemureGram. Third-party works remain with their respective rights holders.</small>
+    </div>
+    <nav className="footer-links" aria-label="Footer navigation">
+      <div><strong>Explore</strong><Link href="/movies">Movies</Link><Link href="/tv-shows">TV Shows</Link><Link href="/my-list">My List</Link><Link href="/search">Search</Link></div>
+      <div><strong>Information</strong><Link href="/about" data-testid="link-footer-about">About</Link><Link href="/terms" data-testid="link-footer-terms">Terms</Link><Link href="/privacy" data-testid="link-footer-privacy">Privacy</Link><Link href="/copyright/report" data-testid="link-footer-copyright">Copyright</Link></div>
+    </nav>
   </footer>;
 }
-function Shell({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
-  return <div className="site-shell"><Header /><main className="page-content">{admin ? <div className="admin-layout"><AdminRail />{children}</div> : children}</main><Footer /></div>;
+function Shell({ children, admin = false, fullBleed = false }: { children: ReactNode; admin?: boolean; fullBleed?: boolean }) {
+  return <div className="site-shell"><Header /><main className={`page-content${fullBleed ? " page-content-full" : ""}`}>{admin ? <div className="admin-layout"><AdminRail />{children}</div> : children}</main><Footer /></div>;
 }
 function AdminRail() {
   const [path] = useLocation();
@@ -183,7 +190,7 @@ function EmptyOriginalHero() {
       <div className="max-w-[660px] animate-fade-up">
         <span className="eyebrow">A DemureGram film &amp; TV catalog</span>
         <h1 className="mt-4 max-w-[700px] text-[clamp(2.5rem,6.5vw,5.6rem)] font-black uppercase leading-[.9] tracking-[-.055em] text-white text-shadow-hero">FamilyFlix</h1>
-        <p className="mt-4 max-w-[54ch] text-[14px] leading-relaxed text-white/70 sm:text-[15px]">Your original FamilyFlix browsing experience is back. Titles appear in the catalog only after their rights and real playback sources pass review.</p>
+        <p className="mt-4 max-w-[54ch] text-[14px] leading-relaxed text-white/70 sm:text-[15px]">The original FamilyFlix layout is restored, while the catalog stays rights-gated. The movie ZIP contains YTS torrent metadata, not licensed video files; titles can appear here when a rights-cleared playable source is available.</p>
         <div className="mt-6 flex flex-wrap gap-2.5">
           <Link href="/movies" className="button" data-testid="button-browse-approved"><Clapperboard size={16} /> Browse movies</Link>
           <Link href="/about" className="button-secondary" data-testid="link-rights-policy"><Info size={15} /> How rights work</Link>
@@ -446,7 +453,8 @@ function AdminTitleDetail({id}:{id:string}) {
   const mainVideoCount=t.rights?.filter(r=>r.assetKind==="main-video").length??0;
   const publishReady=mainVideoCount===1&&!!t.rights?.length&&t.rights.every(r=>r.reviewStatus==="approved")&&t.streamStatus==="ready";
   return <Shell admin><div><Heading eyebrow="Studio / rights record" title={t.name} description={`/${t.slug} · ${t.kind}`} action={<div className="form-actions" style={{marginTop:0}}><button className="button" disabled={!publishReady||publish.isPending} onClick={()=>publish.mutate({id},{onSuccess:()=>{refresh();setMessage("Title published to the approved catalog.");},onError:e=>setMessage(errorText(e))})} data-testid="button-publish-title">{publish.isPending?"Publishing…":"Publish to catalog"}</button><button className="button-danger" onClick={()=>{if(confirm("Archive this title?"))remove.mutate({id},{onSuccess:()=>{qc.invalidateQueries({queryKey:getListAdminTitlesQueryKey()});setMessage("Title archived.");},onError:e=>setMessage(errorText(e))});}} data-testid="button-archive-title">Archive title</button></div>}/>
-    {mainVideoCount!==1&&<p className="form-message error" role="status">Exactly one main-video rights record is required before publication. Current count: {mainVideoCount}.</p>}
+     {t.slug.startsWith("yts-")&&t.status==="draft"&&<div className="notice" style={{marginTop:18}} data-testid="status-metadata-only-draft"><ShieldCheck size={18}/><span><strong>Metadata-only draft.</strong> This record came from the supplied YTS dump. Torrent and magnet URLs, poster art, descriptions, license claims, rights records, and video sources were not imported. Add independently verified rights evidence and an authorized direct video source before publication.</span></div>}
+     {mainVideoCount!==1&&<p className="form-message error" role="status">Exactly one main-video rights record is required before publication. Current count: {mainVideoCount}.</p>}
     <div className="metric-grid"><div className="metric"><span>Publication state</span><strong style={{fontSize:17}}>{t.status}</strong></div><div className="metric"><span>Stream</span><strong style={{fontSize:17}}>{t.streamStatus}</strong></div><div className="metric"><span>Rights records</span><strong>{t.rights?.length??0}</strong></div><div className="metric"><span>Created</span><strong style={{fontSize:17}}>{stamp(t.createdAt)}</strong></div></div>
     <form className="panel" style={{marginTop:18}} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);update.mutate({id,data:{name:String(f.get("name")),synopsis:String(f.get("synopsis"))}},{onSuccess:()=>{refresh();setMessage("Title metadata saved.");},onError:e=>setMessage(errorText(e))});}}><h2>Title metadata</h2><div className="field-grid"><div className="field"><label>Name</label><input name="name" required defaultValue={t.name} data-testid="input-edit-title-name"/></div><div className="field full"><label>Synopsis</label><textarea name="synopsis" defaultValue={t.synopsis} data-testid="input-edit-title-synopsis"/></div></div><div className="form-actions"><button className="button-secondary" disabled={update.isPending} data-testid="button-update-title">{update.isPending?"Saving…":"Save title details"}</button></div></form>
     {message&&<p className="form-message success" data-testid="status-admin-title">{message}</p>}

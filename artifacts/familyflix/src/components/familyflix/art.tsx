@@ -1,5 +1,5 @@
 import { backdropUrl, posterUrl, wideUrl } from "@/lib/art-utils";
-import type { Title } from "@/lib/catalog";
+import type { Title } from "@/lib/catalog-types";
 import { cn } from "@/lib/utils";
 
 function badgeText(title: Title) {

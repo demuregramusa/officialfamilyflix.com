@@ -7,7 +7,7 @@ import { Info, Play } from "lucide-react";
 import { BackdropArt } from "@/components/familyflix/art";
 import { MyListButton } from "@/components/familyflix/my-list-button";
 import { backdropUrl } from "@/lib/art-utils";
-import type { Title } from "@/lib/catalog";
+import type { Title } from "@/lib/catalog-types";
 import { cn } from "@/lib/utils";
 
 export function Hero({ titles }: { titles: Title[] }) {
@@ -31,7 +31,9 @@ export function Hero({ titles }: { titles: Title[] }) {
 
   const detail =
     active.type === "series"
-      ? `${active.seasons} ${active.seasons === 1 ? "Season" : "Seasons"}`
+      ? active.seasons
+        ? `${active.seasons} ${active.seasons === 1 ? "Season" : "Seasons"}`
+        : ""
       : active.duration;
 
   return (
@@ -72,7 +74,7 @@ export function Hero({ titles }: { titles: Title[] }) {
               {active.type === "series" ? "Series" : "Movie"}
             </span>
             <span className="rounded-sm bg-white/10 px-1.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/80">
-              HD
+              Rights reviewed
             </span>
           </div>
 
@@ -88,11 +90,9 @@ export function Hero({ titles }: { titles: Title[] }) {
             {active.score > 0 ? (
               <span className="font-bold text-emerald-400">{active.score}%</span>
             ) : null}
-            <span>{active.year}</span>
-            <span className="rounded border border-white/25 px-1.5 py-px text-[10px] font-semibold text-white/70">
-              {active.rating}
-            </span>
-            <span>{detail}</span>
+            {active.year > 0 ? <span>{active.year}</span> : null}
+            {active.rating ? <span className="rounded border border-white/25 px-1.5 py-px text-[10px] font-semibold text-white/70">{active.rating}</span> : null}
+            {detail ? <span>{detail}</span> : null}
             <span className="text-white/25">·</span>
             <span>{active.genres.join(", ")}</span>
           </div>

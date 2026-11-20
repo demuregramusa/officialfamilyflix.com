@@ -1,2 +1,3 @@
 - [Creative Commons content policy](creative-commons-content-policy.md) — the user expects shared works to carry CC terms; apply only when the uploader has the rights.
 - [Next.js package access](nextjs-package-access.md) — package metadata can resolve while Next.js tarballs are blocked by Replit's package proxy; don't bypass it or port frameworks without approval.
+- [FamilyFlix media-source boundary](familyflix-media-source-boundary.md) — keep legacy direct-video URLs out of the client bundle; render only rights-reviewed API titles.

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 
 import { PosterCard } from "@/components/familyflix/poster-card";
-import { type Title } from "@/lib/catalog";
+import type { Title } from "@/lib/catalog-types";
 import { cn } from "@/lib/utils";
 
 export function BrowseHeader({

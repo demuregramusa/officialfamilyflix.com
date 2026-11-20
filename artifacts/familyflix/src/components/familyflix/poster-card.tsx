@@ -3,7 +3,7 @@ import { Play } from "lucide-react";
 
 import { PosterArt, WideArt } from "@/components/familyflix/art";
 import { MyListButton } from "@/components/familyflix/my-list-button";
-import { type Title } from "@/lib/catalog";
+import type { Title } from "@/lib/catalog-types";
 import { cn } from "@/lib/utils";
 
 export const posterSize =
@@ -12,11 +12,13 @@ export const posterSize =
 function metaLine(title: Title) {
   const detail =
     title.type === "series"
-      ? `${title.seasons} ${title.seasons === 1 ? "Season" : "Seasons"}`
+      ? title.seasons
+        ? `${title.seasons} ${title.seasons === 1 ? "Season" : "Seasons"}`
+        : ""
       : title.type === "live"
         ? "Live now"
         : title.duration;
-  return [String(title.year), title.genres[0], detail].filter(Boolean).join(" · ");
+  return [title.year > 0 ? String(title.year) : "", title.genres[0], detail].filter(Boolean).join(" · ");
 }
 
 export function PosterCard({
@@ -33,6 +35,7 @@ export function PosterCard({
       <Link
         href={title.type === "live" ? `/watch/${title.slug}` : `/title/${title.slug}`}
         className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        data-testid={`card-title-${title.slug}`}
       >
         <PosterArt title={title} />
         <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-t from-black/55 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />

@@ -1,4 +1,4 @@
-import type { Title } from "@/lib/catalog";
+import type { Title } from "@/lib/catalog-types";
 
 const unsplash = (image: string, width: number, height: number) =>
   `https://images.unsplash.com/${image}?auto=format&fit=crop&w=${width}&h=${height}&q=65`;

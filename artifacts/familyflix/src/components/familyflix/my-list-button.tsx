@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, Plus } from "lucide-react";
-import { toast } from "sonner";
 
 import { useMyList } from "@/components/familyflix/my-list-provider";
 import { cn } from "@/lib/utils";
@@ -22,12 +21,7 @@ export function MyListButton({
   const Icon = saved ? Check : Plus;
 
   function handleClick() {
-    const added = toggle(slug);
-    if (added) {
-      toast.success("Added to My List", { description: name });
-    } else {
-      toast("Removed from My List", { description: name });
-    }
+    toggle(slug);
   }
 
   if (variant === "icon") {
