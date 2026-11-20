@@ -1,22 +1,24 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: FamilyFlix catalog, playback, rights review, and copyright case API.
 servers:
   - url: /api
-    description: Base API path
+    description: Shared Replit API service
 tags:
   - name: health
-    description: Health operations
+  - name: catalog
+  - name: playback
+  - name: copyright
+  - name: administration
+  - name: preferences
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
-      description: Returns server health status
+      summary: Check API health
       responses:
         "200":
           description: Healthy
@@ -24,13 +26,1230 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /v1/titles:
+    get:
+      operationId: listPublicTitles
+      tags: [catalog]
+      summary: List approved titles
+      parameters:
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: kind
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/TitleKind"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 40
+      responses:
+        "200":
+          description: Approved public titles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicTitle"
+  /v1/titles/{slug}:
+    get:
+      operationId: getPublicTitle
+      tags: [catalog]
+      summary: Get an approved title
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Title and approved rights records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicTitleDetail"
+        "404":
+          description: Title is not publicly available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /playback/{slug}:
+    get:
+      operationId: getPlayback
+      tags: [playback]
+      summary: Get an approved playback source
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Playable source for an approved title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Playback"
+        "403":
+          description: Rights are pending, restricted, expired, or unapproved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Title or stream not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /site-config:
+    get:
+      operationId: getSiteConfig
+      tags: [catalog]
+      summary: Get public site configuration
+      responses:
+        "200":
+          description: Public site configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteConfig"
+
+  /copyright/reports:
+    post:
+      operationId: submitCopyrightReport
+      tags: [copyright]
+      summary: Submit a copyright complaint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CopyrightReportInput"
+      responses:
+        "201":
+          description: Complaint received for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseReceipt"
+        "400":
+          description: Required report fields are missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /copyright/cases/{caseNumber}/counter-notices:
+    post:
+      operationId: submitCounterNotice
+      tags: [copyright]
+      summary: Submit a counter-notice for a case
+      parameters:
+        - name: caseNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CounterNoticeInput"
+      responses:
+        "201":
+          description: Counter-notice received; no automatic reinstatement occurs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaseReceipt"
+        "404":
+          description: Case not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /user/preferences:
+    get:
+      operationId: getUserPreferences
+      tags: [preferences]
+      summary: Get signed-in user's preferences
+      responses:
+        "200":
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferences"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      operationId: saveUserPreferences
+      tags: [preferences]
+      summary: Save signed-in user's preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPreferencesInput"
+      responses:
+        "200":
+          description: Saved preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPreferences"
+
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [administration]
+      summary: Get rights and catalog overview
+      responses:
+        "200":
+          description: Admin overview counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+  /admin/titles:
+    get:
+      operationId: listAdminTitles
+      tags: [administration]
+      summary: List titles for staff
+      parameters:
+        - name: reviewStatus
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/RightsReviewStatus"
+        - name: query
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Staff catalog list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminTitle"
+    post:
+      operationId: createAdminTitle
+      tags: [administration]
+      summary: Create a pending title and rights records
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TitleInput"
+      responses:
+        "201":
+          description: Created as a draft pending independent review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTitle"
+        "400":
+          description: Invalid media or rights details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/titles/{id}:
+    get:
+      operationId: getAdminTitle
+      tags: [administration]
+      summary: Get a title and its rights evidence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Staff title detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTitle"
+    patch:
+      operationId: updateAdminTitle
+      tags: [administration]
+      summary: Update title metadata without approving rights
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TitleUpdate"
+      responses:
+        "200":
+          description: Updated title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTitle"
+    delete:
+      operationId: deleteAdminTitle
+      tags: [administration]
+      summary: Archive a title
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Title archived
+  /admin/titles/{id}/review:
+    post:
+      operationId: reviewTitleRights
+      tags: [administration]
+      summary: Approve or restrict a title's rights records
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecision"
+      responses:
+        "200":
+          description: Review decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTitle"
+        "409":
+          description: Evidence is incomplete or title cannot be published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/titles/{id}/publish:
+    post:
+      operationId: publishAdminTitle
+      tags: [administration]
+      summary: Publish a title after rights and stream checks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Published title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTitle"
+        "409":
+          description: Rights review, asset expiry, or playback requirements are incomplete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/import:
+    post:
+      operationId: importTitles
+      tags: [administration]
+      summary: Validate or import rights-documented titles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportInput"
+      responses:
+        "200":
+          description: Import report; imported rows remain pending review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportReport"
+        "400":
+          description: Unsupported or invalid import content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/titles/{id}/stream:
+    put:
+      operationId: setTitleStream
+      tags: [administration]
+      summary: Attach an authorized direct stream
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamInput"
+      responses:
+        "200":
+          description: Stream saved and held from playback pending rights review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTitle"
+  /admin/titles/{id}/stream/direct-upload:
+    post:
+      operationId: createCloudflareUpload
+      tags: [administration]
+      summary: Request a direct Cloudflare Stream upload URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: One-time upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectUpload"
+        "503":
+          description: Cloudflare Stream is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/titles/{id}/stream/sync:
+    post:
+      operationId: syncCloudflareStream
+      tags: [administration]
+      summary: Refresh Cloudflare Stream processing status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated stream status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminTitle"
+  /admin/titles/{id}/rights-assets:
+    get:
+      operationId: listTitleRightsAssets
+      tags: [administration]
+      summary: List the title's video, artwork, and other rights records
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Rights records for all associated media
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RightsRecord"
+    post:
+      operationId: addTitleRightsAsset
+      tags: [administration]
+      summary: Add a pending rights record for artwork or another asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RightsInput"
+      responses:
+        "201":
+          description: Rights asset added pending independent review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RightsRecord"
+  /admin/titles/{id}/subtitles:
+    get:
+      operationId: listTitleSubtitles
+      tags: [administration]
+      summary: List title subtitles
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Subtitle tracks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subtitle"
+    post:
+      operationId: addTitleSubtitle
+      tags: [administration]
+      summary: Add a subtitle track with source attribution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubtitleInput"
+      responses:
+        "201":
+          description: Subtitle track added pending rights review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subtitle"
+  /admin/titles/{id}/subtitles/{subtitleId}:
+    delete:
+      operationId: deleteTitleSubtitle
+      tags: [administration]
+      summary: Delete a subtitle track
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: subtitleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Subtitle track deleted
+
+  /admin/copyright/cases:
+    get:
+      operationId: listCopyrightCases
+      tags: [administration, copyright]
+      summary: List copyright reports and counter-notices
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CaseStatus"
+      responses:
+        "200":
+          description: Admin case queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CopyrightCase"
+  /admin/copyright/cases/{id}:
+    get:
+      operationId: getCopyrightCase
+      tags: [administration, copyright]
+      summary: Get a case and its history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Case record and event history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyrightCaseDetail"
+  /admin/copyright/cases/{id}/decision:
+    post:
+      operationId: decideCopyrightCase
+      tags: [administration, copyright]
+      summary: Record a case decision and content action
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseDecision"
+      responses:
+        "200":
+          description: Decision recorded in the case history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyrightCaseDetail"
+  /admin/repeat-infringers:
+    get:
+      operationId: listRepeatInfringers
+      tags: [administration, copyright]
+      summary: List repeat-infringer records
+      responses:
+        "200":
+          description: Repeat-infringer records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RepeatInfringer"
+    post:
+      operationId: recordRepeatInfringer
+      tags: [administration, copyright]
+      summary: Record an admin-reviewed repeat-infringer action
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RepeatInfringerInput"
+      responses:
+        "201":
+          description: Repeat-infringer action recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RepeatInfringer"
+  /admin/activity:
+    get:
+      operationId: listAdminActivity
+      tags: [administration]
+      summary: List recent audit events
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Recent audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEvent"
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [administration]
+      summary: Get site and copyright workflow settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettings"
+    put:
+      operationId: updateAdminSettings
+      tags: [administration]
+      summary: Update public site text and copyright contact readiness
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSettingsInput"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSettings"
+  /admin/staff:
+    get:
+      operationId: listStaff
+      tags: [administration]
+      summary: List staff accounts and roles
+      responses:
+        "200":
+          description: Staff accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffMember"
+    post:
+      operationId: createStaff
+      tags: [administration]
+      summary: Create a staff account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffInput"
+      responses:
+        "201":
+          description: Staff account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+  /admin/staff/{id}:
+    patch:
+      operationId: updateStaff
+      tags: [administration]
+      summary: Change a staff role or access state
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffUpdate"
+      responses:
+        "200":
+          description: Updated staff account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+
 components:
   schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
-
+    TitleKind:
+      type: string
+      enum: [movie, series, live]
+    LicenseType:
+      type: string
+      enum:
+        - cc-by-4.0
+        - cc-by-sa-4.0
+        - cc-by-nd-4.0
+        - cc-by-nc-4.0
+        - cc-by-nc-sa-4.0
+        - cc-by-nc-nd-4.0
+        - cc0-1.0
+        - public-domain
+        - creator-owned
+        - authorized-copyright
+        - unlicensed
+    RightsReviewStatus:
+      type: string
+      enum: [pending, approved, rejected, restricted]
+    AssetKind:
+      type: string
+      enum: [main-video, poster, backdrop, photo, artwork, audio, subtitle, other]
+    CaseStatus:
+      type: string
+      enum: [open, under-review, restricted, counter-notice-received, resolved, rejected, closed]
+    PublicTitle:
+      type: object
+      required: [id, slug, name, kind, synopsis, year, genres, creatorAttribution, posterUrl, featured]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        kind: { $ref: "#/components/schemas/TitleKind" }
+        synopsis: { type: string }
+        year: { type: ["integer", "null"] }
+        genres:
+          type: array
+          items: { type: string }
+        creatorAttribution: { type: string }
+        posterUrl: { type: ["string", "null"], format: uri }
+        featured: { type: boolean }
+    PublicTitleDetail:
+      allOf:
+        - $ref: "#/components/schemas/PublicTitle"
+        - type: object
+          required: [tagline, backdropUrl, cast, rating, durationMinutes, rights]
+          properties:
+            tagline: { type: ["string", "null"] }
+            backdropUrl: { type: ["string", "null"], format: uri }
+            cast:
+              type: array
+              items: { type: string }
+            rating: { type: ["string", "null"] }
+            durationMinutes: { type: ["integer", "null"] }
+            rights:
+              type: array
+              items: { $ref: "#/components/schemas/PublicRightsRecord" }
+    PublicRightsRecord:
+      type: object
+      required: [assetKind, assetLabel, rightsHolder, creatorAttribution, licenseType, licenseVersion, licenseUrl, usageRestrictions, sourceUrl]
+      properties:
+        assetKind: { $ref: "#/components/schemas/AssetKind" }
+        assetLabel: { type: string }
+        rightsHolder: { type: string }
+        creatorAttribution: { type: string }
+        licenseType: { $ref: "#/components/schemas/LicenseType" }
+        licenseVersion: { type: string }
+        licenseUrl: { type: string, format: uri }
+        usageRestrictions:
+          type: array
+          items: { type: string }
+        sourceUrl: { type: string, format: uri }
+        territory: { type: ["string", "null"] }
+        expiresAt: { type: ["string", "null"], format: date-time }
+    Playback:
+      type: object
+      required: [titleName, streamType, url, subtitles]
+      properties:
+        titleName: { type: string }
+        streamType: { type: string, enum: [mp4, hls, cloudflare] }
+        url: { type: string, format: uri }
+        posterUrl: { type: ["string", "null"], format: uri }
+        subtitles:
+          type: array
+          items: { $ref: "#/components/schemas/PublicSubtitle" }
+    PublicSubtitle:
+      type: object
+      required: [id, language, label, url, isDefault]
+      properties:
+        id: { type: string, format: uuid }
+        language: { type: string }
+        label: { type: string }
+        url: { type: string, format: uri }
+        isDefault: { type: boolean }
+    RightsInput:
+      type: object
+      required: [assetKind, assetLabel, assetUrl, rightsHolder, creatorAttribution, licenseType, licenseVersion, licenseUrl, usageRestrictions, sourceUrl, evidenceUrl, uploaderAttested]
+      properties:
+        assetKind: { $ref: "#/components/schemas/AssetKind" }
+        assetLabel: { type: string, minLength: 1, maxLength: 160 }
+        assetUrl: { type: string, format: uri, maxLength: 2048 }
+        rightsHolder: { type: string, minLength: 1, maxLength: 240 }
+        creatorAttribution: { type: string, minLength: 1, maxLength: 240 }
+        licenseType: { $ref: "#/components/schemas/LicenseType" }
+        licenseVersion: { type: string, minLength: 1, maxLength: 40 }
+        licenseUrl: { type: string, format: uri, maxLength: 2048 }
+        usageRestrictions:
+          type: array
+          items: { type: string, maxLength: 240 }
+        sourceUrl: { type: string, format: uri, maxLength: 2048 }
+        evidenceUrl: { type: string, format: uri, maxLength: 2048 }
+        evidenceNotes: { type: ["string", "null"], maxLength: 4000 }
+        territory: { type: ["string", "null"], maxLength: 160 }
+        expiresAt: { type: ["string", "null"], format: date-time }
+        uploaderAttested: { type: boolean, const: true }
+    RightsRecord:
+      allOf:
+        - $ref: "#/components/schemas/RightsInput"
+        - type: object
+          required: [id, reviewStatus, submittedAt]
+          properties:
+            id: { type: string, format: uuid }
+            reviewStatus: { $ref: "#/components/schemas/RightsReviewStatus" }
+            submittedAt: { type: string, format: date-time }
+            reviewedAt: { type: ["string", "null"], format: date-time }
+            reviewedBy: { type: ["string", "null"] }
+            reviewNotes: { type: ["string", "null"] }
+    StreamInput:
+      type: object
+      required: [provider]
+      properties:
+        provider: { type: string, enum: [manual, cloudflare] }
+        mp4Url: { type: ["string", "null"], format: uri, maxLength: 2048 }
+        hlsUrl: { type: ["string", "null"], format: uri, maxLength: 2048 }
+        playbackId: { type: ["string", "null"], maxLength: 240 }
+        signedPlayback: { type: boolean, default: true }
+    TitleInput:
+      type: object
+      required: [name, kind, synopsis, creatorAttribution, genres, rights, uploaderAttested]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 240 }
+        kind: { $ref: "#/components/schemas/TitleKind" }
+        synopsis: { type: string, maxLength: 10000 }
+        year: { type: ["integer", "null"], minimum: 1880, maximum: 2100 }
+        tagline: { type: ["string", "null"], maxLength: 300 }
+        creatorAttribution: { type: string, minLength: 1, maxLength: 240 }
+        rating: { type: ["string", "null"], maxLength: 20 }
+        durationMinutes: { type: ["integer", "null"], minimum: 1, maximum: 10000 }
+        genres:
+          type: array
+          maxItems: 12
+          items: { type: string, minLength: 1, maxLength: 80 }
+        cast:
+          type: array
+          maxItems: 40
+          items: { type: string, maxLength: 160 }
+        featured: { type: boolean, default: false }
+        posterUrl: { type: ["string", "null"], format: uri, maxLength: 2048 }
+        backdropUrl: { type: ["string", "null"], format: uri, maxLength: 2048 }
+        stream:
+          oneOf:
+            - $ref: "#/components/schemas/StreamInput"
+            - type: "null"
+        rights:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/RightsInput" }
+        uploaderAttested: { type: boolean, const: true }
+    TitleUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 240 }
+        kind: { $ref: "#/components/schemas/TitleKind" }
+        synopsis: { type: string, maxLength: 10000 }
+        year: { type: ["integer", "null"], minimum: 1880, maximum: 2100 }
+        tagline: { type: ["string", "null"], maxLength: 300 }
+        creatorAttribution: { type: string, minLength: 1, maxLength: 240 }
+        rating: { type: ["string", "null"], maxLength: 20 }
+        durationMinutes: { type: ["integer", "null"], minimum: 1, maximum: 10000 }
+        genres:
+          type: array
+          maxItems: 12
+          items: { type: string, minLength: 1, maxLength: 80 }
+        cast:
+          type: array
+          maxItems: 40
+          items: { type: string, maxLength: 160 }
+        featured: { type: boolean }
+    AdminTitle:
+      type: object
+      required: [id, slug, name, kind, synopsis, status, rights, streamStatus, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        kind: { $ref: "#/components/schemas/TitleKind" }
+        synopsis: { type: string }
+        status: { type: string, enum: [draft, published, archived] }
+        rights:
+          type: array
+          items: { $ref: "#/components/schemas/RightsRecord" }
+        streamStatus: { type: string, enum: [missing, pending, processing, ready, error, disabled] }
+        stream: { oneOf: [{ $ref: "#/components/schemas/StreamInput" }, { type: "null" }] }
+        createdAt: { type: string, format: date-time }
+    ReviewDecision:
+      type: object
+      required: [decision, note, rightsIds]
+      properties:
+        decision: { type: string, enum: [approve, reject, restrict, restore] }
+        note: { type: string, minLength: 1, maxLength: 4000 }
+        rightsIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+    ImportInput:
+      type: object
+      required: [format, payload, dryRun, uploaderAttested]
+      properties:
+        format: { type: string, enum: [csv, json] }
+        payload: { type: string, minLength: 1, maxLength: 5242880 }
+        dryRun: { type: boolean }
+        updateExisting: { type: boolean, default: false }
+        uploaderAttested: { type: boolean, const: true }
+    ImportIssue:
+      type: object
+      required: [row, message]
+      properties:
+        row: { type: integer, minimum: 1 }
+        title: { type: ["string", "null"] }
+        message: { type: string }
+    ImportReport:
+      type: object
+      required: [dryRun, total, created, updated, skipped, issues]
+      properties:
+        dryRun: { type: boolean }
+        total: { type: integer }
+        created: { type: integer }
+        updated: { type: integer }
+        skipped: { type: integer }
+        issues:
+          type: array
+          items: { $ref: "#/components/schemas/ImportIssue" }
+        pendingReview: { type: integer }
+    SubtitleInput:
+      type: object
+      required: [language, label, url, rights, uploaderAttested]
+      properties:
+        language: { type: string, minLength: 2, maxLength: 20 }
+        label: { type: string, minLength: 1, maxLength: 80 }
+        url: { type: string, format: uri, maxLength: 2048 }
+        rights: { $ref: "#/components/schemas/RightsInput" }
+        uploaderAttested: { type: boolean, const: true }
+    Subtitle:
+      allOf:
+        - $ref: "#/components/schemas/SubtitleInput"
+        - type: object
+          required: [id, isDefault]
+          properties:
+            id: { type: string, format: uuid }
+            isDefault: { type: boolean }
+    CopyrightReportInput:
+      type: object
+      required: [workDescription, infringingUrl, rightsHolder, reporterName, reporterEmail, reporterAddress, reporterPhone, goodFaithStatement, accuracyStatement, signature]
+      properties:
+        titleId: { type: ["string", "null"], format: uuid }
+        workDescription: { type: string, minLength: 10, maxLength: 4000 }
+        infringingUrl: { type: string, format: uri, maxLength: 2048 }
+        rightsHolder: { type: string, minLength: 1, maxLength: 240 }
+        reporterName: { type: string, minLength: 1, maxLength: 240 }
+        reporterEmail: { type: string, format: email, maxLength: 320 }
+        reporterAddress: { type: string, minLength: 5, maxLength: 2000 }
+        reporterPhone: { type: string, minLength: 5, maxLength: 80 }
+        authorizedAgent: { type: ["string", "null"], maxLength: 240 }
+        goodFaithStatement: { type: boolean, const: true }
+        accuracyStatement: { type: boolean, const: true }
+        signature: { type: string, minLength: 1, maxLength: 240 }
+    CounterNoticeInput:
+      type: object
+      required: [fullName, email, address, phone, removedMaterialUrl, reason, goodFaithStatement, jurisdictionConsent, accuracyStatement, signature]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 240 }
+        email: { type: string, format: email, maxLength: 320 }
+        address: { type: string, minLength: 5, maxLength: 2000 }
+        phone: { type: string, minLength: 5, maxLength: 80 }
+        removedMaterialUrl: { type: string, format: uri, maxLength: 2048 }
+        reason: { type: string, minLength: 10, maxLength: 4000 }
+        goodFaithStatement: { type: boolean, const: true }
+        jurisdictionConsent: { type: boolean, const: true }
+        accuracyStatement: { type: boolean, const: true }
+        signature: { type: string, minLength: 1, maxLength: 240 }
+    CaseReceipt:
+      type: object
+      required: [caseNumber, status, message]
+      properties:
+        caseNumber: { type: string }
+        status: { $ref: "#/components/schemas/CaseStatus" }
+        message: { type: string }
+    CopyrightCase:
+      type: object
+      required: [id, caseNumber, caseType, status, submittedAt, reporterName, reporterEmail, summary]
+      properties:
+        id: { type: string, format: uuid }
+        caseNumber: { type: string }
+        caseType: { type: string, enum: [copyright-report, counter-notice] }
+        status: { $ref: "#/components/schemas/CaseStatus" }
+        submittedAt: { type: string, format: date-time }
+        reporterName: { type: string }
+        reporterEmail: { type: string, format: email }
+        summary: { type: string }
+    CopyrightCaseDetail:
+      allOf:
+        - $ref: "#/components/schemas/CopyrightCase"
+        - type: object
+          required: [payload, events]
+          properties:
+            payload: { type: object, additionalProperties: true }
+            events:
+              type: array
+              items: { $ref: "#/components/schemas/CaseEvent" }
+    CaseEvent:
+      type: object
+      required: [id, eventType, actorName, note, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        eventType: { type: string }
+        actorName: { type: string }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+    CaseDecision:
+      type: object
+      required: [decision, note]
+      properties:
+        decision: { type: string, enum: [acknowledge, request-info, restrict, remove, restore, reject, close] }
+        note: { type: string, minLength: 1, maxLength: 4000 }
+        recordRepeatInfringer: { type: boolean, default: false }
+    RepeatInfringerInput:
+      type: object
+      required: [userId, reason]
+      properties:
+        userId: { type: string, minLength: 1, maxLength: 240 }
+        caseId: { type: ["string", "null"], format: uuid }
+        reason: { type: string, minLength: 10, maxLength: 4000 }
+    RepeatInfringer:
+      allOf:
+        - $ref: "#/components/schemas/RepeatInfringerInput"
+        - type: object
+          required: [id, createdAt, actorName]
+          properties:
+            id: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+            actorName: { type: string }
+            strikeCount: { type: integer }
+    AdminDashboard:
+      type: object
+      required: [publishedTitles, pendingRights, openCases, repeatInfringers]
+      properties:
+        publishedTitles: { type: integer }
+        pendingRights: { type: integer }
+        openCases: { type: integer }
+        repeatInfringers: { type: integer }
+    AuditEvent:
+      type: object
+      required: [id, action, entity, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        action: { type: string }
+        entity: { type: string }
+        entityId: { type: ["string", "null"] }
+        actorName: { type: ["string", "null"] }
+        detail: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+    SiteConfig:
+      type: object
+      required: [name, tagline, copyrightContactReady]
+      properties:
+        name: { type: string }
+        tagline: { type: string }
+        copyrightContactReady: { type: boolean }
+    AdminSettings:
+      type: object
+      required: [name, tagline, copyrightContactReady]
+      properties:
+        name: { type: string, maxLength: 120 }
+        tagline: { type: string, maxLength: 240 }
+        copyrightContactReady: { type: boolean }
+    AdminSettingsInput:
+      type: object
+      required: [name, tagline]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        tagline: { type: string, maxLength: 240 }
+    DirectUpload:
+      type: object
+      required: [uploadUrl, assetId]
+      properties:
+        uploadUrl: { type: string, format: uri }
+        assetId: { type: string }
+    StaffMember:
+      type: object
+      required: [id, name, email, role, banned]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [admin, moderator, user] }
+        banned: { type: boolean }
+    StaffInput:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 10, maxLength: 128 }
+        role: { type: string, enum: [admin, moderator] }
+    StaffUpdate:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [role, ban, password, unban] }
+        role: { type: string, enum: [admin, moderator, user] }
+        reason: { type: ["string", "null"], maxLength: 1000 }
+        password: { type: ["string", "null"], minLength: 10, maxLength: 128 }
+    UserPreferences:
+      type: object
+      required: [favoriteGenres, onboarded]
+      properties:
+        favoriteGenres:
+          type: array
+          items: { type: string }
+        onboarded: { type: boolean }
+    UserPreferencesInput:
+      type: object
+      required: [favoriteGenres, onboarded]
+      properties:
+        favoriteGenres:
+          type: array
+          maxItems: 20
+          items: { type: string, maxLength: 80 }
+        onboarded: { type: boolean }

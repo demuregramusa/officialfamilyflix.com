@@ -1,36 +1,28 @@
 kind = "web"
 previewPath = "/familyflix/"
 title = "FamilyFlix"
-description = "A family-friendly film catalog and streaming site for verified public-domain and licensed titles, with admin ingestion, rights review, and playable media."
+description = "A family-friendly streaming catalog for rights-reviewed public-domain and properly licensed titles, with playable media and a copyright review center."
 version = "1.0.0"
 id = "artifacts/familyflix"
 router = "path"
 
 [[services]]
 name = "web"
-paths = [ "/familyflix/" ]
+paths = ["/familyflix/"]
 localPort = 23453
 
 [services.development]
 run = "pnpm --filter @workspace/familyflix run dev"
 
 [services.production]
+build = ["pnpm", "--filter", "@workspace/familyflix", "run", "build"]
+serve = "static"
+publicDir = "artifacts/familyflix/dist/public"
 
-[services.production.build]
-args = ["pnpm", "--filter", "@workspace/familyflix", "run", "build"]
-
-[services.production.build.env]
-NODE_ENV = "production"
-NEXT_PUBLIC_BASE_PATH = "/familyflix"
-
-[services.production.run]
-args = ["pnpm", "--filter", "@workspace/familyflix", "run", "start"]
-
-[services.production.run.env]
-PORT = "23453"
-NODE_ENV = "production"
-NEXT_PUBLIC_BASE_PATH = "/familyflix"
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
 
 [services.env]
 PORT = "23453"
-NEXT_PUBLIC_BASE_PATH = "/familyflix"
+BASE_PATH = "/familyflix/"
