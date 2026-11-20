@@ -1,0 +1,1 @@
+- [Creative Commons content policy](creative-commons-content-policy.md) — the user expects shared works to carry CC terms; apply only when the uploader has the rights.
