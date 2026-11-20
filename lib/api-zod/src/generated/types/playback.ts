@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PlaybackStreamType } from './playbackStreamType';
-import type { Subtitle } from './subtitle';
+import type { PublicSubtitle } from './publicSubtitle';
 
 export interface Playback {
   titleName: string;
@@ -14,5 +14,5 @@ export interface Playback {
   url: string;
   /** @nullable */
   posterUrl?: string | null;
-  subtitles: Subtitle[];
+  subtitles: PublicSubtitle[];
 }

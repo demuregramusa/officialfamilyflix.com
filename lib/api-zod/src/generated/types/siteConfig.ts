@@ -5,9 +5,11 @@
  * FamilyFlix catalog, playback, rights review, and copyright case API.
  * OpenAPI spec version: 0.1.0
  */
+import type { CopyrightContact } from './copyrightContact';
 
 export interface SiteConfig {
   name: string;
   tagline: string;
   copyrightContactReady: boolean;
+  copyrightContact: CopyrightContact | null;
 }

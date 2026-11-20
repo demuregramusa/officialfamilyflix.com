@@ -92,68 +92,18 @@ export const GetPlaybackParams = zod.object({
   "slug": zod.coerce.string()
 })
 
-export const getPlaybackResponseSubtitlesItemOneLanguageMin = 2;
-export const getPlaybackResponseSubtitlesItemOneLanguageMax = 20;
-
-export const getPlaybackResponseSubtitlesItemOneLabelMax = 80;
-
-export const getPlaybackResponseSubtitlesItemOneUrlMax = 2048;
-
-export const getPlaybackResponseSubtitlesItemOneRightsAssetLabelMax = 160;
-
-export const getPlaybackResponseSubtitlesItemOneRightsAssetUrlMax = 2048;
-
-export const getPlaybackResponseSubtitlesItemOneRightsRightsHolderMax = 240;
-
-export const getPlaybackResponseSubtitlesItemOneRightsCreatorAttributionMax = 240;
-
-export const getPlaybackResponseSubtitlesItemOneRightsLicenseVersionMax = 40;
-
-export const getPlaybackResponseSubtitlesItemOneRightsLicenseUrlMax = 2048;
-
-export const getPlaybackResponseSubtitlesItemOneRightsUsageRestrictionsItemMax = 240;
-
-export const getPlaybackResponseSubtitlesItemOneRightsSourceUrlMax = 2048;
-
-export const getPlaybackResponseSubtitlesItemOneRightsEvidenceUrlMax = 2048;
-
-export const getPlaybackResponseSubtitlesItemOneRightsEvidenceNotesMax = 4000;
-
-export const getPlaybackResponseSubtitlesItemOneRightsTerritoryMax = 160;
-
-
-
 export const GetPlaybackResponse = zod.object({
   "titleName": zod.string(),
   "streamType": zod.enum(['mp4', 'hls', 'cloudflare']),
   "url": zod.string().url(),
   "posterUrl": zod.string().url().nullish(),
   "subtitles": zod.array(zod.object({
-  "language": zod.string().min(getPlaybackResponseSubtitlesItemOneLanguageMin).max(getPlaybackResponseSubtitlesItemOneLanguageMax),
-  "label": zod.string().min(1).max(getPlaybackResponseSubtitlesItemOneLabelMax),
-  "url": zod.string().url().max(getPlaybackResponseSubtitlesItemOneUrlMax),
-  "rights": zod.object({
-  "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
-  "assetLabel": zod.string().min(1).max(getPlaybackResponseSubtitlesItemOneRightsAssetLabelMax),
-  "assetUrl": zod.string().url().max(getPlaybackResponseSubtitlesItemOneRightsAssetUrlMax),
-  "rightsHolder": zod.string().min(1).max(getPlaybackResponseSubtitlesItemOneRightsRightsHolderMax),
-  "creatorAttribution": zod.string().min(1).max(getPlaybackResponseSubtitlesItemOneRightsCreatorAttributionMax),
-  "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
-  "licenseVersion": zod.string().min(1).max(getPlaybackResponseSubtitlesItemOneRightsLicenseVersionMax),
-  "licenseUrl": zod.string().url().max(getPlaybackResponseSubtitlesItemOneRightsLicenseUrlMax),
-  "usageRestrictions": zod.array(zod.string().max(getPlaybackResponseSubtitlesItemOneRightsUsageRestrictionsItemMax)),
-  "sourceUrl": zod.string().url().max(getPlaybackResponseSubtitlesItemOneRightsSourceUrlMax),
-  "evidenceUrl": zod.string().url().max(getPlaybackResponseSubtitlesItemOneRightsEvidenceUrlMax),
-  "evidenceNotes": zod.string().max(getPlaybackResponseSubtitlesItemOneRightsEvidenceNotesMax).nullish(),
-  "territory": zod.string().max(getPlaybackResponseSubtitlesItemOneRightsTerritoryMax).nullish(),
-  "expiresAt": zod.coerce.date().nullish(),
-  "uploaderAttested": zod.literal(true)
-}),
-  "uploaderAttested": zod.literal(true)
-}).and(zod.object({
   "id": zod.string().uuid(),
+  "language": zod.string(),
+  "label": zod.string(),
+  "url": zod.string().url(),
   "isDefault": zod.boolean()
-})))
+}))
 })
 
 
@@ -163,7 +113,12 @@ export const GetPlaybackResponse = zod.object({
 export const GetSiteConfigResponse = zod.object({
   "name": zod.string(),
   "tagline": zod.string(),
-  "copyrightContactReady": zod.boolean()
+  "copyrightContactReady": zod.boolean(),
+  "copyrightContact": zod.union([zod.object({
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "address": zod.string()
+}),zod.null()])
 })
 
 
@@ -1326,63 +1281,61 @@ export const ListTitleSubtitlesParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
-export const listTitleSubtitlesResponseOneLanguageMin = 2;
-export const listTitleSubtitlesResponseOneLanguageMax = 20;
+export const listTitleSubtitlesResponseRightsOneOneAssetLabelMax = 160;
 
-export const listTitleSubtitlesResponseOneLabelMax = 80;
+export const listTitleSubtitlesResponseRightsOneOneAssetUrlMax = 2048;
 
-export const listTitleSubtitlesResponseOneUrlMax = 2048;
+export const listTitleSubtitlesResponseRightsOneOneRightsHolderMax = 240;
 
-export const listTitleSubtitlesResponseOneRightsAssetLabelMax = 160;
+export const listTitleSubtitlesResponseRightsOneOneCreatorAttributionMax = 240;
 
-export const listTitleSubtitlesResponseOneRightsAssetUrlMax = 2048;
+export const listTitleSubtitlesResponseRightsOneOneLicenseVersionMax = 40;
 
-export const listTitleSubtitlesResponseOneRightsRightsHolderMax = 240;
+export const listTitleSubtitlesResponseRightsOneOneLicenseUrlMax = 2048;
 
-export const listTitleSubtitlesResponseOneRightsCreatorAttributionMax = 240;
+export const listTitleSubtitlesResponseRightsOneOneUsageRestrictionsItemMax = 240;
 
-export const listTitleSubtitlesResponseOneRightsLicenseVersionMax = 40;
+export const listTitleSubtitlesResponseRightsOneOneSourceUrlMax = 2048;
 
-export const listTitleSubtitlesResponseOneRightsLicenseUrlMax = 2048;
+export const listTitleSubtitlesResponseRightsOneOneEvidenceUrlMax = 2048;
 
-export const listTitleSubtitlesResponseOneRightsUsageRestrictionsItemMax = 240;
+export const listTitleSubtitlesResponseRightsOneOneEvidenceNotesMax = 4000;
 
-export const listTitleSubtitlesResponseOneRightsSourceUrlMax = 2048;
-
-export const listTitleSubtitlesResponseOneRightsEvidenceUrlMax = 2048;
-
-export const listTitleSubtitlesResponseOneRightsEvidenceNotesMax = 4000;
-
-export const listTitleSubtitlesResponseOneRightsTerritoryMax = 160;
+export const listTitleSubtitlesResponseRightsOneOneTerritoryMax = 160;
 
 
 
 export const ListTitleSubtitlesResponseItem = zod.object({
-  "language": zod.string().min(listTitleSubtitlesResponseOneLanguageMin).max(listTitleSubtitlesResponseOneLanguageMax),
-  "label": zod.string().min(1).max(listTitleSubtitlesResponseOneLabelMax),
-  "url": zod.string().url().max(listTitleSubtitlesResponseOneUrlMax),
-  "rights": zod.object({
+  "id": zod.string().uuid(),
+  "language": zod.string(),
+  "label": zod.string(),
+  "url": zod.string().url(),
+  "isDefault": zod.boolean(),
+  "rights": zod.union([zod.object({
   "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
-  "assetLabel": zod.string().min(1).max(listTitleSubtitlesResponseOneRightsAssetLabelMax),
-  "assetUrl": zod.string().url().max(listTitleSubtitlesResponseOneRightsAssetUrlMax),
-  "rightsHolder": zod.string().min(1).max(listTitleSubtitlesResponseOneRightsRightsHolderMax),
-  "creatorAttribution": zod.string().min(1).max(listTitleSubtitlesResponseOneRightsCreatorAttributionMax),
+  "assetLabel": zod.string().min(1).max(listTitleSubtitlesResponseRightsOneOneAssetLabelMax),
+  "assetUrl": zod.string().url().max(listTitleSubtitlesResponseRightsOneOneAssetUrlMax),
+  "rightsHolder": zod.string().min(1).max(listTitleSubtitlesResponseRightsOneOneRightsHolderMax),
+  "creatorAttribution": zod.string().min(1).max(listTitleSubtitlesResponseRightsOneOneCreatorAttributionMax),
   "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
-  "licenseVersion": zod.string().min(1).max(listTitleSubtitlesResponseOneRightsLicenseVersionMax),
-  "licenseUrl": zod.string().url().max(listTitleSubtitlesResponseOneRightsLicenseUrlMax),
-  "usageRestrictions": zod.array(zod.string().max(listTitleSubtitlesResponseOneRightsUsageRestrictionsItemMax)),
-  "sourceUrl": zod.string().url().max(listTitleSubtitlesResponseOneRightsSourceUrlMax),
-  "evidenceUrl": zod.string().url().max(listTitleSubtitlesResponseOneRightsEvidenceUrlMax),
-  "evidenceNotes": zod.string().max(listTitleSubtitlesResponseOneRightsEvidenceNotesMax).nullish(),
-  "territory": zod.string().max(listTitleSubtitlesResponseOneRightsTerritoryMax).nullish(),
+  "licenseVersion": zod.string().min(1).max(listTitleSubtitlesResponseRightsOneOneLicenseVersionMax),
+  "licenseUrl": zod.string().url().max(listTitleSubtitlesResponseRightsOneOneLicenseUrlMax),
+  "usageRestrictions": zod.array(zod.string().max(listTitleSubtitlesResponseRightsOneOneUsageRestrictionsItemMax)),
+  "sourceUrl": zod.string().url().max(listTitleSubtitlesResponseRightsOneOneSourceUrlMax),
+  "evidenceUrl": zod.string().url().max(listTitleSubtitlesResponseRightsOneOneEvidenceUrlMax),
+  "evidenceNotes": zod.string().max(listTitleSubtitlesResponseRightsOneOneEvidenceNotesMax).nullish(),
+  "territory": zod.string().max(listTitleSubtitlesResponseRightsOneOneTerritoryMax).nullish(),
   "expiresAt": zod.coerce.date().nullish(),
-  "uploaderAttested": zod.literal(true)
-}),
   "uploaderAttested": zod.literal(true)
 }).and(zod.object({
   "id": zod.string().uuid(),
-  "isDefault": zod.boolean()
-}))
+  "reviewStatus": zod.enum(['pending', 'approved', 'rejected', 'restricted']),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "reviewedBy": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish()
+})),zod.null()])
+})
 export const ListTitleSubtitlesResponse = zod.array(ListTitleSubtitlesResponseItem)
 
 
@@ -1448,63 +1401,61 @@ export const AddTitleSubtitleBody = zod.object({
   "uploaderAttested": zod.literal(true)
 })
 
-export const addTitleSubtitleResponseOneLanguageMin = 2;
-export const addTitleSubtitleResponseOneLanguageMax = 20;
+export const addTitleSubtitleResponseRightsOneOneAssetLabelMax = 160;
 
-export const addTitleSubtitleResponseOneLabelMax = 80;
+export const addTitleSubtitleResponseRightsOneOneAssetUrlMax = 2048;
 
-export const addTitleSubtitleResponseOneUrlMax = 2048;
+export const addTitleSubtitleResponseRightsOneOneRightsHolderMax = 240;
 
-export const addTitleSubtitleResponseOneRightsAssetLabelMax = 160;
+export const addTitleSubtitleResponseRightsOneOneCreatorAttributionMax = 240;
 
-export const addTitleSubtitleResponseOneRightsAssetUrlMax = 2048;
+export const addTitleSubtitleResponseRightsOneOneLicenseVersionMax = 40;
 
-export const addTitleSubtitleResponseOneRightsRightsHolderMax = 240;
+export const addTitleSubtitleResponseRightsOneOneLicenseUrlMax = 2048;
 
-export const addTitleSubtitleResponseOneRightsCreatorAttributionMax = 240;
+export const addTitleSubtitleResponseRightsOneOneUsageRestrictionsItemMax = 240;
 
-export const addTitleSubtitleResponseOneRightsLicenseVersionMax = 40;
+export const addTitleSubtitleResponseRightsOneOneSourceUrlMax = 2048;
 
-export const addTitleSubtitleResponseOneRightsLicenseUrlMax = 2048;
+export const addTitleSubtitleResponseRightsOneOneEvidenceUrlMax = 2048;
 
-export const addTitleSubtitleResponseOneRightsUsageRestrictionsItemMax = 240;
+export const addTitleSubtitleResponseRightsOneOneEvidenceNotesMax = 4000;
 
-export const addTitleSubtitleResponseOneRightsSourceUrlMax = 2048;
-
-export const addTitleSubtitleResponseOneRightsEvidenceUrlMax = 2048;
-
-export const addTitleSubtitleResponseOneRightsEvidenceNotesMax = 4000;
-
-export const addTitleSubtitleResponseOneRightsTerritoryMax = 160;
+export const addTitleSubtitleResponseRightsOneOneTerritoryMax = 160;
 
 
 
 export const AddTitleSubtitleResponse = zod.object({
-  "language": zod.string().min(addTitleSubtitleResponseOneLanguageMin).max(addTitleSubtitleResponseOneLanguageMax),
-  "label": zod.string().min(1).max(addTitleSubtitleResponseOneLabelMax),
-  "url": zod.string().url().max(addTitleSubtitleResponseOneUrlMax),
-  "rights": zod.object({
+  "id": zod.string().uuid(),
+  "language": zod.string(),
+  "label": zod.string(),
+  "url": zod.string().url(),
+  "isDefault": zod.boolean(),
+  "rights": zod.union([zod.object({
   "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
-  "assetLabel": zod.string().min(1).max(addTitleSubtitleResponseOneRightsAssetLabelMax),
-  "assetUrl": zod.string().url().max(addTitleSubtitleResponseOneRightsAssetUrlMax),
-  "rightsHolder": zod.string().min(1).max(addTitleSubtitleResponseOneRightsRightsHolderMax),
-  "creatorAttribution": zod.string().min(1).max(addTitleSubtitleResponseOneRightsCreatorAttributionMax),
+  "assetLabel": zod.string().min(1).max(addTitleSubtitleResponseRightsOneOneAssetLabelMax),
+  "assetUrl": zod.string().url().max(addTitleSubtitleResponseRightsOneOneAssetUrlMax),
+  "rightsHolder": zod.string().min(1).max(addTitleSubtitleResponseRightsOneOneRightsHolderMax),
+  "creatorAttribution": zod.string().min(1).max(addTitleSubtitleResponseRightsOneOneCreatorAttributionMax),
   "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
-  "licenseVersion": zod.string().min(1).max(addTitleSubtitleResponseOneRightsLicenseVersionMax),
-  "licenseUrl": zod.string().url().max(addTitleSubtitleResponseOneRightsLicenseUrlMax),
-  "usageRestrictions": zod.array(zod.string().max(addTitleSubtitleResponseOneRightsUsageRestrictionsItemMax)),
-  "sourceUrl": zod.string().url().max(addTitleSubtitleResponseOneRightsSourceUrlMax),
-  "evidenceUrl": zod.string().url().max(addTitleSubtitleResponseOneRightsEvidenceUrlMax),
-  "evidenceNotes": zod.string().max(addTitleSubtitleResponseOneRightsEvidenceNotesMax).nullish(),
-  "territory": zod.string().max(addTitleSubtitleResponseOneRightsTerritoryMax).nullish(),
+  "licenseVersion": zod.string().min(1).max(addTitleSubtitleResponseRightsOneOneLicenseVersionMax),
+  "licenseUrl": zod.string().url().max(addTitleSubtitleResponseRightsOneOneLicenseUrlMax),
+  "usageRestrictions": zod.array(zod.string().max(addTitleSubtitleResponseRightsOneOneUsageRestrictionsItemMax)),
+  "sourceUrl": zod.string().url().max(addTitleSubtitleResponseRightsOneOneSourceUrlMax),
+  "evidenceUrl": zod.string().url().max(addTitleSubtitleResponseRightsOneOneEvidenceUrlMax),
+  "evidenceNotes": zod.string().max(addTitleSubtitleResponseRightsOneOneEvidenceNotesMax).nullish(),
+  "territory": zod.string().max(addTitleSubtitleResponseRightsOneOneTerritoryMax).nullish(),
   "expiresAt": zod.coerce.date().nullish(),
-  "uploaderAttested": zod.literal(true)
-}),
   "uploaderAttested": zod.literal(true)
 }).and(zod.object({
   "id": zod.string().uuid(),
-  "isDefault": zod.boolean()
-}))
+  "reviewStatus": zod.enum(['pending', 'approved', 'rejected', 'restricted']),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "reviewedBy": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish()
+})),zod.null()])
+})
 
 
 /**

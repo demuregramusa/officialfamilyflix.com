@@ -170,6 +170,12 @@ button { color: inherit; }
 .split { display:grid;grid-template-columns:1.2fr .8fr;gap:20px; }
 .wrap { overflow-wrap:anywhere; }
 .drawer-scrim { display:none; }
+.permission-card { max-width:620px;margin:6vh auto;padding:clamp(24px,5vw,42px);border:1px solid hsl(var(--line));border-radius:20px;background:linear-gradient(145deg,hsl(var(--surface-raised) / .88),hsl(var(--surface) / .7)); }
+.permission-card h1 { margin:16px 0 10px;font:800 clamp(30px,5vw,48px)/1.03 var(--font-display);letter-spacing:-.06em; }
+.permission-card p { max-width:52ch;margin:0 0 22px;color:hsl(var(--muted));font-size:14px;line-height:1.7; }
+.legal-draft { display:block;margin-top:5px;color:hsl(41 42% 72%); }
+.upload-progress { margin-top:14px;padding:12px 14px;border:1px solid hsl(var(--line));border-radius:12px;background:hsl(var(--ink) / .45); }
+.upload-progress progress { width:100%;height:9px;margin:8px 0 6px;accent-color:hsl(var(--brand)); }
 
 @media (max-width:1050px) {
  .title-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }

@@ -129,6 +129,23 @@ export const PlaybackStreamType = {
   cloudflare: 'cloudflare',
 } as const;
 
+export interface PublicSubtitle {
+  id: string;
+  language: string;
+  label: string;
+  url: string;
+  isDefault: boolean;
+}
+
+export interface Playback {
+  titleName: string;
+  streamType: PlaybackStreamType;
+  url: string;
+  /** @nullable */
+  posterUrl?: string | null;
+  subtitles: PublicSubtitle[];
+}
+
 export interface RightsInput {
   assetKind: AssetKind;
   /**
@@ -175,37 +192,6 @@ export interface RightsInput {
   /** @nullable */
   expiresAt?: string | null;
   uploaderAttested: true;
-}
-
-export interface SubtitleInput {
-  /**
-     * @minLength 2
-     * @maxLength 20
-     */
-  language: string;
-  /**
-     * @minLength 1
-     * @maxLength 80
-     */
-  label: string;
-  /** @maxLength 2048 */
-  url: string;
-  rights: RightsInput;
-  uploaderAttested: true;
-}
-
-export type Subtitle = SubtitleInput & {
-  id: string;
-  isDefault: boolean;
-};
-
-export interface Playback {
-  titleName: string;
-  streamType: PlaybackStreamType;
-  url: string;
-  /** @nullable */
-  posterUrl?: string | null;
-  subtitles: Subtitle[];
 }
 
 export type RightsRecord = RightsInput & ({
@@ -455,6 +441,32 @@ export interface ImportReport {
   pendingReview?: number;
 }
 
+export interface SubtitleInput {
+  /**
+     * @minLength 2
+     * @maxLength 20
+     */
+  language: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  label: string;
+  /** @maxLength 2048 */
+  url: string;
+  rights: RightsInput;
+  uploaderAttested: true;
+}
+
+export interface Subtitle {
+  id: string;
+  language: string;
+  label: string;
+  url: string;
+  isDefault: boolean;
+  rights: RightsRecord | null;
+}
+
 export interface CopyrightReportInput {
   /** @nullable */
   titleId?: string | null;
@@ -642,10 +654,17 @@ export interface AuditEvent {
   createdAt: string;
 }
 
+export interface CopyrightContact {
+  name: string;
+  email: string;
+  address: string;
+}
+
 export interface SiteConfig {
   name: string;
   tagline: string;
   copyrightContactReady: boolean;
+  copyrightContact: CopyrightContact | null;
 }
 
 export interface AdminSettings {

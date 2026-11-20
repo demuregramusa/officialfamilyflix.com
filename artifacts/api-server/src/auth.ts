@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins";
+import { adminAc, userAc } from "better-auth/plugins/admin/access";
 import * as schema from "@workspace/db/schema";
 import { db, user } from "@workspace/db";
 import { isStaffRole } from "./lib/permissions";
@@ -36,6 +37,11 @@ export const auth = betterAuth({
     admin({
       defaultRole: "user",
       adminRoles: ["admin"],
+      roles: {
+        admin: adminAc,
+        moderator: userAc,
+        user: userAc,
+      },
     }),
   ],
   databaseHooks: {

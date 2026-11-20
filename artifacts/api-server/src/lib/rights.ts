@@ -45,6 +45,23 @@ const canonicalCreativeCommonsUrls: Partial<Record<LicenseType, string>> = {
   "cc0-1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
 };
 
+const licenseRestrictions: Partial<Record<LicenseType, string[]>> = {
+  "cc-by-4.0": ["Attribution required"],
+  "cc-by-sa-4.0": ["Attribution required", "Adaptations must use the same license"],
+  "cc-by-nd-4.0": ["Attribution required", "No derivatives"],
+  "cc-by-nc-4.0": ["Attribution required", "NonCommercial use only"],
+  "cc-by-nc-sa-4.0": [
+    "Attribution required",
+    "NonCommercial use only",
+    "Adaptations must use the same license",
+  ],
+  "cc-by-nc-nd-4.0": [
+    "Attribution required",
+    "NonCommercial use only",
+    "No derivatives",
+  ],
+};
+
 export function validatePublicHttpUrl(value: string): string | null {
   let parsed: URL;
   try {
@@ -58,7 +75,10 @@ export function validatePublicHttpUrl(value: string): string | null {
   if (parsed.username || parsed.password) {
     return "Media URLs cannot contain embedded credentials.";
   }
-  if (/\.torrent$/i.test(parsed.pathname) || /magnet|torrent/i.test(parsed.protocol)) {
+  if (
+    /\.torrent$/i.test(parsed.pathname) ||
+    /magnet|torrent/i.test(`${parsed.protocol}${parsed.hostname}${parsed.pathname}${parsed.search}`)
+  ) {
     return "Torrent and magnet sources are not accepted.";
   }
   return null;
@@ -113,7 +133,10 @@ export function rightsToInsert(
     licenseType: licenseToDb[input.licenseType] as (typeof mediaRights.$inferInsert)["licenseType"],
     licenseVersion: input.licenseVersion.trim(),
     licenseUrl: input.licenseUrl.trim(),
-    usageRestrictions: input.usageRestrictions.map((restriction) => restriction.trim()).filter(Boolean),
+    usageRestrictions: [...new Set([
+      ...input.usageRestrictions.map((restriction) => restriction.trim()).filter(Boolean),
+      ...(licenseRestrictions[input.licenseType] ?? []),
+    ])],
     sourceUrl: input.sourceUrl.trim(),
     evidenceUrl: input.evidenceUrl.trim(),
     evidenceNotes: input.evidenceNotes?.trim() || null,
@@ -167,7 +190,15 @@ export function isEvidenceComplete(record: MediaRight): boolean {
   if (!record.sourceUrl || !record.evidenceUrl || !record.licenseUrl || !record.licenseVersion) {
     return false;
   }
-  if (record.licenseType === "unlicensed") return false;
+  const publicLicenseType = licenseFromDb[record.licenseType];
+  if (!publicLicenseType || publicLicenseType === "unlicensed") return false;
+  const expectedLicenseUrl = canonicalCreativeCommonsUrls[publicLicenseType];
+  if (expectedLicenseUrl && record.licenseUrl !== expectedLicenseUrl) return false;
+  if (
+    publicLicenseType.startsWith("cc-") &&
+    record.licenseVersion !== publicLicenseType.slice(-3)
+  ) return false;
+  if (publicLicenseType === "cc0-1.0" && record.licenseVersion !== "1.0") return false;
   if (record.expiresAt && record.expiresAt.getTime() <= Date.now()) return false;
   return true;
 }

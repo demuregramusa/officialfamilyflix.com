@@ -5,9 +5,13 @@
  * FamilyFlix catalog, playback, rights review, and copyright case API.
  * OpenAPI spec version: 0.1.0
  */
-import type { SubtitleInput } from './subtitleInput';
+import type { RightsRecord } from './rightsRecord';
 
-export type Subtitle = SubtitleInput & {
+export interface Subtitle {
   id: string;
+  language: string;
+  label: string;
+  url: string;
   isDefault: boolean;
-};
+  rights: RightsRecord | null;
+}

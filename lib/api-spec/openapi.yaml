@@ -1067,13 +1067,18 @@ components:
         rights: { $ref: "#/components/schemas/RightsInput" }
         uploaderAttested: { type: boolean, const: true }
     Subtitle:
-      allOf:
-        - $ref: "#/components/schemas/SubtitleInput"
-        - type: object
-          required: [id, isDefault]
-          properties:
-            id: { type: string, format: uuid }
-            isDefault: { type: boolean }
+      type: object
+      required: [id, language, label, url, isDefault, rights]
+      properties:
+        id: { type: string, format: uuid }
+        language: { type: string }
+        label: { type: string }
+        url: { type: string, format: uri }
+        isDefault: { type: boolean }
+        rights:
+          oneOf:
+            - $ref: "#/components/schemas/RightsRecord"
+            - type: "null"
     CopyrightReportInput:
       type: object
       required: [workDescription, infringingUrl, rightsHolder, reporterName, reporterEmail, reporterAddress, reporterPhone, goodFaithStatement, accuracyStatement, signature]
@@ -1187,11 +1192,22 @@ components:
         createdAt: { type: string, format: date-time }
     SiteConfig:
       type: object
-      required: [name, tagline, copyrightContactReady]
+      required: [name, tagline, copyrightContactReady, copyrightContact]
       properties:
         name: { type: string }
         tagline: { type: string }
         copyrightContactReady: { type: boolean }
+        copyrightContact:
+          oneOf:
+            - $ref: "#/components/schemas/CopyrightContact"
+            - type: "null"
+    CopyrightContact:
+      type: object
+      required: [name, email, address]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        address: { type: string }
     AdminSettings:
       type: object
       required: [name, tagline, copyrightContactReady]
