@@ -38,6 +38,11 @@ import type {
   PublicTitle, PublicTitleDetail, RightsInput,
 } from "@workspace/api-client-react";
 import { authClient } from "./lib/auth-client";
+import { Hero } from "@/components/familyflix/hero";
+import { BrowseHeader, GenreChips, PosterGrid } from "@/components/familyflix/browse";
+import { PosterCard, posterSize } from "@/components/familyflix/poster-card";
+import { TitleRow } from "@/components/familyflix/title-row";
+import type { Title as CatalogTitle } from "@/lib/catalog";
 
 const genres = ["Adventure", "Animation", "Comedy", "Documentary", "Drama", "Family", "Fantasy", "History", "Mystery", "Music", "Science fiction"];
 const ADMIN_NAV: [string, string, typeof LayoutDashboard][] = [
@@ -134,29 +139,92 @@ function ErrorBox({ message, retry }: { message: string; retry?: () => void }) {
 function Empty({ title, children, icon = <Film size={20} /> }: { title: string; children: ReactNode; icon?: ReactNode }) {
   return <div className="empty-state" data-testid="status-empty"><span className="empty-icon">{icon}</span><h3>{title}</h3><p>{children}</p></div>;
 }
+function toCatalogTitle(title: PublicTitle | PublicTitleDetail): CatalogTitle {
+  const detail = title as Partial<PublicTitleDetail>;
+  const minutes = detail.durationMinutes ?? null;
+  const duration = minutes
+    ? `${Math.floor(minutes / 60) ? `${Math.floor(minutes / 60)}h ` : ""}${minutes % 60 ? `${minutes % 60}m` : ""}`.trim()
+    : undefined;
+  return {
+    slug: title.slug,
+    name: title.name,
+    tagline: detail.tagline ?? "",
+    year: title.year ?? 0,
+    type: title.kind,
+    rating: detail.rating || "",
+    score: 0,
+    ...(duration ? { duration } : {}),
+    genres: title.genres,
+    synopsis: title.synopsis,
+    cast: detail.cast ?? [],
+    creator: title.creatorAttribution,
+    image: "photo-1489599849927-2ee91cede3ba",
+    ...(title.posterUrl ? { poster: title.posterUrl } : {}),
+    ...(detail.backdropUrl || title.posterUrl ? { backdrop: detail.backdropUrl || title.posterUrl || undefined } : {}),
+    palette: ["#100b1a", "#6d28ff"],
+    ...(title.featured ? { featured: true } : {}),
+  };
+}
 function Poster({ title, className = "" }: { title: Pick<PublicTitle, "id" | "name" | "kind"> & { posterUrl?: string | null }; className?: string }) {
   const image = title.posterUrl;
   return <div className={`poster ${image ? "has-image" : ""} ${className}`} style={image ? { backgroundImage: `linear-gradient(0deg,hsl(258 25% 7% / .94),transparent 54%),url("${image}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} data-testid={`poster-title-${title.id}`} aria-label={`${title.name}${image ? " poster art" : " artwork placeholder"}`}><span className="poster-stamp">{title.kind === "series" ? "Series" : title.kind}</span><span className="poster-title">{title.name}</span><span className="poster-open"><ArrowRight size={15} /></span></div>;
 }
 function TitleCards({ titles }: { titles: PublicTitle[] }) {
-  return <div className="title-grid">{titles.map(t => <Link key={t.id} href={`/title/${t.slug}`} className="title-card" data-testid={`card-title-${t.id}`}><Poster title={t} /><div className="card-copy"><strong>{t.name}</strong><span>{t.year || "Year not listed"} · {t.genres?.slice(0,2).join(" · ") || "Approved catalog"}</span></div></Link>)}</div>;
+  return <PosterGrid items={titles.map(toCatalogTitle)} />;
+}
+function EmptyOriginalHero() {
+  return <section className="relative flex min-h-[540px] w-full items-end overflow-hidden bg-[#08060f] sm:min-h-[620px] lg:min-h-[700px]" data-testid="section-featured-catalog">
+    <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(58% 65% at 78% 30%, rgba(109,40,255,.34), transparent 68%), radial-gradient(40% 45% at 78% 58%, rgba(255,46,136,.15), transparent 70%), linear-gradient(90deg,#08060f 0%,rgba(8,6,15,.84) 46%,rgba(8,6,15,.18) 100%)" }} />
+    <div aria-hidden className="pointer-events-none absolute right-[10%] top-[12%] hidden aspect-[.72] w-[29%] rotate-[4deg] rounded-[48%_48%_12px_12px] border border-white/20 bg-gradient-to-br from-[#38265f] via-[#1b1230] to-[#100b17] shadow-2xl md:block" />
+    <div className="relative mx-auto w-full max-w-[1600px] px-4 pb-12 sm:px-6 md:px-8 md:pb-16 xl:px-12">
+      <div className="max-w-[660px] animate-fade-up">
+        <span className="eyebrow">A DemureGram film &amp; TV catalog</span>
+        <h1 className="mt-4 max-w-[700px] text-[clamp(2.5rem,6.5vw,5.6rem)] font-black uppercase leading-[.9] tracking-[-.055em] text-white text-shadow-hero">FamilyFlix</h1>
+        <p className="mt-4 max-w-[54ch] text-[14px] leading-relaxed text-white/70 sm:text-[15px]">Your original FamilyFlix browsing experience is back. Titles appear in the catalog only after their rights and real playback sources pass review.</p>
+        <div className="mt-6 flex flex-wrap gap-2.5">
+          <Link href="/movies" className="button" data-testid="button-browse-approved"><Clapperboard size={16} /> Browse movies</Link>
+          <Link href="/about" className="button-secondary" data-testid="link-rights-policy"><Info size={15} /> How rights work</Link>
+        </div>
+      </div>
+    </div>
+  </section>;
 }
 function Catalog({ kind, query, home = false }: { kind?: "movie" | "series"; query?: string; home?: boolean }) {
   const params = useMemo(() => ({ ...(kind ? { kind } : {}), ...(query ? { query } : {}), limit: 100 }), [kind, query]);
   const q = useListPublicTitles(params);
-  const titles = q.data ?? [];
-  const featured = titles.find(t => t.featured);
+  const titles = (q.data ?? []).map(toCatalogTitle);
+  const featured = titles.filter(t => t.featured).slice(0, 5);
+  const heroTitles = featured.length ? featured : titles.slice(0, 5);
+  if (home) {
+    const movies = titles.filter(t => t.type === "movie");
+    const shows = titles.filter(t => t.type === "series");
+    const sections = [
+      { title: "Featured on FamilyFlix", subtitle: "Stories cleared for this catalog", items: featured.length ? featured : titles },
+      { title: "Movies", subtitle: "Browse approved feature films", items: movies },
+      { title: "TV Shows", subtitle: "Series approved for FamilyFlix", items: shows },
+    ].filter(section => section.items.length > 0);
+    return <Shell fullBleed>
+      {heroTitles.length ? <Hero titles={heroTitles} /> : <EmptyOriginalHero />}
+      <div className="relative z-10 mt-6 space-y-9 pb-6 md:mt-8 md:space-y-11">
+        {q.isLoading ? <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12"><LoadingGrid /></div>
+          : q.isError ? <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12"><ErrorBox message={errorText(q.error)} retry={() => q.refetch()} /></div>
+          : sections.length ? sections.map(section => <TitleRow key={section.title} title={section.title} subtitle={section.subtitle} seeAllHref={section.title === "TV Shows" ? "/tv-shows" : "/movies"}>{section.items.map(t => <PosterCard key={t.slug} title={t} className={posterSize} />)}</TitleRow>)
+          : <section className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12"><Empty title="Your catalog is ready for reviewed titles" icon={<Clapperboard size={20} />}>The original browsing layout is restored. Movies will appear here once an administrator confirms each title’s rights evidence and playable media source.</Empty></section>}
+        <section className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12"><div className="notice" data-testid="status-rights-transparency"><ShieldCheck size={18} /><span><strong>Rights before play.</strong> FamilyFlix displays reviewed rights details before playback. DemureGram does not claim ownership of third-party films.</span></div></section>
+      </div>
+    </Shell>;
+  }
+  const activeGenre = new URLSearchParams(window.location.search).get("genre") || "";
+  const allGenres = Array.from(new Set(titles.flatMap(t => t.genres))).sort((a, b) => a.localeCompare(b));
+  const shown = activeGenre ? titles.filter(t => t.genres.includes(activeGenre)) : titles;
+  const pageTitle = query ? `Results for “${query}”` : kind === "movie" ? "Movies" : kind === "series" ? "TV Shows" : "FamilyFlix";
   return <Shell>
-    {home && <section className="hero" data-testid="section-featured-catalog"><div className="hero-copy">
-      <span className="eyebrow">A little more considered</span>
-      <h1>Good stories.<br />Clear rights.</h1>
-      <p>Find films and series with their permissions in plain view. FamilyFlix is the movie and TV catalog within DemureGram—only titles approved for this catalog appear here.</p>
-      {featured && <div className="hero-meta"><span className="rights-chip"><ShieldCheck size={13} /> Rights reviewed</span><span>{featured.name} · {featured.year ?? "Year unlisted"}</span></div>}
-      <div className="hero-actions"><Link href={featured ? `/title/${featured.slug}` : "/movies"} className="button" data-testid="button-browse-approved"><Clapperboard size={16} /> Browse approved titles</Link><Link href="/about" className="button-secondary" data-testid="link-rights-policy"><Info size={15} /> How rights work</Link></div>
-    </div></section>}
-    <Heading eyebrow={home ? "The approved catalog" : query ? "Catalog search" : kind === "movie" ? "Feature films" : kind === "series" ? "Series" : "All approved titles"} title={home ? "Find your next good watch." : query ? `Results for “${query}”` : kind === "movie" ? "Movies" : kind === "series" ? "TV shows" : "Approved titles"} description="Every title listed here has passed the catalog’s rights review. Availability can vary by territory and time." />
-    {q.isLoading ? <LoadingGrid /> : q.isError ? <ErrorBox message={errorText(q.error)} retry={() => q.refetch()} /> : titles.length ? <TitleCards titles={titles} /> : <Empty title="Nothing in the catalog yet" icon={<Clapperboard size={20} />}>When titles are approved for FamilyFlix, they’ll appear here. Try a different category or return later.</Empty>}
-    <section className="notice" style={{ marginTop: 36 }} data-testid="status-rights-transparency"><ShieldCheck size={18} /><span><strong>Rights before play.</strong> FamilyFlix displays rights-holder and license details supplied and reviewed for each title. DemureGram does not claim ownership of third-party films.</span></section>
+    <BrowseHeader eyebrow={query ? "Search FamilyFlix" : "Rights-reviewed catalog"} title={pageTitle} description={query ? "Search titles that are approved for FamilyFlix." : "Only titles approved for this catalog appear in browse results."} count={q.isLoading || q.isError ? undefined : shown.length} />
+    <div className="mx-auto w-full max-w-[1600px] px-4 pb-6 pt-2 sm:px-6 md:px-8 xl:px-12">
+      {!query && <GenreChips genres={allGenres} active={activeGenre} basePath={kind === "series" ? "/tv-shows" : "/movies"} />}
+      {q.isLoading ? <LoadingGrid /> : q.isError ? <ErrorBox message={errorText(q.error)} retry={() => q.refetch()} /> : shown.length ? <PosterGrid items={shown} /> : <Empty title={query ? "No matching approved titles" : "No approved titles yet"} icon={<Clapperboard size={20} />}>{query ? "Try another title, creator or category. Unreviewed items do not appear in search." : "Titles from unreviewed or torrent-only sources are not shown here. Approved titles will appear when their rights and playback sources are verified."}</Empty>}
+      <section className="notice" style={{ marginTop: 36 }} data-testid="status-rights-transparency"><ShieldCheck size={18} /><span><strong>Rights before play.</strong> FamilyFlix displays rights-holder and license details supplied and reviewed for each title. DemureGram does not claim ownership of third-party films.</span></section>
+    </div>
   </Shell>;
 }
 function SearchPage() {

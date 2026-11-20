@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "wouter";
 import { Play } from "lucide-react";
 
 import { PosterArt, WideArt } from "@/components/familyflix/art";

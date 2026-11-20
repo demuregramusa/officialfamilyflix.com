@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "wouter";
 import { Info, Play } from "lucide-react";
 
 import { BackdropArt } from "@/components/familyflix/art";
 import { MyListButton } from "@/components/familyflix/my-list-button";
-import { backdropUrl, type Title } from "@/lib/catalog";
+import { backdropUrl } from "@/lib/art-utils";
+import type { Title } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 
 export function Hero({ titles }: { titles: Title[] }) {

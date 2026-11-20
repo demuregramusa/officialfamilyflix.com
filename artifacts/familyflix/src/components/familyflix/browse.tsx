@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "wouter";
 
 import { PosterCard } from "@/components/familyflix/poster-card";
 import { type Title } from "@/lib/catalog";
