@@ -1,6 +1,239 @@
+import { lookup as dnsLookup } from "node:dns/promises";
+import { request as httpsRequest } from "node:https";
+import { isIP } from "node:net";
 import type { AssetKind, LicenseType, RightsInput } from "@workspace/api-zod";
 import type { RequestSession } from "./auth-middleware";
-import { mediaRights, type MediaRight } from "@workspace/db";
+import type { mediaRights, MediaRight } from "@workspace/db";
+
+const sourceProbeTimeoutMs = 5_000;
+const sourceDnsTimeoutMs = 3_000;
+const sourceRedirectLimit = 3;
+
+export interface MediaSourceProbeResponse {
+  status: number;
+  contentType: string | null;
+  location: string | null;
+}
+
+export interface MediaSourceProbeTransport {
+  resolve(hostname: string): Promise<string[]>;
+  request(url: URL, address: string): Promise<MediaSourceProbeResponse>;
+}
+
+function isPrivateOrReservedIpv4(address: string): boolean {
+  const parts = address.split(".").map(Number);
+  const [first, second, third] = parts;
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 100 && second! >= 64 && second! <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second! >= 16 && second! <= 31) ||
+    (first === 192 && second === 0 && third === 0) ||
+    (first === 192 && second === 0 && third === 2) ||
+    (first === 192 && second === 88 && third === 99) ||
+    (first === 192 && second === 168) ||
+    (first === 198 && (second === 18 || second === 19)) ||
+    (first === 198 && second === 51 && third === 100) ||
+    (first === 203 && second === 0 && third === 113) ||
+    first! >= 224
+  );
+}
+
+export function isPublicMediaSourceAddress(address: string): boolean {
+  const version = isIP(address);
+  if (version === 4) return !isPrivateOrReservedIpv4(address);
+  if (version === 6) {
+    let normalized = address.toLowerCase();
+    const embeddedIpv4 = normalized.match(/(\d+\.\d+\.\d+\.\d+)$/);
+    if (embeddedIpv4) {
+      const octets = embeddedIpv4[1]!.split(".").map(Number);
+      const high = ((octets[0]! << 8) | octets[1]!).toString(16);
+      const low = ((octets[2]! << 8) | octets[3]!).toString(16);
+      normalized = normalized.replace(embeddedIpv4[1]!, `${high}:${low}`);
+    }
+    const [left, right = ""] = normalized.split("::");
+    const leftGroups = left ? left.split(":") : [];
+    const rightGroups = right ? right.split(":") : [];
+    const zeroCount = 8 - leftGroups.length - rightGroups.length;
+    const groups = normalized.includes("::")
+      ? [...leftGroups, ...Array.from({ length: zeroCount }, () => "0"), ...rightGroups]
+      : leftGroups;
+    const firstGroup = Number.parseInt(groups[0] ?? "", 16);
+    const secondGroup = Number.parseInt(groups[1] ?? "", 16);
+    // Only accept global unicast addresses. This excludes loopback, link-local,
+    // unique-local, IPv4-mapped, and other non-public IPv6 ranges.
+    if (firstGroup < 0x2000 || firstGroup > 0x3fff) return false;
+    return !(
+      firstGroup === 0x2002 ||
+      (firstGroup === 0x2001 && [0x0000, 0x0002, 0x0010, 0x0020, 0x0db8].includes(secondGroup))
+    );
+  }
+  return false;
+}
+
+function validateDirectMediaSourceUrl(value: string, type: "mp4" | "hls"): URL | string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return "Enter a valid HTTPS media source URL.";
+  }
+  const hostname = url.hostname.replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, "");
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    (url.port && url.port !== "443") ||
+    !hostname ||
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal") ||
+    hostname.endsWith(".home.arpa") ||
+    hostname.endsWith(".test") ||
+    hostname.endsWith(".example") ||
+    hostname.endsWith(".invalid")
+  ) {
+    return "Playback sources must use public HTTPS addresses without credentials or custom ports.";
+  }
+  if (value.length > 2048) return "Playback source URLs cannot exceed 2,048 characters.";
+  if (!url.pathname.toLowerCase().endsWith(type === "hls" ? ".m3u8" : ".mp4")) {
+    return `The ${type.toUpperCase()} URL must end in .${type === "hls" ? "m3u8" : "mp4"}.`;
+  }
+  return url;
+}
+
+function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    operation.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+const defaultMediaSourceProbeTransport: MediaSourceProbeTransport = {
+  async resolve(hostname) {
+    if (isIP(hostname)) return [hostname];
+    const addresses = await withTimeout(
+      dnsLookup(hostname, { all: true, verbatim: true }),
+      sourceDnsTimeoutMs,
+      "The source host lookup timed out.",
+    );
+    return addresses.map(({ address }) => address);
+  },
+  request(url, address) {
+    return new Promise((resolve, reject) => {
+      const request = httpsRequest(
+        {
+          hostname: address,
+          servername: url.hostname.replace(/^\[|\]$/g, ""),
+          port: 443,
+          path: `${url.pathname}${url.search}`,
+          method: "GET",
+          agent: false,
+          headers: {
+            host: url.host,
+            range: "bytes=0-0",
+            accept: "video/mp4, application/vnd.apple.mpegurl, application/x-mpegURL",
+            "user-agent": "DemureGram-media-source-check/1.0",
+          },
+        },
+        (response) => {
+          const result = {
+            status: response.statusCode ?? 0,
+            contentType: typeof response.headers["content-type"] === "string"
+              ? response.headers["content-type"]
+              : null,
+            location: typeof response.headers.location === "string"
+              ? response.headers.location
+              : null,
+          };
+          response.destroy();
+          resolve(result);
+        },
+      );
+      request.setTimeout(sourceProbeTimeoutMs, () => {
+        request.destroy(new Error("The source response timed out."));
+      });
+      request.once("error", reject);
+      request.end();
+    });
+  },
+};
+
+export async function checkDirectMediaSource(
+  value: string,
+  type: "mp4" | "hls",
+  transport: MediaSourceProbeTransport = defaultMediaSourceProbeTransport,
+): Promise<string | null> {
+  let currentUrl = validateDirectMediaSourceUrl(value, type);
+  if (typeof currentUrl === "string") return currentUrl;
+
+  for (let redirectCount = 0; ; redirectCount += 1) {
+    const hostname = currentUrl.hostname.replace(/^\[|\]$/g, "");
+    let addresses: string[];
+    try {
+      addresses = await transport.resolve(hostname);
+    } catch {
+      return "The media source host could not be resolved.";
+    }
+    if (!addresses.length || addresses.some((address) => !isPublicMediaSourceAddress(address))) {
+      return "The media source must resolve only to public internet addresses.";
+    }
+
+    let result: MediaSourceProbeResponse;
+    try {
+      // Pin the request to a checked IP so a DNS change cannot redirect the
+      // connection to a private or link-local address after validation.
+      result = await transport.request(currentUrl, addresses[0]!);
+    } catch {
+      return "The media source could not be reached within the allowed time.";
+    }
+
+    if ([301, 302, 303, 307, 308].includes(result.status)) {
+      if (!result.location || redirectCount >= sourceRedirectLimit) {
+        return "The media source redirected too many times or omitted its redirect target.";
+      }
+      let redirectedUrl: URL;
+      try {
+        redirectedUrl = new URL(result.location, currentUrl);
+      } catch {
+        return "The media source returned an invalid redirect.";
+      }
+      const redirectValidation = validateDirectMediaSourceUrl(redirectedUrl.href, type);
+      if (typeof redirectValidation === "string") return "The media source redirected to an unsupported or unsafe URL.";
+      currentUrl = redirectValidation;
+      continue;
+    }
+
+    if (result.status < 200 || result.status >= 300) {
+      return `The media source returned HTTP ${result.status}.`;
+    }
+    const contentType = result.contentType?.split(";", 1)[0]?.trim().toLowerCase();
+    const validTypes = type === "mp4"
+      ? ["video/mp4"]
+      : [
+          "application/vnd.apple.mpegurl",
+          "application/x-mpegurl",
+          "audio/mpegurl",
+          "audio/x-mpegurl",
+        ];
+    if (!contentType || !validTypes.includes(contentType)) {
+      return `The media source did not return a supported ${type.toUpperCase()} media type.`;
+    }
+    return null;
+  }
+}
 
 const licenseToDb: Record<LicenseType, string> = {
   "cc-by-4.0": "cc_by_4_0",

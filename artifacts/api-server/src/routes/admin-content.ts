@@ -23,7 +23,12 @@ import {
 import type { TitleInput } from "@workspace/api-zod";
 import { requireCapability } from "../lib/auth-middleware";
 import { logAudit } from "../lib/audit";
-import { rightsFromDb, rightsToInsert, validateRightsInput } from "../lib/rights";
+import {
+  checkDirectMediaSource,
+  rightsFromDb,
+  rightsToInsert,
+  validateRightsInput,
+} from "../lib/rights";
 import { curatedPublicDomainTitles } from "../lib/curated-public-domain-titles";
 
 const router = Router();
@@ -248,6 +253,9 @@ function validateStreamUrl(value: string, type: "mp4" | "hls") {
   if (urlIssue) return urlIssue;
   const parsed = new URL(value);
   if (parsed.protocol !== "https:") return "Playback sources must use HTTPS.";
+  if (parsed.username || parsed.password || (parsed.port && parsed.port !== "443")) {
+    return "Playback sources cannot contain credentials or use a custom port.";
+  }
   if (!parsed.pathname.toLowerCase().endsWith(type === "hls" ? ".m3u8" : ".mp4")) {
     return `The ${type.toUpperCase()} URL must end in .${type === "hls" ? "m3u8" : "mp4"}.`;
   }
@@ -490,6 +498,41 @@ router.post("/admin/import", requireCapability("library.import"), async (request
       issues.push({ row: rowNumber, title: titleInput.name, message: "Add a main-video rights record." });
       skipped += 1;
       continue;
+    }
+    if (titleInput.stream) {
+      if (titleInput.stream.provider !== "manual") {
+        issues.push({
+          row: rowNumber,
+          title: titleInput.name,
+          message: "Import title metadata first, then attach Cloudflare Stream through the admin upload workflow.",
+        });
+        skipped += 1;
+        continue;
+      }
+      const streamSources = [
+        ...(titleInput.stream.hlsUrl ? [{ url: titleInput.stream.hlsUrl, type: "hls" as const }] : []),
+        ...(titleInput.stream.mp4Url ? [{ url: titleInput.stream.mp4Url, type: "mp4" as const }] : []),
+      ];
+      if (!streamSources.length) {
+        issues.push({
+          row: rowNumber,
+          title: titleInput.name,
+          message: "Add a direct MP4 or HLS source.",
+        });
+        skipped += 1;
+        continue;
+      }
+      let sourceIssue: string | null = null;
+      for (const source of streamSources) {
+        sourceIssue = validateStreamUrl(source.url, source.type);
+        if (!sourceIssue) sourceIssue = await checkDirectMediaSource(source.url, source.type);
+        if (sourceIssue) break;
+      }
+      if (sourceIssue) {
+        issues.push({ row: rowNumber, title: titleInput.name, message: sourceIssue });
+        skipped += 1;
+        continue;
+      }
     }
     const baseSlug = titleInput.name.normalize("NFKD").toLowerCase()
       .replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-")
