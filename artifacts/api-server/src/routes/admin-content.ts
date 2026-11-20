@@ -24,8 +24,17 @@ import type { TitleInput } from "@workspace/api-zod";
 import { requireCapability } from "../lib/auth-middleware";
 import { logAudit } from "../lib/audit";
 import { rightsFromDb, rightsToInsert, validateRightsInput } from "../lib/rights";
+import { curatedPublicDomainTitles } from "../lib/curated-public-domain-titles";
 
 const router = Router();
+
+router.get(
+  "/admin/import/public-domain-starter-pack",
+  requireCapability("library.import"),
+  (_request, response): void => {
+    response.json(curatedPublicDomainTitles.map((title) => CreateAdminTitleBody.parse(title)));
+  },
+);
 
 function jsonError(response: import("express").Response, message: string, status = 400) {
   response.status(status).json({ error: message });

@@ -1588,6 +1588,112 @@ export const GetAdminArchiveSourcesResponse = zod.array(GetAdminArchiveSourcesRe
 
 
 /**
+ * @summary Get administrator-only source-reviewed public-domain title inputs
+ */
+export const getCuratedPublicDomainTitlesResponseNameMax = 240;
+
+export const getCuratedPublicDomainTitlesResponseSynopsisMax = 10000;
+
+export const getCuratedPublicDomainTitlesResponseYearMin = 1880;
+export const getCuratedPublicDomainTitlesResponseYearMax = 2100;
+
+export const getCuratedPublicDomainTitlesResponseTaglineMax = 300;
+
+export const getCuratedPublicDomainTitlesResponseCreatorAttributionMax = 240;
+
+export const getCuratedPublicDomainTitlesResponseRatingMax = 20;
+
+export const getCuratedPublicDomainTitlesResponseDurationMinutesMax = 10000;
+
+export const getCuratedPublicDomainTitlesResponseGenresItemMax = 80;
+
+export const getCuratedPublicDomainTitlesResponseGenresMax = 12;
+
+export const getCuratedPublicDomainTitlesResponseCastItemMax = 160;
+
+export const getCuratedPublicDomainTitlesResponseCastMax = 40;
+
+export const getCuratedPublicDomainTitlesResponseFeaturedDefault = false;
+export const getCuratedPublicDomainTitlesResponsePosterUrlMax = 2048;
+
+export const getCuratedPublicDomainTitlesResponseBackdropUrlMax = 2048;
+
+export const getCuratedPublicDomainTitlesResponseStreamOneMp4UrlMax = 2048;
+
+export const getCuratedPublicDomainTitlesResponseStreamOneHlsUrlMax = 2048;
+
+export const getCuratedPublicDomainTitlesResponseStreamOnePlaybackIdMax = 240;
+
+export const getCuratedPublicDomainTitlesResponseStreamOneSignedPlaybackDefault = true;
+export const getCuratedPublicDomainTitlesResponseRightsItemAssetLabelMax = 160;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemAssetUrlMax = 2048;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemRightsHolderMax = 240;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemCreatorAttributionMax = 240;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemLicenseVersionMax = 40;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemLicenseUrlMax = 2048;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemUsageRestrictionsItemMax = 240;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemSourceUrlMax = 2048;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemEvidenceUrlMax = 2048;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemEvidenceNotesMax = 4000;
+
+export const getCuratedPublicDomainTitlesResponseRightsItemTerritoryMax = 160;
+
+
+
+
+export const GetCuratedPublicDomainTitlesResponseItem = zod.object({
+  "name": zod.string().min(1).max(getCuratedPublicDomainTitlesResponseNameMax),
+  "kind": zod.enum(['movie', 'series', 'live']),
+  "synopsis": zod.string().max(getCuratedPublicDomainTitlesResponseSynopsisMax),
+  "year": zod.number().int().min(getCuratedPublicDomainTitlesResponseYearMin).max(getCuratedPublicDomainTitlesResponseYearMax).nullish(),
+  "tagline": zod.string().max(getCuratedPublicDomainTitlesResponseTaglineMax).nullish(),
+  "creatorAttribution": zod.string().min(1).max(getCuratedPublicDomainTitlesResponseCreatorAttributionMax),
+  "rating": zod.string().max(getCuratedPublicDomainTitlesResponseRatingMax).nullish(),
+  "durationMinutes": zod.number().int().min(1).max(getCuratedPublicDomainTitlesResponseDurationMinutesMax).nullish(),
+  "genres": zod.array(zod.string().min(1).max(getCuratedPublicDomainTitlesResponseGenresItemMax)).max(getCuratedPublicDomainTitlesResponseGenresMax),
+  "cast": zod.array(zod.string().max(getCuratedPublicDomainTitlesResponseCastItemMax)).max(getCuratedPublicDomainTitlesResponseCastMax).optional(),
+  "featured": zod.boolean().default(getCuratedPublicDomainTitlesResponseFeaturedDefault),
+  "posterUrl": zod.string().url().max(getCuratedPublicDomainTitlesResponsePosterUrlMax).nullish(),
+  "backdropUrl": zod.string().url().max(getCuratedPublicDomainTitlesResponseBackdropUrlMax).nullish(),
+  "stream": zod.union([zod.object({
+  "provider": zod.enum(['manual', 'cloudflare']),
+  "mp4Url": zod.string().url().max(getCuratedPublicDomainTitlesResponseStreamOneMp4UrlMax).nullish(),
+  "hlsUrl": zod.string().url().max(getCuratedPublicDomainTitlesResponseStreamOneHlsUrlMax).nullish(),
+  "playbackId": zod.string().max(getCuratedPublicDomainTitlesResponseStreamOnePlaybackIdMax).nullish(),
+  "signedPlayback": zod.boolean().default(getCuratedPublicDomainTitlesResponseStreamOneSignedPlaybackDefault)
+}),zod.null()]).optional(),
+  "rights": zod.array(zod.object({
+  "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
+  "assetLabel": zod.string().min(1).max(getCuratedPublicDomainTitlesResponseRightsItemAssetLabelMax),
+  "assetUrl": zod.string().url().max(getCuratedPublicDomainTitlesResponseRightsItemAssetUrlMax),
+  "rightsHolder": zod.string().min(1).max(getCuratedPublicDomainTitlesResponseRightsItemRightsHolderMax),
+  "creatorAttribution": zod.string().min(1).max(getCuratedPublicDomainTitlesResponseRightsItemCreatorAttributionMax),
+  "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
+  "licenseVersion": zod.string().min(1).max(getCuratedPublicDomainTitlesResponseRightsItemLicenseVersionMax),
+  "licenseUrl": zod.string().url().max(getCuratedPublicDomainTitlesResponseRightsItemLicenseUrlMax),
+  "usageRestrictions": zod.array(zod.string().max(getCuratedPublicDomainTitlesResponseRightsItemUsageRestrictionsItemMax)),
+  "sourceUrl": zod.string().url().max(getCuratedPublicDomainTitlesResponseRightsItemSourceUrlMax),
+  "evidenceUrl": zod.string().url().max(getCuratedPublicDomainTitlesResponseRightsItemEvidenceUrlMax),
+  "evidenceNotes": zod.string().max(getCuratedPublicDomainTitlesResponseRightsItemEvidenceNotesMax).nullish(),
+  "territory": zod.string().max(getCuratedPublicDomainTitlesResponseRightsItemTerritoryMax).nullish(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "uploaderAttested": zod.literal(true)
+})).min(1),
+  "uploaderAttested": zod.literal(true)
+})
+export const GetCuratedPublicDomainTitlesResponse = zod.array(GetCuratedPublicDomainTitlesResponseItem)
+
+
+/**
  * @summary Attach an authorized direct stream
  */
 export const SetTitleStreamParams = zod.object({

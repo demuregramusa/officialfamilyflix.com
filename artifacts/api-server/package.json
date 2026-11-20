@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --disable-warning=ExperimentalWarning --test src/lib/copyright-notices.test.mjs src/lib/episode-eligibility.test.mjs src/lib/movie-archive-parser.test.mjs src/lib/movie-archive-policy.test.mjs"
+    "test": "node --disable-warning=ExperimentalWarning --test src/lib/copyright-notices.test.mjs src/lib/episode-eligibility.test.mjs src/lib/movie-archive-parser.test.mjs src/lib/movie-archive-policy.test.mjs src/lib/curated-public-domain-titles.test.mjs"
   },
   "dependencies": {
     "@workspace/api-zod": "workspace:*",

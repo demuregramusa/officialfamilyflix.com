@@ -6,6 +6,39 @@ loadable starter pack. This is a finding that the available evidence is
 insufficient—not a conclusion that the works are infringing or that all of
 their contents are protected.
 
+## Library of Congress titles prepared for dry-run import
+
+The following three individually checked item records are included in the
+administrator-only starter pack. Each LOC item record explicitly states that
+the contents of the *Before and After the Great Earthquake and Fire: Early
+Films of San Francisco, 1897 to 1916* collection are in the public domain and
+free to use and reuse. Each source labels the film as silent, identifies its
+date, and links to the digital viewing copy used below. The collection notice
+is the documented U.S. public-domain basis; FamilyFlix makes no claim about
+copyright status in other territories.
+
+The item records give this credit line:
+
+> Library of Congress, Motion Picture, Broadcasting, and Recorded Sound
+> Division, Before and After the Great Earthquake and Fire: Early Films of San
+> Francisco, 1897 to 1916 Collection.
+
+| Title | Item record and documented evidence | Direct HLS source | Rights and known limits |
+| --- | --- | --- | --- |
+| A trip down Market Street before the fire (1906) | [LOC item 00694408](https://www.loc.gov/item/00694408/). The record dates the film to 1906, credits Miles Brothers, classifies it as a silent film, and contains the collection-level public-domain/free-reuse statement. It says it was filmed April 14, 1906. | `https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00015143:00015143/full/full/0/full/default.m3u8` | U.S. status only. Use the LOC credit line. LOC advises users to assess separate privacy, publicity, trademark, and other rights. The source's exact audiovisual contents have not been independently audited by FamilyFlix. |
+| San Francisco earthquake and fire, April 18, 1906 | [LOC item 00694425](https://www.loc.gov/item/00694425/). The record dates the silent film to 1906, says it was photographed in San Francisco and Oakland in early May, and contains the collection-level public-domain/free-reuse statement. The record does not identify the filmmaker. | `https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00007947:00007947/full/full/0/full/default.m3u8` | U.S. status only. Use the LOC credit line. The item record warns that some title cards are sensationalized and that one family scene may have been staged; LOC also advises assessment of separate privacy, publicity, trademark, and other rights. |
+| TR in San Francisco, 1903 | [LOC item 00694419](https://www.loc.gov/item/00694419/). The record dates the silent film to 1903, describes Roosevelt's visit, and contains the collection-level public-domain/free-reuse statement. The filmmaker is not identified; LOC notes it may include footage from May 12 and May 13. | `https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:01877808:01877808/full/full/0/full/default.m3u8` | U.S. status only. Use the LOC credit line. LOC advises assessment of separate privacy, publicity, trademark, and other rights. |
+
+On 2026-11-20, each HLS master playlist and its 540p variant returned HTTP 200;
+the first media segment for each variant also returned HTTP 200 with a
+`video/MP2T` content type. The direct source URLs remain in the API server's
+curated manifest; the browser bundle contains only title, year, and LOC
+item-page links. The import screen fetches the full records through an
+administrator-authorized API route, prefills JSON, and resets to dry-run mode.
+Importing creates drafts with pending rights records. It does not approve or
+publish a title; an administrator must review the evidence and explicitly
+publish each title.
+
 ## Decision and review boundary
 
 The NASA item records identify NASA as the photographer, and the asset metadata

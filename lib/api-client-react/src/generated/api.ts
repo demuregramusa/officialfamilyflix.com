@@ -2736,6 +2736,107 @@ export function useGetAdminArchiveSources<TData = Awaited<ReturnType<typeof getA
 
 
 
+export const getGetCuratedPublicDomainTitlesUrl = () => {
+
+
+
+
+  return `/api/admin/import/public-domain-starter-pack`
+}
+
+/**
+ * @summary Get administrator-only source-reviewed public-domain title inputs
+ */
+export const getCuratedPublicDomainTitles = async ( options?: Parameters<typeof customFetch>[1]): Promise<TitleInput[]> => {
+
+  return customFetch<TitleInput[]>(getGetCuratedPublicDomainTitlesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCuratedPublicDomainTitlesQueryKey = () => {
+    return [
+    `/api/admin/import/public-domain-starter-pack`
+    ] as const;
+    }
+
+
+export const getGetCuratedPublicDomainTitlesQueryOptions = <TData = Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError = ErrorType<Error>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCuratedPublicDomainTitlesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>> = ({ signal }) => getCuratedPublicDomainTitles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCuratedPublicDomainTitlesQueryResult = NonNullable<Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>>
+export type GetCuratedPublicDomainTitlesQueryError = ErrorType<Error>
+
+
+export function useGetCuratedPublicDomainTitles<TData = Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError = ErrorType<Error>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>,
+          TError,
+          Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCuratedPublicDomainTitles<TData = Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError = ErrorType<Error>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>,
+          TError,
+          Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCuratedPublicDomainTitles<TData = Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError = ErrorType<Error>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get administrator-only source-reviewed public-domain title inputs
+ */
+
+export function useGetCuratedPublicDomainTitles<TData = Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError = ErrorType<Error>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCuratedPublicDomainTitles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetCuratedPublicDomainTitlesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getSetTitleStreamUrl = (id: string,) => {
 
 

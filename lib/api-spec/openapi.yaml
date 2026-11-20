@@ -664,6 +664,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admin/import/public-domain-starter-pack:
+    get:
+      operationId: getCuratedPublicDomainTitles
+      tags: [administration]
+      summary: Get administrator-only source-reviewed public-domain title inputs
+      responses:
+        "200":
+          description: Title inputs for the existing dry-run-first import flow
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TitleInput" }
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Administrator import capability required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /admin/titles/{id}/stream:
     put:
       operationId: setTitleStream
