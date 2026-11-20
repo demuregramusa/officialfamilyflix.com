@@ -611,6 +611,71 @@ export interface CaseDecision {
   recordRepeatInfringer?: boolean;
 }
 
+export type CopyrightNoticeType = typeof CopyrightNoticeType[keyof typeof CopyrightNoticeType];
+
+
+export const CopyrightNoticeType = {
+  receipt: 'receipt',
+  'status-update': 'status-update',
+  restriction: 'restriction',
+  'counter-notice-invitation': 'counter-notice-invitation',
+} as const;
+
+export interface CopyrightCaseCommunicationReview {
+  previewEventId: string;
+  noticeType: CopyrightNoticeType;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  note: string;
+  reviewed: true;
+}
+
+export interface CopyrightCaseCommunicationPreviewInput {
+  noticeType: CopyrightNoticeType;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  note: string;
+}
+
+export type CopyrightCaseCommunicationPreviewRecipientRole = typeof CopyrightCaseCommunicationPreviewRecipientRole[keyof typeof CopyrightCaseCommunicationPreviewRecipientRole];
+
+
+export const CopyrightCaseCommunicationPreviewRecipientRole = {
+  submitter: 'submitter',
+  uploader: 'uploader',
+} as const;
+
+export interface CopyrightCaseCommunicationPreview {
+  previewEventId: string;
+  noticeType: CopyrightNoticeType;
+  recipientRole: CopyrightCaseCommunicationPreviewRecipientRole;
+  recipientName: string;
+  maskedRecipientEmail: string;
+  subject: string;
+  text: string;
+  canDeliver: boolean;
+  blockReason: string;
+}
+
+export type CopyrightCaseCommunicationResultOutcome = typeof CopyrightCaseCommunicationResultOutcome[keyof typeof CopyrightCaseCommunicationResultOutcome];
+
+
+export const CopyrightCaseCommunicationResultOutcome = {
+  sent: 'sent',
+  failed: 'failed',
+} as const;
+
+export interface CopyrightCaseCommunicationResult {
+  caseId: string;
+  communicationEventId: string;
+  outcome: CopyrightCaseCommunicationResultOutcome;
+  message: string;
+}
+
 export interface RepeatInfringerInput {
   /**
      * @minLength 1

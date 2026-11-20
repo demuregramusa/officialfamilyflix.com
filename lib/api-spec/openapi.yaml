@@ -660,6 +660,81 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CopyrightCaseDetail"
+  /admin/copyright/cases/{id}/communications:
+    post:
+      operationId: sendCopyrightCaseCommunication
+      tags: [administration, copyright]
+      summary: Review and send a case-specific email notice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CopyrightCaseCommunicationReview"
+      responses:
+        "200":
+          description: Delivery outcome recorded in case history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyrightCaseCommunicationResult"
+  /admin/copyright/cases/{id}/communications/preview:
+    post:
+      operationId: previewCopyrightCaseCommunication
+      tags: [administration, copyright]
+      summary: Preview the reviewed recipient and case email before sending
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CopyrightCaseCommunicationPreviewInput"
+      responses:
+        "200":
+          description: Staff-only email preview with masked recipient address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyrightCaseCommunicationPreview"
+  /admin/copyright/cases/{id}/communications/{eventId}/retry:
+    post:
+      operationId: retryCopyrightCaseCommunication
+      tags: [administration, copyright]
+      summary: Retry a previously reviewed case email after delivery failure
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Retry outcome recorded in case history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyrightCaseCommunicationResult"
   /admin/repeat-infringers:
     get:
       operationId: listRepeatInfringers
@@ -1154,6 +1229,48 @@ components:
         decision: { type: string, enum: [acknowledge, request-info, restrict, remove, restore, reject, close] }
         note: { type: string, minLength: 1, maxLength: 4000 }
         recordRepeatInfringer: { type: boolean, default: false }
+    CopyrightCaseCommunicationReview:
+      type: object
+      required: [previewEventId, noticeType, note, reviewed]
+      properties:
+        previewEventId: { type: string, format: uuid }
+        noticeType:
+          $ref: "#/components/schemas/CopyrightNoticeType"
+        note: { type: string, minLength: 1, maxLength: 2000 }
+        reviewed:
+          type: boolean
+          enum: [true]
+    CopyrightCaseCommunicationPreviewInput:
+      type: object
+      required: [noticeType, note]
+      properties:
+        noticeType:
+          $ref: "#/components/schemas/CopyrightNoticeType"
+        note: { type: string, minLength: 1, maxLength: 2000 }
+    CopyrightNoticeType:
+      type: string
+      enum: [receipt, status-update, restriction, counter-notice-invitation]
+    CopyrightCaseCommunicationPreview:
+      type: object
+      required: [previewEventId, noticeType, recipientRole, recipientName, maskedRecipientEmail, subject, text, canDeliver, blockReason]
+      properties:
+        previewEventId: { type: string, format: uuid }
+        noticeType: { $ref: "#/components/schemas/CopyrightNoticeType" }
+        recipientRole: { type: string, enum: [submitter, uploader] }
+        recipientName: { type: string }
+        maskedRecipientEmail: { type: string }
+        subject: { type: string }
+        text: { type: string }
+        canDeliver: { type: boolean }
+        blockReason: { type: string }
+    CopyrightCaseCommunicationResult:
+      type: object
+      required: [caseId, communicationEventId, outcome, message]
+      properties:
+        caseId: { type: string, format: uuid }
+        communicationEventId: { type: string, format: uuid }
+        outcome: { type: string, enum: [sent, failed] }
+        message: { type: string }
     RepeatInfringerInput:
       type: object
       required: [userId, reason]

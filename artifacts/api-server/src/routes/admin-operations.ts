@@ -1,7 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { Router } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import {
+  PreviewCopyrightCaseCommunicationResponse,
+  SendCopyrightCaseCommunicationResponse,
+  RetryCopyrightCaseCommunicationParams,
+  PreviewCopyrightCaseCommunicationBody,
+  SendCopyrightCaseCommunicationBody,
+  SendCopyrightCaseCommunicationParams,
   CreateStaffBody,
   DecideCopyrightCaseBody,
   DecideCopyrightCaseParams,
@@ -29,6 +36,18 @@ import { auth } from "../auth";
 import { requireCapability } from "../lib/auth-middleware";
 import { logAudit } from "../lib/audit";
 import { isEvidenceComplete, isRightCurrent } from "../lib/rights";
+import {
+  buildCopyrightNotice,
+  canRetryNotice,
+  canRestoreRestrictedTitle,
+  deliverCopyrightEmail,
+  noticeRecipientRole,
+  matchesNoticePreview,
+  serializeCopyrightCaseEvent,
+  unavailableEmailTransport,
+  validateNoticeReview,
+  type CopyrightNoticeType,
+} from "../lib/copyright-notices";
 
 const router = Router();
 
@@ -127,13 +146,7 @@ router.get("/admin/copyright/cases/:id", requireCapability("copyright.manage"), 
   response.json({
     ...caseSummary(record),
     payload: record.payload,
-    events: events.map((event) => ({
-      id: event.id,
-      eventType: event.eventType,
-      actorName: event.actorName,
-      note: event.note,
-      createdAt: event.createdAt.toISOString(),
-    })),
+    events: events.map(serializeCopyrightCaseEvent),
   });
 });
 
@@ -191,8 +204,13 @@ router.post("/admin/copyright/cases/:id/decision", requireCapability("copyright.
       db.select().from(videoAssets).where(eq(videoAssets.movieId, record.movieId)).limit(1),
     ]);
     const main = rights.find((right) => right.assetKind === "main_video" && isRightCurrent(right));
-    if (!main || rights.some((right) => !isEvidenceComplete(right) || right.reviewStatus !== "approved") ||
-        !video[0] || video[0].status !== "ready" || video[0].mediaRightId !== main.id) {
+    if (!canRestoreRestrictedTitle({
+      hasCurrentMainRight: Boolean(main),
+      allRightsApprovedAndComplete: rights.every((right) =>
+        isEvidenceComplete(right) && right.reviewStatus === "approved"),
+      streamReady: Boolean(video[0] && video[0].status === "ready"),
+      streamMatchesMainRight: Boolean(main && video[0] && video[0].mediaRightId === main.id),
+    })) {
       response.status(409).json({ error: "Restore is blocked until every rights record is re-reviewed and the linked stream is ready." });
       return;
     }
@@ -255,13 +273,433 @@ router.post("/admin/copyright/cases/:id/decision", requireCapability("copyright.
   response.json({
     ...caseSummary(updated!),
     payload: updated!.payload,
-    events: events.map((event) => ({
-      id: event.id,
-      eventType: event.eventType,
-      actorName: event.actorName,
-      note: event.note,
-      createdAt: event.createdAt.toISOString(),
-    })),
+    events: events.map(serializeCopyrightCaseEvent),
+  });
+});
+
+function maskEmail(address: string) {
+  const [local, domain] = address.split("@");
+  if (!local || !domain) return "recipient unavailable";
+  return `${local.slice(0, 1)}***@${domain}`;
+}
+
+type NoticeRecipient = { email: string; name: string };
+type CounterNoticeLinkSnapshot = { url: string | undefined; errorCode: string | null };
+
+function isNoticeRecipient(value: unknown): value is NoticeRecipient {
+  return typeof value === "object" && value !== null &&
+    "email" in value && typeof value.email === "string" &&
+    "name" in value && typeof value.name === "string";
+}
+
+function isCounterNoticeLinkSnapshot(value: unknown): value is CounterNoticeLinkSnapshot {
+  return typeof value === "object" && value !== null &&
+    (!("url" in value) || typeof value.url === "string") &&
+    "errorCode" in value && (value.errorCode === null || typeof value.errorCode === "string");
+}
+
+async function resolveNoticeRecipient(
+  record: typeof copyrightCases.$inferSelect,
+  noticeType: CopyrightNoticeType,
+): Promise<{ recipient: NoticeRecipient; errorCode: string | null }> {
+  if (noticeRecipientRole(noticeType) === "submitter") {
+    return {
+      recipient: { email: record.reporterEmail, name: record.reporterName },
+      errorCode: null,
+    };
+  }
+  if (!record.movieId) {
+    return {
+      recipient: { email: "", name: "Uploader" },
+      errorCode: "uploader_not_linked",
+    };
+  }
+  const [right] = await db.select({ userId: mediaRights.uploaderId })
+    .from(mediaRights)
+    .where(and(eq(mediaRights.movieId, record.movieId), eq(mediaRights.assetKind, "main_video")))
+    .limit(1);
+  if (!right?.userId) {
+    return {
+      recipient: { email: "", name: "Uploader" },
+      errorCode: "uploader_not_identified",
+    };
+  }
+  const [uploader] = await db.select({ email: user.email, name: user.name })
+    .from(user)
+    .where(eq(user.id, right.userId))
+    .limit(1);
+  return uploader
+    ? { recipient: uploader, errorCode: null }
+    : {
+        recipient: { email: "", name: "Uploader" },
+        errorCode: "uploader_not_identified",
+      };
+}
+
+function resolveCounterNoticeLink(caseNumber: string, noticeType: CopyrightNoticeType) {
+  if (noticeType !== "counter-notice-invitation") {
+    return { url: undefined, errorCode: null as string | null, message: "" };
+  }
+  try {
+    const publicUrl = process.env.FAMILYFLIX_PUBLIC_URL;
+    if (!publicUrl) throw new Error("A public site URL has not been configured.");
+    const baseUrl = new URL(publicUrl);
+    if (baseUrl.protocol !== "https:") throw new Error("The public site URL must use HTTPS.");
+    return {
+      url: new URL(
+        `/familyflix/copyright/counter-notice/${encodeURIComponent(caseNumber)}`,
+        baseUrl,
+      ).toString(),
+      errorCode: null,
+      message: "",
+    };
+  } catch (error) {
+    return {
+      url: undefined,
+      errorCode: "public_site_url_invalid",
+      message: error instanceof Error ? error.message : "A valid public site URL is required.",
+    };
+  }
+}
+
+router.post("/admin/copyright/cases/:id/communications/preview", requireCapability("copyright.manage"), async (request, response) => {
+  const params = SendCopyrightCaseCommunicationParams.safeParse(request.params);
+  const parsed = PreviewCopyrightCaseCommunicationBody.safeParse(request.body);
+  if (!params.success || !parsed.success) {
+    response.status(400).json({ error: (!parsed.success && parsed.error.issues[0]?.message) || "Invalid communication preview." });
+    return;
+  }
+  const [record] = await db.select().from(copyrightCases)
+    .where(eq(copyrightCases.id, params.data.id)).limit(1);
+  if (!record) {
+    response.status(404).json({ error: "Copyright case not found." });
+    return;
+  }
+  const { noticeType, note } = parsed.data;
+  const reviewIssue = validateNoticeReview({
+    caseType: caseTypeToApi(record.caseType) as "copyright-report" | "counter-notice",
+    caseStatus: caseStatusToApi(record.status),
+    noticeType,
+    reviewed: true,
+  });
+  if (reviewIssue) {
+    response.status(409).json({ error: reviewIssue });
+    return;
+  }
+  const role = noticeRecipientRole(noticeType);
+  const { recipient, errorCode: recipientErrorCode } = await resolveNoticeRecipient(record, noticeType);
+  const { url: counterNoticeUrl, errorCode: linkError, message: linkMessage } =
+    resolveCounterNoticeLink(record.caseNumber, noticeType);
+  const previewEventId = randomUUID();
+  await db.insert(copyrightCaseEvents).values({
+    id: previewEventId,
+    caseId: record.id,
+    eventType: "copyright_notice_previewed",
+    actorUserId: response.locals.session.user.id,
+    actorName: response.locals.session.user.name,
+    note: `Staff previewed a ${noticeType} email for the ${role}.`,
+    detail: {
+      noticeType,
+      note,
+      recipientRole: role,
+      recipientSnapshot: recipient,
+      recipientErrorCode,
+      caseStatusAtPreview: caseStatusToApi(record.status),
+      counterNoticeLinkSnapshot: { url: counterNoticeUrl, errorCode: linkError },
+    },
+  });
+  const rendered = buildCopyrightNotice({
+    caseNumber: record.caseNumber,
+    caseStatus: caseStatusToApi(record.status),
+    caseType: caseTypeToApi(record.caseType) as "copyright-report" | "counter-notice",
+    noticeType,
+    note,
+    recipientName: recipient.name,
+    counterNoticeUrl,
+  });
+  response.json(PreviewCopyrightCaseCommunicationResponse.parse({
+    previewEventId,
+    noticeType,
+    recipientRole: role,
+    recipientName: recipient.name,
+    maskedRecipientEmail: maskEmail(recipient.email),
+    subject: rendered.subject,
+    text: rendered.text,
+    canDeliver: false,
+    blockReason: recipientErrorCode
+      ? "The uploader could not be identified from this case."
+      : linkError
+        ? linkMessage
+        : "No approved email provider and verified sender are configured.",
+  }));
+});
+
+async function deliverReviewedNotice(input: {
+  caseId: string;
+  caseNumber: string;
+  caseType: "copyright-report" | "counter-notice";
+  caseStatus: string;
+  noticeType: CopyrightNoticeType;
+  note: string;
+  reviewed: boolean;
+  communicationEventId: string;
+  attempt: number;
+  actorUserId: string;
+  actorName: string;
+  response: import("express").Response;
+  recipientSnapshot: NoticeRecipient;
+  recipientErrorCode?: string | null;
+  counterNoticeLinkSnapshot: { url: string | undefined; errorCode: string | null };
+}) {
+  const {
+    caseId, caseNumber, caseType, caseStatus, noticeType, note, reviewed, communicationEventId, attempt,
+    actorUserId, actorName, response, recipientSnapshot, recipientErrorCode,
+    counterNoticeLinkSnapshot,
+  } = input;
+  const reviewIssue = validateNoticeReview({ caseType, caseStatus, noticeType, reviewed });
+  if (reviewIssue) {
+    input.response.status(409).json({ error: reviewIssue });
+    return;
+  }
+
+  const recipient = recipientSnapshot;
+  const recipientRole = noticeRecipientRole(noticeType);
+  let errorCode: string | null = recipientErrorCode ?? null;
+  const link = counterNoticeLinkSnapshot;
+  if (link.errorCode) errorCode = link.errorCode;
+
+  const rendered = buildCopyrightNotice({
+    caseNumber,
+    caseStatus,
+    caseType,
+    noticeType,
+    note,
+    recipientName: recipient.name,
+    counterNoticeUrl: link.url,
+  });
+  const delivery = errorCode
+    ? { outcome: "failed" as const, errorCode }
+    : await deliverCopyrightEmail(unavailableEmailTransport, {
+        to: recipient.email,
+        ...rendered,
+        idempotencyKey: `${communicationEventId}:${attempt}`,
+      });
+
+  await db.insert(copyrightCaseEvents).values({
+    caseId,
+    eventType: delivery.outcome === "sent"
+      ? "copyright_notice_delivery_sent"
+      : "copyright_notice_delivery_failed",
+    actorUserId,
+    actorName,
+    note: delivery.outcome === "sent"
+      ? `Reviewed ${noticeType} email delivered on attempt ${attempt}.`
+      : `Reviewed ${noticeType} email delivery failed on attempt ${attempt}.`,
+    detail: {
+      communicationEventId,
+      noticeType,
+      recipientRole,
+      attempt,
+      outcome: delivery.outcome,
+      ...(delivery.outcome === "sent"
+        ? { providerMessageId: delivery.messageId }
+        : { errorCode: delivery.errorCode }),
+    },
+  });
+  await logAudit(
+    response.locals.session,
+    `copyright.case.notice.${delivery.outcome}`,
+    "copyright_case",
+    caseId,
+    { caseNumber, noticeType, recipientRole, attempt, errorCode: delivery.outcome === "failed" ? delivery.errorCode : undefined },
+  );
+  response.json(SendCopyrightCaseCommunicationResponse.parse({
+    caseId,
+    communicationEventId,
+    outcome: delivery.outcome,
+    message: delivery.outcome === "sent"
+      ? "The reviewed notice was delivered."
+      : delivery.errorCode === "sender_not_configured"
+        ? "Delivery failed: no approved email provider and verified sender are configured."
+        : delivery.errorCode === "uploader_not_linked" || delivery.errorCode === "uploader_not_identified"
+          ? "Delivery failed: the uploader could not be identified from this case."
+          : delivery.errorCode === "public_site_url_not_configured" || delivery.errorCode === "public_site_url_invalid"
+            ? "Delivery failed: a valid HTTPS FamilyFlix site URL is required for a counter-notice link."
+            : "Delivery failed. Check the sender configuration and retry this reviewed notice.",
+  }));
+}
+
+router.post("/admin/copyright/cases/:id/communications", requireCapability("copyright.manage"), async (request, response) => {
+  const params = SendCopyrightCaseCommunicationParams.safeParse(request.params);
+  const parsed = SendCopyrightCaseCommunicationBody.safeParse(request.body);
+  if (!params.success || !parsed.success) {
+    response.status(400).json({ error: (!parsed.success && parsed.error.issues[0]?.message) || "Invalid case communication." });
+    return;
+  }
+  const [record] = await db.select().from(copyrightCases)
+    .where(eq(copyrightCases.id, params.data.id)).limit(1);
+  if (!record) {
+    response.status(404).json({ error: "Copyright case not found." });
+    return;
+  }
+  const { noticeType, note, reviewed } = parsed.data;
+  const reviewIssue = validateNoticeReview({
+    caseType: caseTypeToApi(record.caseType) as "copyright-report" | "counter-notice",
+    caseStatus: record.status,
+    noticeType,
+    reviewed,
+  });
+  if (reviewIssue) {
+    response.status(409).json({ error: reviewIssue });
+    return;
+  }
+  const [preview] = await db.select().from(copyrightCaseEvents)
+    .where(and(
+      eq(copyrightCaseEvents.id, parsed.data.previewEventId),
+      eq(copyrightCaseEvents.caseId, record.id),
+      eq(copyrightCaseEvents.eventType, "copyright_notice_previewed"),
+    )).limit(1);
+  if (!preview || !matchesNoticePreview(preview, {
+    reviewerId: response.locals.session.user.id,
+    noticeType,
+    note,
+    caseStatus: caseStatusToApi(record.status),
+  })) {
+    response.status(409).json({ error: "Preview this exact message and recipient again before confirming delivery." });
+    return;
+  }
+  const recipientSnapshot = preview.detail.recipientSnapshot;
+  const counterNoticeLinkSnapshot = preview.detail.counterNoticeLinkSnapshot;
+  if (!isNoticeRecipient(recipientSnapshot) || !isCounterNoticeLinkSnapshot(counterNoticeLinkSnapshot)) {
+    response.status(409).json({ error: "The reviewed recipient or counter-notice link could not be verified." });
+    return;
+  }
+  const communicationEventId = randomUUID();
+  const role = noticeRecipientRole(noticeType);
+  const recipientErrorCode = typeof preview.detail.recipientErrorCode === "string"
+    ? preview.detail.recipientErrorCode
+    : null;
+  await db.insert(copyrightCaseEvents).values({
+    id: communicationEventId,
+    caseId: record.id,
+    eventType: "copyright_notice_reviewed",
+    actorUserId: response.locals.session.user.id,
+    actorName: response.locals.session.user.name,
+    note: `Staff reviewed a ${noticeType} email for the ${role}.`,
+    detail: {
+      noticeType,
+      note,
+      recipientRole: role,
+      recipientSnapshot,
+      recipientErrorCode,
+      caseStatusAtReview: caseStatusToApi(record.status),
+      counterNoticeLinkSnapshot,
+      reviewed: true,
+    },
+  });
+  await deliverReviewedNotice({
+    caseId: record.id,
+    caseNumber: record.caseNumber,
+    caseType: caseTypeToApi(record.caseType) as "copyright-report" | "counter-notice",
+    caseStatus: caseStatusToApi(record.status),
+    noticeType,
+    note,
+    reviewed,
+    communicationEventId,
+    attempt: 1,
+    actorUserId: response.locals.session.user.id,
+    actorName: response.locals.session.user.name,
+    response,
+    recipientSnapshot,
+    recipientErrorCode,
+    counterNoticeLinkSnapshot,
+  });
+});
+
+router.post("/admin/copyright/cases/:id/communications/:eventId/retry", requireCapability("copyright.manage"), async (request, response) => {
+  const params = RetryCopyrightCaseCommunicationParams.safeParse(request.params);
+  if (!params.success) {
+    response.status(400).json({ error: "Invalid communication event." });
+    return;
+  }
+  const [record] = await db.select().from(copyrightCases)
+    .where(eq(copyrightCases.id, params.data.id)).limit(1);
+  if (!record) {
+    response.status(404).json({ error: "Copyright case not found." });
+    return;
+  }
+  const [failedAttempt] = await db.select().from(copyrightCaseEvents)
+    .where(and(
+      eq(copyrightCaseEvents.id, params.data.eventId),
+      eq(copyrightCaseEvents.caseId, record.id),
+      eq(copyrightCaseEvents.eventType, "copyright_notice_delivery_failed"),
+    )).limit(1);
+  if (!failedAttempt) {
+    response.status(404).json({ error: "A failed notice attempt for this case was not found." });
+    return;
+  }
+  const communicationEventId = String(failedAttempt.detail.communicationEventId ?? "");
+  const [review] = await db.select().from(copyrightCaseEvents)
+    .where(and(
+      eq(copyrightCaseEvents.id, communicationEventId),
+      eq(copyrightCaseEvents.caseId, record.id),
+      eq(copyrightCaseEvents.eventType, "copyright_notice_reviewed"),
+    )).limit(1);
+  if (!review || review.detail.reviewed !== true) {
+    response.status(409).json({ error: "The original reviewed communication could not be verified." });
+    return;
+  }
+  const noticeType = String(review.detail.noticeType) as CopyrightNoticeType;
+  if (
+    (noticeType === "restriction" || noticeType === "counter-notice-invitation") &&
+    (record.caseType !== "copyright_report" || record.status !== "restricted")
+  ) {
+    response.status(409).json({ error: "Uploader notices can only be retried while the copyright report remains restricted." });
+    return;
+  }
+  const recipientSnapshot = review.detail.recipientSnapshot;
+  if (!isNoticeRecipient(recipientSnapshot)) {
+    response.status(409).json({ error: "The original reviewed recipient could not be verified." });
+    return;
+  }
+  const allAttempts = await db.select().from(copyrightCaseEvents)
+    .where(eq(copyrightCaseEvents.caseId, record.id));
+  const communicationAttempts = allAttempts
+    .filter((event) =>
+      ["copyright_notice_delivery_failed", "copyright_notice_delivery_sent"].includes(event.eventType) &&
+      String(event.detail.communicationEventId ?? "") === communicationEventId
+    )
+    .sort((a, b) => Number(b.detail.attempt ?? 0) - Number(a.detail.attempt ?? 0));
+  if (communicationAttempts[0]?.id !== failedAttempt.id) {
+    response.status(409).json({ error: "Retry the most recent failed delivery attempt." });
+    return;
+  }
+  const latestOutcome = communicationAttempts[0]?.eventType === "copyright_notice_delivery_sent" ? "sent" : "failed";
+  if (!canRetryNotice({ attempts: communicationAttempts.length, latestOutcome })) {
+    if (latestOutcome === "sent") {
+    response.status(409).json({ error: "This notice was already delivered." });
+    return;
+    }
+    response.status(409).json({ error: "This notice has reached its retry limit." });
+    return;
+  }
+  const note = String(review.detail.note ?? "");
+  await deliverReviewedNotice({
+    caseId: record.id,
+    caseNumber: record.caseNumber,
+    caseType: caseTypeToApi(record.caseType) as "copyright-report" | "counter-notice",
+    caseStatus: String(review.detail.caseStatusAtReview ?? caseStatusToApi(record.status)),
+    noticeType,
+    note,
+    reviewed: review.detail.reviewed === true,
+    communicationEventId,
+    attempt: communicationAttempts.length + 1,
+    actorUserId: response.locals.session.user.id,
+    actorName: response.locals.session.user.name,
+    response,
+    recipientSnapshot: recipientSnapshot as NoticeRecipient,
+    recipientErrorCode: typeof review.detail.recipientErrorCode === "string" ? review.detail.recipientErrorCode : null,
+    counterNoticeLinkSnapshot: review.detail.counterNoticeLinkSnapshot as { url: string | undefined; errorCode: string | null },
   });
 });
 

@@ -1556,6 +1556,77 @@ export const DecideCopyrightCaseResponse = zod.object({
 
 
 /**
+ * @summary Review and send a case-specific email notice
+ */
+export const SendCopyrightCaseCommunicationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const sendCopyrightCaseCommunicationBodyNoteMax = 2000;
+
+
+
+export const SendCopyrightCaseCommunicationBody = zod.object({
+  "previewEventId": zod.string().uuid(),
+  "noticeType": zod.enum(['receipt', 'status-update', 'restriction', 'counter-notice-invitation']),
+  "note": zod.string().min(1).max(sendCopyrightCaseCommunicationBodyNoteMax),
+  "reviewed": zod.literal(true)
+})
+
+export const SendCopyrightCaseCommunicationResponse = zod.object({
+  "caseId": zod.string().uuid(),
+  "communicationEventId": zod.string().uuid(),
+  "outcome": zod.enum(['sent', 'failed']),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Preview the reviewed recipient and case email before sending
+ */
+export const PreviewCopyrightCaseCommunicationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const previewCopyrightCaseCommunicationBodyNoteMax = 2000;
+
+
+
+export const PreviewCopyrightCaseCommunicationBody = zod.object({
+  "noticeType": zod.enum(['receipt', 'status-update', 'restriction', 'counter-notice-invitation']),
+  "note": zod.string().min(1).max(previewCopyrightCaseCommunicationBodyNoteMax)
+})
+
+export const PreviewCopyrightCaseCommunicationResponse = zod.object({
+  "previewEventId": zod.string().uuid(),
+  "noticeType": zod.enum(['receipt', 'status-update', 'restriction', 'counter-notice-invitation']),
+  "recipientRole": zod.enum(['submitter', 'uploader']),
+  "recipientName": zod.string(),
+  "maskedRecipientEmail": zod.string(),
+  "subject": zod.string(),
+  "text": zod.string(),
+  "canDeliver": zod.boolean(),
+  "blockReason": zod.string()
+})
+
+
+/**
+ * @summary Retry a previously reviewed case email after delivery failure
+ */
+export const RetryCopyrightCaseCommunicationParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const RetryCopyrightCaseCommunicationResponse = zod.object({
+  "caseId": zod.string().uuid(),
+  "communicationEventId": zod.string().uuid(),
+  "outcome": zod.enum(['sent', 'failed']),
+  "message": zod.string()
+})
+
+
+/**
  * @summary List repeat-infringer records
  */
 export const listRepeatInfringersResponseOneUserIdMax = 240;

@@ -20,6 +20,8 @@ import {
   useListCopyrightCases, useListPublicTitles, useListRepeatInfringers,
   useListStaff, useListTitleRightsAssets, useListTitleSubtitles,
   usePublishAdminTitle, useRecordRepeatInfringer, useReviewTitleRights, useSaveUserPreferences,
+  usePreviewCopyrightCaseCommunication, useRetryCopyrightCaseCommunication,
+  useSendCopyrightCaseCommunication,
   useSetTitleStream, useSubmitCopyrightReport, useSubmitCounterNotice,
   useSyncCloudflareStream, useUpdateAdminSettings, useUpdateAdminTitle,
   useUpdateStaff, getGetAdminDashboardQueryKey, getGetAdminSettingsQueryKey,
@@ -35,6 +37,7 @@ import {
   ReviewDecisionDecision, StaffInputRole, StaffUpdateRole, TitleKind,
 } from "@workspace/api-client-react";
 import type {
+  CopyrightCaseCommunicationPreview, CopyrightCaseCommunicationReview,
   PublicTitle, PublicTitleDetail, RightsInput,
 } from "@workspace/api-client-react";
 import { authClient } from "./lib/auth-client";
@@ -483,14 +486,91 @@ function CopyrightCases() {
   </div></Shell>;
 }
 function CopyrightCaseDetail({id}:{id:string}) {
-  const qc=useQueryClient(); const q=useGetCopyrightCase(id,{query:{enabled:!!id,queryKey:getGetCopyrightCaseQueryKey(id)}}); const decide=useDecideCopyrightCase(); const [message,setMessage]=useState("");
+  const qc=useQueryClient();
+  const q=useGetCopyrightCase(id,{query:{enabled:!!id,queryKey:getGetCopyrightCaseQueryKey(id)}});
+  const decide=useDecideCopyrightCase();
+  const previewNotice=usePreviewCopyrightCaseCommunication();
+  const sendNotice=useSendCopyrightCaseCommunication();
+  const retryNotice=useRetryCopyrightCaseCommunication();
+  const [message,setMessage]=useState("");
+  const [noticeResult,setNoticeResult]=useState("");
+  const [noticeNote,setNoticeNote]=useState("");
+  const [noticePreview,setNoticePreview]=useState<CopyrightCaseCommunicationPreview|null>(null);
+  const [noticeType,setNoticeType]=useState<CopyrightCaseCommunicationReview["noticeType"]>("receipt");
+  const [noticeReviewed,setNoticeReviewed]=useState(false);
   if(q.isLoading)return <Shell admin><div className="skeleton" style={{height:260}}/></Shell>;
   if(q.isError||!q.data)return <Shell admin><div><Heading eyebrow="Studio / copyright" title="Case review"/><ErrorBox message={q.isError?errorText(q.error):"Case not found."} retry={()=>q.refetch()}/></div></Shell>;
   const c=q.data;
   function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);decide.mutate({id,data:{decision:String(f.get("decision")) as import("@workspace/api-client-react").CaseDecision["decision"],note:String(f.get("note")),recordRepeatInfringer:f.get("recordRepeat")==="on"}},{onSuccess:()=>{qc.invalidateQueries({queryKey:getGetCopyrightCaseQueryKey(id)});qc.invalidateQueries({queryKey:getListCopyrightCasesQueryKey()});qc.invalidateQueries({queryKey:getGetAdminDashboardQueryKey()});setMessage("Decision and case history recorded.");},onError:e=>setMessage(errorText(e))});}
+  function sendCommunication(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();
+    if(!noticePreview||!noticeReviewed){
+      setNoticeResult("Preview the complete message and confirm your review before delivery.");
+      return;
+    }
+    sendNotice.mutate({id,data:{previewEventId:noticePreview.previewEventId,noticeType,note:noticeNote,reviewed:true}},{
+      onSuccess:r=>{
+        setNoticeResult(r.message);
+        setNoticeReviewed(false);
+        qc.invalidateQueries({queryKey:getGetCopyrightCaseQueryKey(id)});
+      },
+      onError:e=>setNoticeResult(errorText(e)),
+    });
+  }
+  function previewCommunication(){
+    setNoticeReviewed(false);
+    setNoticeResult("");
+    setNoticePreview(null);
+    previewNotice.mutate({id,data:{noticeType,note:noticeNote}},{
+      onSuccess:r=>setNoticePreview(r),
+      onError:e=>setNoticeResult(errorText(e)),
+    });
+  }
+  function changeNoticeType(value:CopyrightCaseCommunicationReview["noticeType"]){
+    setNoticeType(value);
+    setNoticeReviewed(false);
+    setNoticePreview(null);
+  }
+  function changeNoticeNote(value:string){
+    setNoticeNote(value);
+    setNoticeReviewed(false);
+    setNoticePreview(null);
+  }
+  function retryCommunication(eventId:string){
+    retryNotice.mutate({id,eventId},{
+      onSuccess:r=>{
+        setNoticeResult(r.message);
+        qc.invalidateQueries({queryKey:getGetCopyrightCaseQueryKey(id)});
+      },
+      onError:e=>setNoticeResult(errorText(e)),
+    });
+  }
+  const noticeRecipient = noticeType==="restriction"||noticeType==="counter-notice-invitation" ? "the recorded uploader" : "the case submitter";
+  const counterInviteAvailable=c.caseType==="copyright-report"&&c.status==="restricted";
   return <Shell admin><div><Heading eyebrow={`Studio / case ${c.caseNumber}`} title="Case history" description={`${c.caseType==="copyright-report"?"Copyright report":"Counter-notice"} · Submitted ${stamp(c.submittedAt)}`} />
-     <div className="panel"><div className="feature-line"><span className={`status ${c.status==="closed"||c.status==="resolved"?"good":"warn"}`} data-testid="status-case-detail">{c.status}</span><span>Reporter: {c.reporterName}</span></div><h2 style={{marginTop:16}}>{c.summary}</h2><div className="helper wrap">Reporter email: {c.reporterEmail}</div>{c.caseType==="copyright-report"&&<div className="notice" style={{marginTop:16}}><Info size={17}/><span>For a counter-notice, send the case-specific form through your approved communication process. This app does not send case emails.</span><Link href={`/copyright/counter-notice/${encodeURIComponent(c.caseNumber)}`} className="button-secondary" data-testid="link-admin-counter-notice">Open counter-notice form</Link></div>}<details style={{marginTop:18}}><summary className="helper" style={{cursor:"pointer"}}>Submitted details (sensitive)</summary><pre className="helper wrap" style={{whiteSpace:"pre-wrap"}}>{JSON.stringify(c.payload,null,2)}</pre></details></div>
-    <div className="panel"><h2>Event history</h2>{c.events?.length?c.events.map(ev=><div className="rights-row" key={ev.id} data-testid={`row-case-event-${ev.id}`}><div><strong>{ev.eventType}</strong><p>{ev.note}</p></div><div className="helper">{ev.actorName}<br/>{stamp(ev.createdAt)}</div></div>):<Empty title="No recorded events">Case decisions and communications will be captured here.</Empty>}</div>
+     <div className="panel"><div className="feature-line"><span className={`status ${c.status==="closed"||c.status==="resolved"?"good":"warn"}`} data-testid="status-case-detail">{c.status}</span><span>Reporter: {c.reporterName}</span></div><h2 style={{marginTop:16}}>{c.summary}</h2><div className="helper wrap">Reporter email: {c.reporterEmail}</div>{c.caseType==="copyright-report"&&<div className="notice" style={{marginTop:16}}><Info size={17}/><span>A counter-notice link is available only through a reviewed communication for a restricted case. A submitted counter-notice never restores content automatically.</span></div>}<details style={{marginTop:18}}><summary className="helper" style={{cursor:"pointer"}}>Submitted details (sensitive)</summary><pre className="helper wrap" style={{whiteSpace:"pre-wrap"}}>{JSON.stringify(c.payload,null,2)}</pre></details></div>
+    <div className="panel">
+      <h2>Case email communication</h2>
+      <div className="notice" style={{marginBottom:16}}><Info size={17}/><span>No approved email provider and verified sender are connected. Delivery attempts will be recorded as failed until an approved sender is configured.</span></div>
+      <form onSubmit={sendCommunication}>
+        <div className="field-grid">
+          <div className="field"><label htmlFor="case-notice-type">Notice type</label><select id="case-notice-type" value={noticeType} onChange={e=>changeNoticeType(e.target.value as CopyrightCaseCommunicationReview["noticeType"])} data-testid="input-case-notice-type">
+            <option value="receipt">Receipt to submitter</option>
+            <option value="status-update">Status update to submitter</option>
+            <option value="restriction" disabled={!counterInviteAvailable}>Restriction notice to uploader</option>
+            <option value="counter-notice-invitation" disabled={!counterInviteAvailable}>Counter-notice link to uploader</option>
+          </select></div>
+          <div className="field full"><label htmlFor="case-communication-note">Message note</label><textarea id="case-communication-note" value={noticeNote} onChange={e=>changeNoticeNote(e.target.value)} required minLength={1} maxLength={2000} data-testid="input-case-communication-note" placeholder="Enter the case-specific explanation staff reviewed." /></div>
+          <label className="field full helper"><span><input type="checkbox" checked={noticeReviewed} onChange={e=>setNoticeReviewed(e.target.checked)} required disabled={!noticePreview} data-testid="input-case-communication-reviewed"/> I reviewed the case, recipient, complete message, and any counter-notice link before attempting delivery.</span></label>
+        </div>
+        <p className="helper" style={{marginTop:12}}>This notice will go to {noticeRecipient}. The recipient address is resolved from the case submitter or the title’s recorded uploader, never entered manually.</p>
+        {noticeType==="counter-notice-invitation"&&<p className="helper" data-testid="status-counter-link-gate">The case-specific counter-notice link is included only in this reviewed communication. Sending it does not restore restricted content.</p>}
+        {noticePreview&&<div className="panel" style={{marginTop:16}} data-testid="panel-case-communication-preview"><h3>Email preview</h3><p><strong>To:</strong> {noticePreview.recipientName} ({noticePreview.maskedRecipientEmail}; {noticePreview.recipientRole})</p><p><strong>Subject:</strong> {noticePreview.subject}</p><pre className="helper wrap" style={{whiteSpace:"pre-wrap"}}>{noticePreview.text}</pre><p className="helper">{noticePreview.canDeliver?"Sender is ready.":"Delivery is blocked: "+noticePreview.blockReason}</p></div>}
+        {noticeResult&&<p className="form-message" role="status" data-testid="status-case-communication">{noticeResult}</p>}
+        <div className="form-actions"><button className="button-secondary" type="button" onClick={previewCommunication} disabled={previewNotice.isPending||!noticeNote.trim()} data-testid="button-preview-case-communication">{previewNotice.isPending?"Preparing preview…":"Preview email"}</button><button className="button" disabled={sendNotice.isPending||!noticeReviewed} data-testid="button-send-case-communication">{sendNotice.isPending?"Recording…":"Confirm review and attempt delivery"}</button></div>
+      </form>
+    </div>
+    <div className="panel"><h2>Event history</h2>{c.events?.length?c.events.map(ev=><div className="rights-row" key={ev.id} data-testid={`row-case-event-${ev.id}`}><div><strong>{ev.eventType}</strong><p>{ev.note}</p>{ev.eventType==="copyright_notice_delivery_failed"&&<button className="button-secondary" type="button" onClick={()=>retryCommunication(ev.id)} disabled={retryNotice.isPending} data-testid={`button-retry-case-communication-${ev.id}`}>Retry reviewed email</button>}</div><div className="helper">{ev.actorName}<br/>{stamp(ev.createdAt)}</div></div>):<Empty title="No recorded events">Case decisions and communications will be captured here.</Empty>}</div>
     <form className="panel" onSubmit={submit}><h2>Record a decision</h2><div className="field-grid"><div className="field"><label>Decision</label><select name="decision" data-testid="input-case-decision">{["acknowledge","request-info","restrict","remove","restore","reject","close"].map(x=><option key={x}>{x}</option>)}</select></div><div className="field"><label>Reviewer note</label><textarea name="note" required maxLength={4000} data-testid="input-case-note"/></div><label className="field full helper"><span><input type="checkbox" name="recordRepeat" data-testid="input-case-repeat-infringer"/> Record a repeat-infringer strike only if independently confirmed and appropriate.</span></label></div>{message&&<p className="form-message success" data-testid="status-case-decision">{message}</p>}<div className="form-actions"><button className="button" disabled={decide.isPending} data-testid="button-decide-case">{decide.isPending?"Saving…":"Save decision"}</button><Link href="/admin/copyright" className="button-secondary">Back to cases</Link></div></form>
   </div></Shell>;
 }

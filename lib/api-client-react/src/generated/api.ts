@@ -33,6 +33,10 @@ import type {
   CaseDecision,
   CaseReceipt,
   CopyrightCase,
+  CopyrightCaseCommunicationPreview,
+  CopyrightCaseCommunicationPreviewInput,
+  CopyrightCaseCommunicationResult,
+  CopyrightCaseCommunicationReview,
   CopyrightCaseDetail,
   CopyrightReportInput,
   CounterNoticeInput,
@@ -2772,6 +2776,260 @@ export const useDecideCopyrightCase = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDecideCopyrightCaseMutationOptions(options), queryClient);
+    }
+
+export const getSendCopyrightCaseCommunicationUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/copyright/cases/${id}/communications`
+}
+
+/**
+ * @summary Review and send a case-specific email notice
+ */
+export const sendCopyrightCaseCommunication = async (id: string,
+    copyrightCaseCommunicationReview: CopyrightCaseCommunicationReview, options?: Parameters<typeof customFetch>[1]): Promise<CopyrightCaseCommunicationResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CopyrightCaseCommunicationResult>(getSendCopyrightCaseCommunicationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(copyrightCaseCommunicationReview)
+  }
+);}
+
+
+
+
+
+export const getSendCopyrightCaseCommunicationMutationKey = () => ['sendCopyrightCaseCommunication'] as const;
+
+export const getSendCopyrightCaseCommunicationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendCopyrightCaseCommunication>>, TError,SendCopyrightCaseCommunicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendCopyrightCaseCommunication>>, TError,SendCopyrightCaseCommunicationMutationVariables, TContext> => {
+
+const mutationKey = getSendCopyrightCaseCommunicationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendCopyrightCaseCommunication>>, SendCopyrightCaseCommunicationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  sendCopyrightCaseCommunication(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendCopyrightCaseCommunicationMutationResult = NonNullable<Awaited<ReturnType<typeof sendCopyrightCaseCommunication>>>
+    export type SendCopyrightCaseCommunicationMutationBody = BodyType<CopyrightCaseCommunicationReview>
+    export type SendCopyrightCaseCommunicationMutationError = ErrorType<unknown>
+    export type SendCopyrightCaseCommunicationMutationVariables = {id: string;data: BodyType<CopyrightCaseCommunicationReview>}
+
+    /**
+ * @summary Review and send a case-specific email notice
+ */
+export const useSendCopyrightCaseCommunication = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendCopyrightCaseCommunication>>, TError,SendCopyrightCaseCommunicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof sendCopyrightCaseCommunication>>,
+        TError,
+        SendCopyrightCaseCommunicationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSendCopyrightCaseCommunicationMutationOptions(options), queryClient);
+    }
+
+export const getPreviewCopyrightCaseCommunicationUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/copyright/cases/${id}/communications/preview`
+}
+
+/**
+ * @summary Preview the reviewed recipient and case email before sending
+ */
+export const previewCopyrightCaseCommunication = async (id: string,
+    copyrightCaseCommunicationPreviewInput: CopyrightCaseCommunicationPreviewInput, options?: Parameters<typeof customFetch>[1]): Promise<CopyrightCaseCommunicationPreview> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CopyrightCaseCommunicationPreview>(getPreviewCopyrightCaseCommunicationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(copyrightCaseCommunicationPreviewInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewCopyrightCaseCommunicationMutationKey = () => ['previewCopyrightCaseCommunication'] as const;
+
+export const getPreviewCopyrightCaseCommunicationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewCopyrightCaseCommunication>>, TError,PreviewCopyrightCaseCommunicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewCopyrightCaseCommunication>>, TError,PreviewCopyrightCaseCommunicationMutationVariables, TContext> => {
+
+const mutationKey = getPreviewCopyrightCaseCommunicationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewCopyrightCaseCommunication>>, PreviewCopyrightCaseCommunicationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  previewCopyrightCaseCommunication(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewCopyrightCaseCommunicationMutationResult = NonNullable<Awaited<ReturnType<typeof previewCopyrightCaseCommunication>>>
+    export type PreviewCopyrightCaseCommunicationMutationBody = BodyType<CopyrightCaseCommunicationPreviewInput>
+    export type PreviewCopyrightCaseCommunicationMutationError = ErrorType<unknown>
+    export type PreviewCopyrightCaseCommunicationMutationVariables = {id: string;data: BodyType<CopyrightCaseCommunicationPreviewInput>}
+
+    /**
+ * @summary Preview the reviewed recipient and case email before sending
+ */
+export const usePreviewCopyrightCaseCommunication = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewCopyrightCaseCommunication>>, TError,PreviewCopyrightCaseCommunicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof previewCopyrightCaseCommunication>>,
+        TError,
+        PreviewCopyrightCaseCommunicationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewCopyrightCaseCommunicationMutationOptions(options), queryClient);
+    }
+
+export const getRetryCopyrightCaseCommunicationUrl = (id: string,
+    eventId: string,) => {
+
+
+
+
+  return `/api/admin/copyright/cases/${id}/communications/${eventId}/retry`
+}
+
+/**
+ * @summary Retry a previously reviewed case email after delivery failure
+ */
+export const retryCopyrightCaseCommunication = async (id: string,
+    eventId: string, options?: Parameters<typeof customFetch>[1]): Promise<CopyrightCaseCommunicationResult> => {
+
+  return customFetch<CopyrightCaseCommunicationResult>(getRetryCopyrightCaseCommunicationUrl(id,eventId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRetryCopyrightCaseCommunicationMutationKey = () => ['retryCopyrightCaseCommunication'] as const;
+
+export const getRetryCopyrightCaseCommunicationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryCopyrightCaseCommunication>>, TError,RetryCopyrightCaseCommunicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof retryCopyrightCaseCommunication>>, TError,RetryCopyrightCaseCommunicationMutationVariables, TContext> => {
+
+const mutationKey = getRetryCopyrightCaseCommunicationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retryCopyrightCaseCommunication>>, RetryCopyrightCaseCommunicationMutationVariables> = (props) => {
+          const {id,eventId} = props ?? {};
+
+          return  retryCopyrightCaseCommunication(id,eventId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetryCopyrightCaseCommunicationMutationResult = NonNullable<Awaited<ReturnType<typeof retryCopyrightCaseCommunication>>>
+
+    export type RetryCopyrightCaseCommunicationMutationError = ErrorType<unknown>
+    export type RetryCopyrightCaseCommunicationMutationVariables = {id: string;eventId: string}
+
+    /**
+ * @summary Retry a previously reviewed case email after delivery failure
+ */
+export const useRetryCopyrightCaseCommunication = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryCopyrightCaseCommunication>>, TError,RetryCopyrightCaseCommunicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof retryCopyrightCaseCommunication>>,
+        TError,
+        RetryCopyrightCaseCommunicationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRetryCopyrightCaseCommunicationMutationOptions(options), queryClient);
     }
 
 export const getListRepeatInfringersUrl = () => {
