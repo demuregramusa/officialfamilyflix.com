@@ -1,9 +1,10 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import {
   bigint,
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -123,11 +124,51 @@ export const movies = pgTable(
   ],
 );
 
+export const seriesSeasons = pgTable(
+  "series_seasons",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    movieId: uuid("movie_id").notNull().references(() => movies.id, { onDelete: "cascade" }),
+    seasonNumber: integer("season_number").notNull(),
+    name: text("name"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("series_seasons_title_number_unique").on(table.movieId, table.seasonNumber),
+    check("series_seasons_number_positive", sql`${table.seasonNumber} > 0`),
+  ],
+);
+
+export const seriesEpisodes = pgTable(
+  "series_episodes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    seasonId: uuid("season_id").notNull().references(() => seriesSeasons.id, { onDelete: "cascade" }),
+    episodeNumber: integer("episode_number").notNull(),
+    name: text("name").notNull(),
+    synopsis: text("synopsis").notNull().default(""),
+    durationMinutes: integer("duration_minutes"),
+    status: movieStatus("status").notNull().default("draft"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("series_episodes_season_number_unique").on(table.seasonId, table.episodeNumber),
+    index("series_episodes_status_idx").on(table.status),
+    check("series_episodes_number_positive", sql`${table.episodeNumber} > 0`),
+    check("series_episodes_duration_positive", sql`${table.durationMinutes} is null or ${table.durationMinutes} > 0`),
+  ],
+);
+
 export const mediaRights = pgTable(
   "media_rights",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     movieId: uuid("movie_id").references(() => movies.id, { onDelete: "cascade" }),
+    episodeId: uuid("episode_id").references(() => seriesEpisodes.id, { onDelete: "cascade" }),
     assetKind: mediaAssetKind("asset_kind").notNull(),
     assetLabel: text("asset_label").notNull(),
     assetUrl: text("asset_url").notNull(),
@@ -154,8 +195,10 @@ export const mediaRights = pgTable(
   },
   (table) => [
     index("media_rights_movie_idx").on(table.movieId),
+    index("media_rights_episode_idx").on(table.episodeId),
     index("media_rights_review_status_idx").on(table.reviewStatus),
     index("media_rights_asset_kind_idx").on(table.assetKind),
+    check("media_rights_owner_check", sql`num_nonnulls(${table.movieId}, ${table.episodeId}) = 1`),
   ],
 );
 
@@ -189,9 +232,8 @@ export const videoAssets = pgTable(
   "video_assets",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    movieId: uuid("movie_id")
-      .notNull()
-      .references(() => movies.id, { onDelete: "cascade" }),
+    movieId: uuid("movie_id").references(() => movies.id, { onDelete: "cascade" }),
+    episodeId: uuid("episode_id").references(() => seriesEpisodes.id, { onDelete: "cascade" }),
     mediaRightId: uuid("media_right_id").references(() => mediaRights.id, {
       onDelete: "set null",
     }),
@@ -214,7 +256,9 @@ export const videoAssets = pgTable(
   },
   (table) => [
     uniqueIndex("video_assets_movie_unique").on(table.movieId),
+    uniqueIndex("video_assets_episode_unique").on(table.episodeId),
     index("video_assets_status_idx").on(table.status),
+    check("video_assets_owner_check", sql`num_nonnulls(${table.movieId}, ${table.episodeId}) = 1`),
   ],
 );
 
@@ -283,6 +327,18 @@ export const moviesRelations = relations(movies, ({ many, one }) => ({
   video: one(videoAssets),
   subtitles: many(subtitles),
   rights: many(mediaRights),
+  seasons: many(seriesSeasons),
+}));
+
+export const seriesSeasonsRelations = relations(seriesSeasons, ({ one, many }) => ({
+  movie: one(movies, { fields: [seriesSeasons.movieId], references: [movies.id] }),
+  episodes: many(seriesEpisodes),
+}));
+
+export const seriesEpisodesRelations = relations(seriesEpisodes, ({ one, many }) => ({
+  season: one(seriesSeasons, { fields: [seriesEpisodes.seasonId], references: [seriesSeasons.id] }),
+  rights: many(mediaRights),
+  video: one(videoAssets),
 }));
 
 export const genresRelations = relations(genres, ({ many }) => ({
@@ -296,10 +352,12 @@ export const movieGenresRelations = relations(movieGenres, ({ one }) => ({
 
 export const mediaRightsRelations = relations(mediaRights, ({ one }) => ({
   movie: one(movies, { fields: [mediaRights.movieId], references: [movies.id] }),
+  episode: one(seriesEpisodes, { fields: [mediaRights.episodeId], references: [seriesEpisodes.id] }),
 }));
 
 export const videoAssetsRelations = relations(videoAssets, ({ one }) => ({
   movie: one(movies, { fields: [videoAssets.movieId], references: [movies.id] }),
+  episode: one(seriesEpisodes, { fields: [videoAssets.episodeId], references: [seriesEpisodes.id] }),
   rights: one(mediaRights, {
     fields: [videoAssets.mediaRightId],
     references: [mediaRights.id],

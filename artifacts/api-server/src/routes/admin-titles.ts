@@ -363,15 +363,17 @@ router.post("/admin/titles/:id/publish", requireCapability("library.publish"), a
   const currentRights = rights.filter((record) => record.movieId === movie.id);
   const main = currentRights.find((record) => record.assetKind === "main_video");
   const stream = video[0];
+  const mediaReady = movie.kind === "series" ||
+    (currentRights.filter((record) => record.assetKind === "main_video").length === 1 &&
+      !!main && !!stream && stream.status === "ready" && stream.mediaRightId === main.id);
   if (
     !currentRights.length ||
     currentRights.some((record) => !isEvidenceComplete(record) || record.reviewStatus !== "approved") ||
-    !main ||
-    !stream ||
-    stream.status !== "ready" ||
-    stream.mediaRightId !== main.id
+    !mediaReady
   ) {
-    response.status(409).json({ error: "All media rights must be reviewed, current, and linked to a ready main-video stream before publication." });
+    response.status(409).json({ error: movie.kind === "series"
+      ? "All series-level rights must be reviewed and current before publication."
+      : "All media rights must be reviewed, current, and linked to a ready main-video stream before publication." });
     return;
   }
   await db.update(movies).set({

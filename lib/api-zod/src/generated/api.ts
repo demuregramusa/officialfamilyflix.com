@@ -81,7 +81,29 @@ export const GetPublicTitleResponse = zod.object({
   "sourceUrl": zod.string().url(),
   "territory": zod.string().nullish(),
   "expiresAt": zod.coerce.date().nullish()
+})),
+  "episodes": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "seasonNumber": zod.number().int(),
+  "seasonName": zod.string().nullable(),
+  "episodeNumber": zod.number().int(),
+  "name": zod.string(),
+  "synopsis": zod.string(),
+  "durationMinutes": zod.number().int().nullable(),
+  "rights": zod.array(zod.object({
+  "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
+  "assetLabel": zod.string(),
+  "rightsHolder": zod.string(),
+  "creatorAttribution": zod.string(),
+  "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
+  "licenseVersion": zod.string(),
+  "licenseUrl": zod.string().url(),
+  "usageRestrictions": zod.array(zod.string()),
+  "sourceUrl": zod.string().url(),
+  "territory": zod.string().nullish(),
+  "expiresAt": zod.coerce.date().nullish()
 }))
+})).describe('Only currently playable, published episodes are returned for series.')
 }))
 
 
@@ -105,6 +127,34 @@ export const GetPlaybackResponse = zod.object({
   "isDefault": zod.boolean()
 }))
 })
+
+
+/**
+ * @summary Get an approved episode playback source
+ */
+export const GetEpisodePlaybackParams = zod.object({
+  "slug": zod.coerce.string(),
+  "episodeId": zod.coerce.string().uuid()
+})
+
+export const GetEpisodePlaybackResponse = zod.object({
+  "titleName": zod.string(),
+  "streamType": zod.enum(['mp4', 'hls', 'cloudflare']),
+  "url": zod.string().url(),
+  "posterUrl": zod.string().url().nullish(),
+  "subtitles": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "language": zod.string(),
+  "label": zod.string(),
+  "url": zod.string().url(),
+  "isDefault": zod.boolean()
+}))
+}).and(zod.object({
+  "episodeId": zod.string().uuid(),
+  "seasonNumber": zod.number().int(),
+  "episodeNumber": zod.number().int(),
+  "episodeName": zod.string()
+}))
 
 
 /**
@@ -892,6 +942,364 @@ export const PublishAdminTitleResponse = zod.object({
   "signedPlayback": zod.boolean().default(publishAdminTitleResponseStreamOneSignedPlaybackDefault)
 }),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List seasons and episodes for an admin series
+ */
+export const ListAdminSeriesEpisodesParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const listAdminSeriesEpisodesResponseRightsItemOneAssetLabelMax = 160;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneAssetUrlMax = 2048;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneRightsHolderMax = 240;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneCreatorAttributionMax = 240;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneLicenseVersionMax = 40;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneLicenseUrlMax = 2048;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneUsageRestrictionsItemMax = 240;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneSourceUrlMax = 2048;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneEvidenceUrlMax = 2048;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneEvidenceNotesMax = 4000;
+
+export const listAdminSeriesEpisodesResponseRightsItemOneTerritoryMax = 160;
+
+
+
+export const ListAdminSeriesEpisodesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "seasonNumber": zod.number().int(),
+  "seasonName": zod.string().nullable(),
+  "episodeNumber": zod.number().int(),
+  "name": zod.string(),
+  "synopsis": zod.string(),
+  "durationMinutes": zod.number().int().nullable(),
+  "status": zod.enum(['draft', 'published', 'archived']),
+  "rights": zod.array(zod.object({
+  "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
+  "assetLabel": zod.string().min(1).max(listAdminSeriesEpisodesResponseRightsItemOneAssetLabelMax),
+  "assetUrl": zod.string().url().max(listAdminSeriesEpisodesResponseRightsItemOneAssetUrlMax),
+  "rightsHolder": zod.string().min(1).max(listAdminSeriesEpisodesResponseRightsItemOneRightsHolderMax),
+  "creatorAttribution": zod.string().min(1).max(listAdminSeriesEpisodesResponseRightsItemOneCreatorAttributionMax),
+  "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
+  "licenseVersion": zod.string().min(1).max(listAdminSeriesEpisodesResponseRightsItemOneLicenseVersionMax),
+  "licenseUrl": zod.string().url().max(listAdminSeriesEpisodesResponseRightsItemOneLicenseUrlMax),
+  "usageRestrictions": zod.array(zod.string().max(listAdminSeriesEpisodesResponseRightsItemOneUsageRestrictionsItemMax)),
+  "sourceUrl": zod.string().url().max(listAdminSeriesEpisodesResponseRightsItemOneSourceUrlMax),
+  "evidenceUrl": zod.string().url().max(listAdminSeriesEpisodesResponseRightsItemOneEvidenceUrlMax),
+  "evidenceNotes": zod.string().max(listAdminSeriesEpisodesResponseRightsItemOneEvidenceNotesMax).nullish(),
+  "territory": zod.string().max(listAdminSeriesEpisodesResponseRightsItemOneTerritoryMax).nullish(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "uploaderAttested": zod.literal(true)
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'rejected', 'restricted']),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "reviewedBy": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish()
+}))),
+  "streamStatus": zod.enum(['missing', 'pending', 'processing', 'ready', 'error', 'disabled'])
+})
+export const ListAdminSeriesEpisodesResponse = zod.array(ListAdminSeriesEpisodesResponseItem)
+
+
+/**
+ * @summary Create draft episodes from a documented JSON seasons format
+ */
+export const ImportAdminSeriesEpisodesParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+
+export const importAdminSeriesEpisodesBodySeasonsItemNameMax = 240;
+
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemNameMax = 240;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemSynopsisDefault = ``;
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemSynopsisMax = 10000;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemDurationMinutesMax = 1000;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsAssetLabelMax = 160;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsAssetUrlMax = 2048;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsRightsHolderMax = 240;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsCreatorAttributionMax = 240;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsLicenseVersionMax = 40;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsLicenseUrlMax = 2048;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsUsageRestrictionsItemMax = 240;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsSourceUrlMax = 2048;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsEvidenceUrlMax = 2048;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsEvidenceNotesMax = 4000;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsTerritoryMax = 160;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesItemStreamUrlMax = 2048;
+
+export const importAdminSeriesEpisodesBodySeasonsItemEpisodesMax = 100;
+
+export const importAdminSeriesEpisodesBodySeasonsMax = 50;
+
+
+
+export const ImportAdminSeriesEpisodesBody = zod.object({
+  "seasons": zod.array(zod.object({
+  "seasonNumber": zod.number().int().min(1),
+  "name": zod.string().max(importAdminSeriesEpisodesBodySeasonsItemNameMax).nullish(),
+  "episodes": zod.array(zod.object({
+  "episodeNumber": zod.number().int().min(1),
+  "name": zod.string().min(1).max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemNameMax),
+  "synopsis": zod.string().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemSynopsisMax).default(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemSynopsisDefault),
+  "durationMinutes": zod.number().int().min(1).max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemDurationMinutesMax).nullish(),
+  "rights": zod.object({
+  "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
+  "assetLabel": zod.string().min(1).max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsAssetLabelMax),
+  "assetUrl": zod.string().url().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsAssetUrlMax),
+  "rightsHolder": zod.string().min(1).max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsRightsHolderMax),
+  "creatorAttribution": zod.string().min(1).max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsCreatorAttributionMax),
+  "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
+  "licenseVersion": zod.string().min(1).max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsLicenseVersionMax),
+  "licenseUrl": zod.string().url().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsLicenseUrlMax),
+  "usageRestrictions": zod.array(zod.string().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsUsageRestrictionsItemMax)),
+  "sourceUrl": zod.string().url().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsSourceUrlMax),
+  "evidenceUrl": zod.string().url().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsEvidenceUrlMax),
+  "evidenceNotes": zod.string().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsEvidenceNotesMax).nullish(),
+  "territory": zod.string().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemRightsTerritoryMax).nullish(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "uploaderAttested": zod.literal(true)
+}),
+  "stream": zod.object({
+  "url": zod.string().url().max(importAdminSeriesEpisodesBodySeasonsItemEpisodesItemStreamUrlMax)
+})
+})).min(1).max(importAdminSeriesEpisodesBodySeasonsItemEpisodesMax)
+})).min(1).max(importAdminSeriesEpisodesBodySeasonsMax),
+  "uploaderAttested": zod.literal(true)
+})
+
+export const importAdminSeriesEpisodesResponseRightsItemOneAssetLabelMax = 160;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneAssetUrlMax = 2048;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneRightsHolderMax = 240;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneCreatorAttributionMax = 240;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneLicenseVersionMax = 40;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneLicenseUrlMax = 2048;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneUsageRestrictionsItemMax = 240;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneSourceUrlMax = 2048;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneEvidenceUrlMax = 2048;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneEvidenceNotesMax = 4000;
+
+export const importAdminSeriesEpisodesResponseRightsItemOneTerritoryMax = 160;
+
+
+
+export const ImportAdminSeriesEpisodesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "seasonNumber": zod.number().int(),
+  "seasonName": zod.string().nullable(),
+  "episodeNumber": zod.number().int(),
+  "name": zod.string(),
+  "synopsis": zod.string(),
+  "durationMinutes": zod.number().int().nullable(),
+  "status": zod.enum(['draft', 'published', 'archived']),
+  "rights": zod.array(zod.object({
+  "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
+  "assetLabel": zod.string().min(1).max(importAdminSeriesEpisodesResponseRightsItemOneAssetLabelMax),
+  "assetUrl": zod.string().url().max(importAdminSeriesEpisodesResponseRightsItemOneAssetUrlMax),
+  "rightsHolder": zod.string().min(1).max(importAdminSeriesEpisodesResponseRightsItemOneRightsHolderMax),
+  "creatorAttribution": zod.string().min(1).max(importAdminSeriesEpisodesResponseRightsItemOneCreatorAttributionMax),
+  "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
+  "licenseVersion": zod.string().min(1).max(importAdminSeriesEpisodesResponseRightsItemOneLicenseVersionMax),
+  "licenseUrl": zod.string().url().max(importAdminSeriesEpisodesResponseRightsItemOneLicenseUrlMax),
+  "usageRestrictions": zod.array(zod.string().max(importAdminSeriesEpisodesResponseRightsItemOneUsageRestrictionsItemMax)),
+  "sourceUrl": zod.string().url().max(importAdminSeriesEpisodesResponseRightsItemOneSourceUrlMax),
+  "evidenceUrl": zod.string().url().max(importAdminSeriesEpisodesResponseRightsItemOneEvidenceUrlMax),
+  "evidenceNotes": zod.string().max(importAdminSeriesEpisodesResponseRightsItemOneEvidenceNotesMax).nullish(),
+  "territory": zod.string().max(importAdminSeriesEpisodesResponseRightsItemOneTerritoryMax).nullish(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "uploaderAttested": zod.literal(true)
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'rejected', 'restricted']),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "reviewedBy": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish()
+}))),
+  "streamStatus": zod.enum(['missing', 'pending', 'processing', 'ready', 'error', 'disabled'])
+})
+export const ImportAdminSeriesEpisodesResponse = zod.array(ImportAdminSeriesEpisodesResponseItem)
+
+
+/**
+ * @summary Review one episode rights record
+ */
+export const ReviewSeriesEpisodeParams = zod.object({
+  "episodeId": zod.coerce.string().uuid()
+})
+
+export const reviewSeriesEpisodeBodyNoteMax = 4000;
+
+
+
+export const ReviewSeriesEpisodeBody = zod.object({
+  "decision": zod.enum(['approve', 'reject', 'restrict', 'restore']),
+  "note": zod.string().min(1).max(reviewSeriesEpisodeBodyNoteMax)
+})
+
+export const reviewSeriesEpisodeResponseRightsItemOneAssetLabelMax = 160;
+
+export const reviewSeriesEpisodeResponseRightsItemOneAssetUrlMax = 2048;
+
+export const reviewSeriesEpisodeResponseRightsItemOneRightsHolderMax = 240;
+
+export const reviewSeriesEpisodeResponseRightsItemOneCreatorAttributionMax = 240;
+
+export const reviewSeriesEpisodeResponseRightsItemOneLicenseVersionMax = 40;
+
+export const reviewSeriesEpisodeResponseRightsItemOneLicenseUrlMax = 2048;
+
+export const reviewSeriesEpisodeResponseRightsItemOneUsageRestrictionsItemMax = 240;
+
+export const reviewSeriesEpisodeResponseRightsItemOneSourceUrlMax = 2048;
+
+export const reviewSeriesEpisodeResponseRightsItemOneEvidenceUrlMax = 2048;
+
+export const reviewSeriesEpisodeResponseRightsItemOneEvidenceNotesMax = 4000;
+
+export const reviewSeriesEpisodeResponseRightsItemOneTerritoryMax = 160;
+
+
+
+export const ReviewSeriesEpisodeResponse = zod.object({
+  "id": zod.string().uuid(),
+  "seasonNumber": zod.number().int(),
+  "seasonName": zod.string().nullable(),
+  "episodeNumber": zod.number().int(),
+  "name": zod.string(),
+  "synopsis": zod.string(),
+  "durationMinutes": zod.number().int().nullable(),
+  "status": zod.enum(['draft', 'published', 'archived']),
+  "rights": zod.array(zod.object({
+  "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
+  "assetLabel": zod.string().min(1).max(reviewSeriesEpisodeResponseRightsItemOneAssetLabelMax),
+  "assetUrl": zod.string().url().max(reviewSeriesEpisodeResponseRightsItemOneAssetUrlMax),
+  "rightsHolder": zod.string().min(1).max(reviewSeriesEpisodeResponseRightsItemOneRightsHolderMax),
+  "creatorAttribution": zod.string().min(1).max(reviewSeriesEpisodeResponseRightsItemOneCreatorAttributionMax),
+  "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
+  "licenseVersion": zod.string().min(1).max(reviewSeriesEpisodeResponseRightsItemOneLicenseVersionMax),
+  "licenseUrl": zod.string().url().max(reviewSeriesEpisodeResponseRightsItemOneLicenseUrlMax),
+  "usageRestrictions": zod.array(zod.string().max(reviewSeriesEpisodeResponseRightsItemOneUsageRestrictionsItemMax)),
+  "sourceUrl": zod.string().url().max(reviewSeriesEpisodeResponseRightsItemOneSourceUrlMax),
+  "evidenceUrl": zod.string().url().max(reviewSeriesEpisodeResponseRightsItemOneEvidenceUrlMax),
+  "evidenceNotes": zod.string().max(reviewSeriesEpisodeResponseRightsItemOneEvidenceNotesMax).nullish(),
+  "territory": zod.string().max(reviewSeriesEpisodeResponseRightsItemOneTerritoryMax).nullish(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "uploaderAttested": zod.literal(true)
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'rejected', 'restricted']),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "reviewedBy": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish()
+}))),
+  "streamStatus": zod.enum(['missing', 'pending', 'processing', 'ready', 'error', 'disabled'])
+})
+
+
+/**
+ * @summary Publish an episode after rights and stream checks
+ */
+export const PublishSeriesEpisodeParams = zod.object({
+  "episodeId": zod.coerce.string().uuid()
+})
+
+export const publishSeriesEpisodeResponseRightsItemOneAssetLabelMax = 160;
+
+export const publishSeriesEpisodeResponseRightsItemOneAssetUrlMax = 2048;
+
+export const publishSeriesEpisodeResponseRightsItemOneRightsHolderMax = 240;
+
+export const publishSeriesEpisodeResponseRightsItemOneCreatorAttributionMax = 240;
+
+export const publishSeriesEpisodeResponseRightsItemOneLicenseVersionMax = 40;
+
+export const publishSeriesEpisodeResponseRightsItemOneLicenseUrlMax = 2048;
+
+export const publishSeriesEpisodeResponseRightsItemOneUsageRestrictionsItemMax = 240;
+
+export const publishSeriesEpisodeResponseRightsItemOneSourceUrlMax = 2048;
+
+export const publishSeriesEpisodeResponseRightsItemOneEvidenceUrlMax = 2048;
+
+export const publishSeriesEpisodeResponseRightsItemOneEvidenceNotesMax = 4000;
+
+export const publishSeriesEpisodeResponseRightsItemOneTerritoryMax = 160;
+
+
+
+export const PublishSeriesEpisodeResponse = zod.object({
+  "id": zod.string().uuid(),
+  "seasonNumber": zod.number().int(),
+  "seasonName": zod.string().nullable(),
+  "episodeNumber": zod.number().int(),
+  "name": zod.string(),
+  "synopsis": zod.string(),
+  "durationMinutes": zod.number().int().nullable(),
+  "status": zod.enum(['draft', 'published', 'archived']),
+  "rights": zod.array(zod.object({
+  "assetKind": zod.enum(['main-video', 'poster', 'backdrop', 'photo', 'artwork', 'audio', 'subtitle', 'other']),
+  "assetLabel": zod.string().min(1).max(publishSeriesEpisodeResponseRightsItemOneAssetLabelMax),
+  "assetUrl": zod.string().url().max(publishSeriesEpisodeResponseRightsItemOneAssetUrlMax),
+  "rightsHolder": zod.string().min(1).max(publishSeriesEpisodeResponseRightsItemOneRightsHolderMax),
+  "creatorAttribution": zod.string().min(1).max(publishSeriesEpisodeResponseRightsItemOneCreatorAttributionMax),
+  "licenseType": zod.enum(['cc-by-4.0', 'cc-by-sa-4.0', 'cc-by-nd-4.0', 'cc-by-nc-4.0', 'cc-by-nc-sa-4.0', 'cc-by-nc-nd-4.0', 'cc0-1.0', 'public-domain', 'creator-owned', 'authorized-copyright', 'unlicensed']),
+  "licenseVersion": zod.string().min(1).max(publishSeriesEpisodeResponseRightsItemOneLicenseVersionMax),
+  "licenseUrl": zod.string().url().max(publishSeriesEpisodeResponseRightsItemOneLicenseUrlMax),
+  "usageRestrictions": zod.array(zod.string().max(publishSeriesEpisodeResponseRightsItemOneUsageRestrictionsItemMax)),
+  "sourceUrl": zod.string().url().max(publishSeriesEpisodeResponseRightsItemOneSourceUrlMax),
+  "evidenceUrl": zod.string().url().max(publishSeriesEpisodeResponseRightsItemOneEvidenceUrlMax),
+  "evidenceNotes": zod.string().max(publishSeriesEpisodeResponseRightsItemOneEvidenceNotesMax).nullish(),
+  "territory": zod.string().max(publishSeriesEpisodeResponseRightsItemOneTerritoryMax).nullish(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "uploaderAttested": zod.literal(true)
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'rejected', 'restricted']),
+  "submittedAt": zod.coerce.date(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "reviewedBy": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish()
+}))),
+  "streamStatus": zod.enum(['missing', 'pending', 'processing', 'ready', 'error', 'disabled'])
 })
 
 

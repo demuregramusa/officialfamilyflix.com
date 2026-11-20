@@ -14,7 +14,7 @@ import {
   useAddTitleRightsAsset, useAddTitleSubtitle, useCreateAdminTitle,
   useCreateCloudflareUpload, useCreateStaff, useDecideCopyrightCase,
   useDeleteAdminTitle, useDeleteTitleSubtitle, useGetAdminDashboard,
-  useGetAdminSettings, useGetAdminTitle, useGetCopyrightCase, useGetPlayback,
+  useGetAdminSettings, useGetAdminTitle, useGetCopyrightCase, useGetEpisodePlayback, useGetPlayback,
   useGetPublicTitle, useGetSiteConfig, useGetUserPreferences,
   useHealthCheck, useImportTitles, useListAdminActivity, useListAdminTitles,
   useListCopyrightCases, useListPublicTitles, useListRepeatInfringers,
@@ -26,7 +26,7 @@ import {
   useSyncCloudflareStream, useUpdateAdminSettings, useUpdateAdminTitle,
   useUpdateStaff, getGetAdminDashboardQueryKey, getGetAdminSettingsQueryKey,
   getGetAdminTitleQueryKey, getGetCopyrightCaseQueryKey, getGetPlaybackQueryKey,
-  getGetPublicTitleQueryKey, getGetSiteConfigQueryKey,
+  getGetEpisodePlaybackQueryKey, getGetPublicTitleQueryKey, getGetSiteConfigQueryKey,
   getGetUserPreferencesQueryKey, getListAdminTitlesQueryKey,
   getListCopyrightCasesQueryKey, getListPublicTitlesQueryKey,
   getListRepeatInfringersQueryKey, getListStaffQueryKey,
@@ -47,6 +47,7 @@ import { PosterCard, posterSize } from "@/components/familyflix/poster-card";
 import { TitleRow } from "@/components/familyflix/title-row";
 import type { Title as CatalogTitle } from "@/lib/catalog-types";
 import { curatedPublicDomainTitles } from "@/lib/curated-public-domain-titles";
+import { SeriesEpisodeManager } from "@/components/admin/series-episode-manager";
 
 const genres = ["Adventure", "Animation", "Comedy", "Documentary", "Drama", "Family", "Fantasy", "History", "Mystery", "Music", "Science fiction"];
 const ADMIN_NAV: [string, string, typeof LayoutDashboard][] = [
@@ -267,17 +268,41 @@ function DetailPage({ slug }: { slug: string }) {
       <p style={{ maxWidth: 670, color: "hsl(260 10% 78%)", lineHeight: 1.8 }}>{detail.synopsis || "No synopsis has been provided."}</p>
       <p className="helper">Creator attribution: <strong style={{ color: "hsl(42 26% 92%)" }}>{detail.creatorAttribution || "Not supplied"}</strong></p>
       {detail.cast?.length > 0 && <p className="helper">Featuring: {detail.cast.join(", ")}</p>}
-      <div className="form-actions"><Link href={`/watch/${detail.slug}`} className="button" data-testid="button-play-title"><Play size={15} fill="currentColor" /> Check playback availability</Link><button className="button-secondary" onClick={toggleSaved} data-testid="button-save-title"><Bookmark size={15} /> {saved ? "Remove from my list" : "Save to my list"}</button><Link href={`/copyright/report?title=${encodeURIComponent(detail.id)}`} className="quiet-button" data-testid="link-report-title">Report a concern</Link></div>
+      <div className="form-actions">{detail.kind !== "series" && <Link href={`/watch/${detail.slug}`} className="button" data-testid="button-play-title"><Play size={15} fill="currentColor" /> Check playback availability</Link>}<button className="button-secondary" onClick={toggleSaved} data-testid="button-save-title"><Bookmark size={15} /> {saved ? "Remove from my list" : "Save to my list"}</button><Link href={`/copyright/report?title=${encodeURIComponent(detail.id)}`} className="quiet-button" data-testid="link-report-title">Report a concern</Link></div>
+      {detail.kind === "series" && <section className="panel" style={{ marginTop: 28 }} data-testid="public-series-episodes">
+        <h2>Available episodes</h2>
+        <p className="helper">Only episodes with current, reviewed rights and an approved stream are listed.</p>
+        {detail.episodes.length ? [...new Set(detail.episodes.map((episode) => episode.seasonNumber))].map((seasonNumber) => {
+          const seasonEpisodes = detail.episodes.filter((episode) => episode.seasonNumber === seasonNumber);
+          const seasonName = seasonEpisodes[0]?.seasonName || `Season ${seasonNumber}`;
+          return <div key={seasonNumber} style={{ marginTop: 18 }}>
+            <h3>{seasonName}</h3>
+            {seasonEpisodes.map((episode) => <article className="rights-row" key={episode.id} data-testid={`public-episode-${episode.id}`}>
+              <div><strong>Episode {episode.episodeNumber}: {episode.name}</strong><p>{episode.synopsis}</p>{episode.durationMinutes && <p>{episode.durationMinutes} min</p>}
+                {episode.rights.map((right, index) => <p className="helper" key={`${right.assetLabel}-${index}`}>Rights: {right.rightsHolder} · {right.licenseType} {right.licenseVersion} · {right.territory || "Territory not specified"} · Expires {stamp(right.expiresAt)}{right.licenseUrl && <> · <a href={right.licenseUrl} target="_blank" rel="noreferrer">License details</a></>}</p>)}
+              </div><Link className="button" href={`/watch/${detail.slug}/${episode.id}`} data-testid={`button-play-episode-${episode.id}`}><Play size={14} fill="currentColor" /> Play episode</Link>
+            </article>)}
+          </div>;
+        }) : <Empty title="No episodes are currently available">Episodes appear here only after rights review, stream checks, and an explicit publication decision.</Empty>}
+      </section>}
       <section className="panel" style={{ marginTop: 28 }}><h2><ShieldCheck size={17} style={{ verticalAlign: "middle", marginRight: 8, color: "hsl(157 35% 67%)" }} />Rights & attribution</h2><p className="helper" style={{ marginBottom: 16 }}>FamilyFlix presents this title under the terms shown below. Rights information reflects records reviewed for this catalog and does not imply DemureGram owns the work.</p>
          {detail.rights?.length ? detail.rights.map((r,i) => <div className="rights-row" key={`${r.assetKind}-${i}`} data-testid={`status-rights-record-${i}`}><div><strong>{r.assetLabel || r.assetKind}</strong><p>Asset type: {r.assetKind}</p><p>Rights holder: {r.rightsHolder || "Not stated"}</p><p>Creator: {r.creatorAttribution || "Not stated"}</p><p>License: {r.licenseType} {r.licenseVersion ? `· ${r.licenseVersion}` : ""}</p><p>Restrictions: {r.usageRestrictions?.length ? r.usageRestrictions.join("; ") : "None listed"}</p><p>Territory: {r.territory || "Not specified"} · Expires: {stamp(r.expiresAt)}</p></div><div>{r.licenseUrl && <a className="status good" href={r.licenseUrl} target="_blank" rel="noreferrer" data-testid={`link-license-${i}`}>License details ↗</a>}{r.sourceUrl && <p><a href={r.sourceUrl} target="_blank" rel="noreferrer" data-testid={`link-rights-source-${i}`}>Source record ↗</a></p>}</div></div>) : <Empty title="Rights details are not available">Contact the catalog team through the copyright report form if you have a question about this listing.</Empty>}
       </section>
     </div></div>
   </Shell>;
 }
-function WatchPage({ slug }: { slug: string }) {
+function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const p = useGetPlayback(slug, { query: { enabled: !!slug, queryKey: getGetPlaybackQueryKey(slug), retry: false } });
-  const playback = p.data;
+  const p = useGetPlayback(slug, { query: { enabled: !!slug && !episodeId, queryKey: getGetPlaybackQueryKey(slug), retry: false } });
+  const episode = useGetEpisodePlayback(slug, episodeId ?? "", { query: {
+    enabled: !!slug && !!episodeId,
+    queryKey: getGetEpisodePlaybackQueryKey(slug, episodeId ?? ""),
+    retry: false,
+  } });
+  const playback = episodeId ? episode.data : p.data;
+  const isLoading = episodeId ? episode.isLoading : p.isLoading;
+  const isError = episodeId ? episode.isError : p.isError;
+  const playbackError = episodeId ? episode.error : p.error;
   const isSafeUrl = !!playback?.url && /^https?:/i.test(playback.url) && !/^(magnet:|torrent:)/i.test(playback.url);
   useEffect(() => {
     const video = videoRef.current;
@@ -293,8 +318,8 @@ function WatchPage({ slug }: { slug: string }) {
     hls.attachMedia(video);
     return () => hls.destroy();
   }, [playback?.url]);
-  return <Shell><Heading eyebrow="Approved playback" title={playback?.titleName || "Playback check"} description="Playback is available only when the server returns an approved media source for this title." />
-    {p.isLoading ? <div className="skeleton" style={{ height: 400 }} /> : p.isError ? <div className="empty-state"><span className="empty-icon"><LockKeyhole size={20} /></span><h3>Playback is not available</h3><p>This title has no server-approved stream available right now. No external or peer-to-peer media links are offered.</p><Link href={`/title/${slug}`} className="button-secondary" style={{ marginTop: 16 }} data-testid="link-playback-title">View title and rights details</Link></div> : isSafeUrl ? <div className="panel"><div className="feature-line" data-testid="status-approved-playback"><ShieldCheck size={16} /> Server-approved source · {playback.streamType}</div><video ref={videoRef} controls playsInline preload="metadata" poster={playback.posterUrl || undefined} src={/\.m3u8(?:$|[?#])/i.test(playback.url) ? undefined : playback.url} style={{ width: "100%", marginTop: 18, borderRadius: 12, background: "#09070d" }} data-testid="video-approved-playback">{playback.subtitles?.map(s => <track key={s.id} kind="subtitles" src={s.url} srcLang={s.language} label={s.label} default={s.isDefault} />)}</video><p className="helper">This playback URL was returned by the FamilyFlix server. If it stops working, return to the title page to review its current rights information.</p></div> : <ErrorBox message="The server did not return a safe, approved media URL. Playback has been withheld." />}</Shell>;
+  return <Shell><Heading eyebrow={episodeId ? "Approved episode playback" : "Approved playback"} title={playback?.titleName || "Playback check"} description="Playback is available only when the server returns an approved media source for this title or episode." />
+    {isLoading ? <div className="skeleton" style={{ height: 400 }} /> : isError ? <div className="empty-state"><span className="empty-icon"><LockKeyhole size={20} /></span><h3>Playback is not available</h3><p>This title or episode has no server-approved stream available right now. No external or peer-to-peer media links are offered.</p><Link href={`/title/${slug}`} className="button-secondary" style={{ marginTop: 16 }} data-testid="link-playback-title">View title and rights details</Link></div> : isSafeUrl ? <div className="panel"><div className="feature-line" data-testid="status-approved-playback"><ShieldCheck size={16} /> Server-approved source · {playback.streamType}</div><video ref={videoRef} controls playsInline preload="metadata" poster={playback.posterUrl || undefined} src={/\.m3u8(?:$|[?#])/i.test(playback.url) ? undefined : playback.url} style={{ width: "100%", marginTop: 18, borderRadius: 12, background: "#09070d" }} data-testid="video-approved-playback">{playback.subtitles?.map(s => <track key={s.id} kind="subtitles" src={s.url} srcLang={s.language} label={s.label} default={s.isDefault} />)}</video>{episodeId && <p className="helper">Season {episode.data?.seasonNumber}, Episode {episode.data?.episodeNumber}: {episode.data?.episodeName}</p>}<p className="helper">This playback URL was returned by the FamilyFlix server. If it stops working, return to the title page to review its current rights information.</p></div> : <ErrorBox message={playbackError ? errorText(playbackError) : "The server did not return a safe, approved media URL. Playback has been withheld."} />}</Shell>;
 }
 function MyListPage() {
   const [slugs, setSlugs] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("ff-list") || "[]"); } catch { return []; } });
@@ -419,7 +444,7 @@ function AdminTitleCreate() {
       <div className="field"><label>Tagline</label><input name="tagline" data-testid="input-title-tagline"/></div><div className="field"><label>Audience rating</label><input name="rating" data-testid="input-title-rating"/></div>
        <div className="field"><label>Duration in minutes</label><input name="duration" type="number" min="1" data-testid="input-title-duration"/></div><label className="helper"><input name="featured" type="checkbox" data-testid="input-title-featured"/> Feature on home</label>
     </div>
-    <h2 style={{marginTop:28}}>Rights evidence</h2><p className="helper">Do not use torrent or magnet links as playback or source media. Provide rights documentation and license details from the relevant rights holder.</p>
+    <h2 style={{marginTop:28}}>Rights evidence</h2><p className="helper">Do not use torrent or magnet links as playback or source media. Provide rights documentation and license details from the relevant rights holder. For a series, this record covers the overall series listing; each episode must be imported with its own rights evidence and playback source.</p>
     <div className="field-grid" style={{marginTop:14}}>
       <div className="field"><label>Asset label</label><input name="assetLabel" required defaultValue="Main video" data-testid="input-rights-label"/></div><div className="field"><label>Main asset URL</label><input type="url" name="assetUrl" required data-testid="input-rights-asset-url"/></div>
       <div className="field"><label>Rights holder</label><input name="rightsHolder" required data-testid="input-rights-holder"/></div><div className="field"><label>Creator attribution</label><input name="creatorAttribution" required data-testid="input-rights-creator"/></div>
@@ -452,12 +477,13 @@ function AdminTitleDetail({id}:{id:string}) {
   function streamSubmit(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const url=String(f.get("url")||"");let parsed:URL;try{parsed=new URL(url);}catch{setMessage("Enter one direct HTTPS .mp4 or .m3u8 URL.");return;}if(parsed.protocol!=="https:"||!/\.(?:mp4|m3u8)$/i.test(parsed.pathname)){setMessage("Enter exactly one HTTPS direct-video URL ending in .mp4 or .m3u8. Torrent, magnet and non-video links are not accepted.");return;}const streamUrl=/\.m3u8$/i.test(parsed.pathname)?{hlsUrl:url}:{mp4Url:url};setStream.mutate({id,data:{provider:"manual",...streamUrl,signedPlayback:false}},{onSuccess:()=>{refresh();setMessage("Stream source saved. Availability still depends on approval and server checks.");},onError:e=>setMessage(errorText(e))});}
    function requestUpload(){if(!uploadFile){setMessage("Choose a local MP4 or MOV file before requesting a Cloudflare upload.");return;}if(!/\.(mp4|mov)$/i.test(uploadFile.name)||uploadFile.size===0){setMessage("Choose a non-empty local .mp4 or .mov video file.");return;}if(uploadFile.size>MAX_UPLOAD_BYTES){setMessage("Choose a video file smaller than 30 GB.");return;}setUploadProgress(0);setMessage("Requesting a secure Cloudflare upload destination…");upload.mutate({id},{onSuccess:direct=>{setUploadAssetId(direct.assetId);refresh();const transfer=new TusUpload(uploadFile,{endpoint:direct.uploadUrl,retryDelays:[0,3000,5000,10000,20000],chunkSize:50*1024*1024,metadata:{filename:uploadFile.name,filetype:uploadFile.type||"video/mp4"},onProgress:(sent,total)=>setUploadProgress(total>0?Math.floor(sent/total*100):0),onError:error=>{setUploadProgress(null);setMessage(`Upload failed: ${error.message}`);},onSuccess:()=>{setUploadProgress(100);setMessage(`Upload transfer completed. Cloudflare asset ID: ${direct.assetId}. Use Sync to refresh processing status.`);}});transfer.start();},onError:e=>{setUploadProgress(null);setMessage(errorText(e));}});}
   const mainVideoCount=t.rights?.filter(r=>r.assetKind==="main-video").length??0;
-  const publishReady=mainVideoCount===1&&!!t.rights?.length&&t.rights.every(r=>r.reviewStatus==="approved")&&t.streamStatus==="ready";
+  const publishReady=mainVideoCount===1&&!!t.rights?.length&&t.rights.every(r=>r.reviewStatus==="approved")&&(t.kind==="series"||t.streamStatus==="ready");
   return <Shell admin><div><Heading eyebrow="Studio / rights record" title={t.name} description={`/${t.slug} · ${t.kind}`} action={<div className="form-actions" style={{marginTop:0}}><button className="button" disabled={!publishReady||publish.isPending} onClick={()=>publish.mutate({id},{onSuccess:()=>{refresh();setMessage("Title published to the approved catalog.");},onError:e=>setMessage(errorText(e))})} data-testid="button-publish-title">{publish.isPending?"Publishing…":"Publish to catalog"}</button><button className="button-danger" onClick={()=>{if(confirm("Archive this title?"))remove.mutate({id},{onSuccess:()=>{qc.invalidateQueries({queryKey:getListAdminTitlesQueryKey()});setMessage("Title archived.");},onError:e=>setMessage(errorText(e))});}} data-testid="button-archive-title">Archive title</button></div>}/>
      {t.slug.startsWith("yts-")&&t.status==="draft"&&<div className="notice" style={{marginTop:18}} data-testid="status-metadata-only-draft"><ShieldCheck size={18}/><span><strong>Metadata-only draft.</strong> This record came from the supplied YTS dump. Torrent and magnet URLs, poster art, descriptions, license claims, rights records, and video sources were not imported. Add independently verified rights evidence and an authorized direct video source before publication.</span></div>}
      {mainVideoCount!==1&&<p className="form-message error" role="status">Exactly one main-video rights record is required before publication. Current count: {mainVideoCount}.</p>}
     <div className="metric-grid"><div className="metric"><span>Publication state</span><strong style={{fontSize:17}}>{t.status}</strong></div><div className="metric"><span>Stream</span><strong style={{fontSize:17}}>{t.streamStatus}</strong></div><div className="metric"><span>Rights records</span><strong>{t.rights?.length??0}</strong></div><div className="metric"><span>Created</span><strong style={{fontSize:17}}>{stamp(t.createdAt)}</strong></div></div>
     <form className="panel" style={{marginTop:18}} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);update.mutate({id,data:{name:String(f.get("name")),synopsis:String(f.get("synopsis"))}},{onSuccess:()=>{refresh();setMessage("Title metadata saved.");},onError:e=>setMessage(errorText(e))});}}><h2>Title metadata</h2><div className="field-grid"><div className="field"><label>Name</label><input name="name" required defaultValue={t.name} data-testid="input-edit-title-name"/></div><div className="field full"><label>Synopsis</label><textarea name="synopsis" defaultValue={t.synopsis} data-testid="input-edit-title-synopsis"/></div></div><div className="form-actions"><button className="button-secondary" disabled={update.isPending} data-testid="button-update-title">{update.isPending?"Saving…":"Save title details"}</button></div></form>
+    {t.kind==="series"&&<SeriesEpisodeManager id={id} slug={t.slug} seriesPublished={t.status==="published"}/>}
     {message&&<p className="form-message success" data-testid="status-admin-title">{message}</p>}
     <div className="panel" style={{marginTop:18}}><h2>Rights records & evidence</h2>{assets.isLoading?<div className="skeleton" style={{height:110}}/>:assets.isError?<ErrorBox message={errorText(assets.error)} retry={()=>assets.refetch()}/>:assets.data?.length?<div className="table-wrap"><table className="data-table"><thead><tr><th>Asset</th><th>Holder / license</th><th>Review</th><th>Evidence</th></tr></thead><tbody>{assets.data.map(r=><tr key={r.id} data-testid={`row-rights-evidence-${r.id}`}><td>{r.assetLabel}<div className="helper">{r.assetKind}</div></td><td>{r.rightsHolder}<div className="helper">{r.licenseType} {r.licenseVersion}</div></td><td><span className={`status ${r.reviewStatus==="approved"?"good":r.reviewStatus==="pending"?"warn":""}`} data-testid={`status-rights-${r.id}`}>{r.reviewStatus}</span></td><td><details><summary className="helper" style={{cursor:"pointer"}}>Evidence details</summary><div className="helper wrap" style={{minWidth:230,paddingTop:8}}><p>Creator: {r.creatorAttribution}</p><p>Asset URL: {r.assetUrl||"Not supplied"}</p><p>License URL: {r.licenseUrl||"Not supplied"}</p><p>Source: {r.sourceUrl||"Not supplied"}</p><p>Evidence: {r.evidenceUrl||"Not supplied"}</p><p>Restrictions: {r.usageRestrictions?.join("; ")||"None listed"}</p><p>Territory: {r.territory||"Not specified"} · Expires: {stamp(r.expiresAt)}</p><p>Uploader attestation: {r.uploaderAttested?"Provided":"Not recorded"}</p><p>Submitted: {stamp(r.submittedAt)} · Reviewer: {r.reviewedBy||"Not reviewed"}</p>{r.reviewNotes&&<p>Reviewer notes: {r.reviewNotes}</p>}{r.evidenceNotes&&<p>Evidence notes: {r.evidenceNotes}</p>}</div></details></td></tr>)}</tbody></table></div>:<Empty title="No evidence records">Add source, license and supporting evidence before approving publication.</Empty>}</div>
     <div className="split" style={{marginTop:16}}><form className="panel" onSubmit={assetSubmit}><h2>Add rights evidence</h2><div className="field-grid">
@@ -623,6 +649,7 @@ function AppRoutes() {
     <Route path="/tv-shows" component={()=> <Catalog kind="series"/>}/>
     <Route path="/search" component={SearchPage}/>
     <Route path="/title/:slug">{p=>p?<DetailPage slug={p.slug}/>:null}</Route>
+    <Route path="/watch/:slug/:episodeId">{p=>p?<WatchPage slug={p.slug} episodeId={p.episodeId}/>:null}</Route>
     <Route path="/watch/:slug">{p=>p?<WatchPage slug={p.slug}/>:null}</Route>
     <Route path="/my-list" component={MyListPage}/>
     <Route path="/auth/sign-in" component={()=> <AuthPage/>}/>

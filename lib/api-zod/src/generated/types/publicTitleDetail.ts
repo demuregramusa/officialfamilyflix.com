@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PublicRightsRecord } from './publicRightsRecord';
+import type { PublicSeriesEpisode } from './publicSeriesEpisode';
 import type { PublicTitle } from './publicTitle';
 
 export type PublicTitleDetail = PublicTitle & ({
@@ -19,4 +20,6 @@ export type PublicTitleDetail = PublicTitle & ({
   /** @nullable */
   durationMinutes: number | null;
   rights: PublicRightsRecord[];
+  /** Only currently playable, published episodes are returned for series. */
+  episodes: PublicSeriesEpisode[];
 });

@@ -114,6 +114,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /playback/{slug}/episodes/{episodeId}:
+    get:
+      operationId: getEpisodePlayback
+      tags: [playback]
+      summary: Get an approved episode playback source
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: episodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Playable source for an independently approved episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EpisodePlayback"
+        "403":
+          description: Episode rights are pending, restricted, expired, or unapproved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Series or episode is not publicly available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /site-config:
     get:
       operationId: getSiteConfig
@@ -391,6 +427,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admin/titles/{id}/episodes:
+    get:
+      operationId: listAdminSeriesEpisodes
+      tags: [administration]
+      summary: List seasons and episodes for an admin series
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Season and episode records including private review evidence
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AdminSeriesEpisode" }
+    post:
+      operationId: importAdminSeriesEpisodes
+      tags: [administration]
+      summary: Create draft episodes from a documented JSON seasons format
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SeriesEpisodeImportInput" }
+      responses:
+        "201":
+          description: Episodes created as drafts pending separate rights review and publication
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AdminSeriesEpisode" }
+        "409":
+          description: Series or episode numbers conflict, or the parent is not a series
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /admin/episodes/{episodeId}/review:
+    post:
+      operationId: reviewSeriesEpisode
+      tags: [administration]
+      summary: Review one episode rights record
+      parameters:
+        - name: episodeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EpisodeReviewDecision" }
+      responses:
+        "200":
+          description: Episode rights review recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSeriesEpisode" }
+        "409":
+          description: Episode rights evidence is incomplete or expired
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /admin/episodes/{episodeId}/publish:
+    post:
+      operationId: publishSeriesEpisode
+      tags: [administration]
+      summary: Publish an episode after rights and stream checks
+      parameters:
+        - name: episodeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Episode published after an explicit gate
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminSeriesEpisode" }
+        "409":
+          description: Rights, stream, or parent-series publication requirements are incomplete
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /admin/import:
     post:
       operationId: importTitles
@@ -934,7 +1062,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/PublicTitle"
         - type: object
-          required: [tagline, backdropUrl, cast, rating, durationMinutes, rights]
+          required: [tagline, backdropUrl, cast, rating, durationMinutes, rights, episodes]
           properties:
             tagline: { type: ["string", "null"] }
             backdropUrl: { type: ["string", "null"], format: uri }
@@ -946,6 +1074,24 @@ components:
             rights:
               type: array
               items: { $ref: "#/components/schemas/PublicRightsRecord" }
+            episodes:
+              type: array
+              description: Only currently playable, published episodes are returned for series.
+              items: { $ref: "#/components/schemas/PublicSeriesEpisode" }
+    PublicSeriesEpisode:
+      type: object
+      required: [id, seasonNumber, seasonName, episodeNumber, name, synopsis, durationMinutes, rights]
+      properties:
+        id: { type: string, format: uuid }
+        seasonNumber: { type: integer }
+        seasonName: { type: ["string", "null"] }
+        episodeNumber: { type: integer }
+        name: { type: string }
+        synopsis: { type: string }
+        durationMinutes: { type: ["integer", "null"] }
+        rights:
+          type: array
+          items: { $ref: "#/components/schemas/PublicRightsRecord" }
     PublicRightsRecord:
       type: object
       required: [assetKind, assetLabel, rightsHolder, creatorAttribution, licenseType, licenseVersion, licenseUrl, usageRestrictions, sourceUrl]
@@ -974,6 +1120,16 @@ components:
         subtitles:
           type: array
           items: { $ref: "#/components/schemas/PublicSubtitle" }
+    EpisodePlayback:
+      allOf:
+        - $ref: "#/components/schemas/Playback"
+        - type: object
+          required: [episodeId, seasonNumber, episodeNumber, episodeName]
+          properties:
+            episodeId: { type: string, format: uuid }
+            seasonNumber: { type: integer }
+            episodeNumber: { type: integer }
+            episodeName: { type: string }
     PublicSubtitle:
       type: object
       required: [id, language, label, url, isDefault]
@@ -1093,6 +1249,63 @@ components:
         streamStatus: { type: string, enum: [missing, pending, processing, ready, error, disabled] }
         stream: { oneOf: [{ $ref: "#/components/schemas/StreamInput" }, { type: "null" }] }
         createdAt: { type: string, format: date-time }
+    SeriesEpisodeInput:
+      type: object
+      required: [episodeNumber, name, rights, stream]
+      properties:
+        episodeNumber: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1, maxLength: 240 }
+        synopsis: { type: string, maxLength: 10000, default: "" }
+        durationMinutes: { type: ["integer", "null"], minimum: 1, maximum: 1000 }
+        rights: { $ref: "#/components/schemas/RightsInput" }
+        stream:
+          type: object
+          required: [url]
+          properties:
+            url: { type: string, format: uri, maxLength: 2048 }
+    SeriesSeasonInput:
+      type: object
+      required: [seasonNumber, episodes]
+      properties:
+        seasonNumber: { type: integer, minimum: 1 }
+        name: { type: ["string", "null"], maxLength: 240 }
+        episodes:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/SeriesEpisodeInput" }
+    SeriesEpisodeImportInput:
+      type: object
+      required: [seasons, uploaderAttested]
+      properties:
+        seasons:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: "#/components/schemas/SeriesSeasonInput" }
+        uploaderAttested: { type: boolean, const: true }
+    EpisodeReviewDecision:
+      type: object
+      required: [decision, note]
+      properties:
+        decision: { type: string, enum: [approve, reject, restrict, restore] }
+        note: { type: string, minLength: 1, maxLength: 4000 }
+    AdminSeriesEpisode:
+      type: object
+      required: [id, seasonNumber, seasonName, episodeNumber, name, synopsis, durationMinutes, status, rights, streamStatus]
+      properties:
+        id: { type: string, format: uuid }
+        seasonNumber: { type: integer }
+        seasonName: { type: ["string", "null"] }
+        episodeNumber: { type: integer }
+        name: { type: string }
+        synopsis: { type: string }
+        durationMinutes: { type: ["integer", "null"] }
+        status: { type: string, enum: [draft, published, archived] }
+        rights:
+          type: array
+          items: { $ref: "#/components/schemas/RightsRecord" }
+        streamStatus: { type: string, enum: [missing, pending, processing, ready, error, disabled] }
     ReviewDecision:
       type: object
       required: [decision, note, rightsIds]

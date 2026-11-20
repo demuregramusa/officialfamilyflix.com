@@ -7,6 +7,9 @@
  */
 
 export * from './adminDashboard';
+export * from './adminSeriesEpisode';
+export * from './adminSeriesEpisodeStatus';
+export * from './adminSeriesEpisodeStreamStatus';
 export * from './adminSettings';
 export * from './adminSettingsInput';
 export * from './adminTitle';
@@ -35,6 +38,9 @@ export * from './copyrightNoticeType';
 export * from './copyrightReportInput';
 export * from './counterNoticeInput';
 export * from './directUpload';
+export * from './episodePlayback';
+export * from './episodeReviewDecision';
+export * from './episodeReviewDecisionDecision';
 export * from './error';
 export * from './healthStatus';
 export * from './importInput';
@@ -49,6 +55,7 @@ export * from './listPublicTitlesParams';
 export * from './playback';
 export * from './playbackStreamType';
 export * from './publicRightsRecord';
+export * from './publicSeriesEpisode';
 export * from './publicSubtitle';
 export * from './publicTitle';
 export * from './publicTitleDetail';
@@ -59,6 +66,10 @@ export * from './reviewDecisionDecision';
 export * from './rightsInput';
 export * from './rightsRecord';
 export * from './rightsReviewStatus';
+export * from './seriesEpisodeImportInput';
+export * from './seriesEpisodeInput';
+export * from './seriesEpisodeInputStream';
+export * from './seriesSeasonInput';
 export * from './siteConfig';
 export * from './staffInput';
 export * from './staffInputRole';

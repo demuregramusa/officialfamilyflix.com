@@ -120,11 +120,13 @@ export function validateRightsInput(input: RightsInput): string | null {
 
 export function rightsToInsert(
   input: RightsInput,
-  movieId: string,
+  movieId: string | null,
   session: RequestSession,
+  episodeId: string | null = null,
 ) {
   return {
     movieId,
+    episodeId,
     assetKind: assetToDb[input.assetKind] as (typeof mediaRights.$inferInsert)["assetKind"],
     assetLabel: input.assetLabel.trim(),
     assetUrl: input.assetUrl.trim(),

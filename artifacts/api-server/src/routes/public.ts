@@ -2,10 +2,11 @@ import { Router } from "express";
 import {
   GetPublicTitleParams,
   GetPlaybackParams,
+  GetEpisodePlaybackParams,
   ListPublicTitlesQueryParams,
 } from "@workspace/api-zod";
 import { db, siteSettings } from "@workspace/db";
-import { getCatalogRows, getPlaybackForRow, getPublicCatalogRowBySlug, toPublicTitle, toPublicTitleDetail } from "../lib/catalog";
+import { getCatalogRows, getEpisodePlaybackForRow, getPlaybackForRow, getPublicCatalogRowBySlug, toPublicTitle, toPublicTitleDetail } from "../lib/catalog";
 import { validatePublicHttpUrl } from "../lib/rights";
 import { eq } from "drizzle-orm";
 
@@ -54,6 +55,33 @@ router.get("/playback/:slug", async (request, response) => {
   const urlIssue = validatePublicHttpUrl(playback.url);
   if (urlIssue || /magnet|torrent/i.test(playback.url)) {
     request.log?.error({ titleId: row.movie.id }, "Playback source failed the media URL policy");
+    response.status(403).json({ error: "This media source is not accepted for playback." });
+    return;
+  }
+  response.json(playback);
+});
+
+router.get("/playback/:slug/episodes/:episodeId", async (request, response) => {
+  const parsed = GetEpisodePlaybackParams.safeParse(request.params);
+  if (!parsed.success) {
+    response.status(400).json({ error: "Invalid series or episode ID." });
+    return;
+  }
+  const row = await getPublicCatalogRowBySlug(parsed.data.slug);
+  const episodeIsVisible = row?.movie.kind === "series" &&
+    row.episodes.some(({ episode }) => episode.id === parsed.data.episodeId);
+  if (!row || !episodeIsVisible) {
+    response.status(404).json({ error: "This episode is not available in the approved catalog." });
+    return;
+  }
+  const playback = await getEpisodePlaybackForRow(row, parsed.data.episodeId);
+  if (!playback) {
+    response.status(403).json({ error: "Episode rights or playback requirements are not currently satisfied." });
+    return;
+  }
+  const urlIssue = validatePublicHttpUrl(playback.url);
+  if (urlIssue || /magnet|torrent/i.test(playback.url)) {
+    request.log?.error({ episodeId: parsed.data.episodeId }, "Episode playback source failed the media URL policy");
     response.status(403).json({ error: "This media source is not accepted for playback." });
     return;
   }

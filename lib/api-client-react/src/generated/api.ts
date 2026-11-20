@@ -26,6 +26,7 @@ import type {
 
 import type {
   AdminDashboard,
+  AdminSeriesEpisode,
   AdminSettings,
   AdminSettingsInput,
   AdminTitle,
@@ -41,6 +42,8 @@ import type {
   CopyrightReportInput,
   CounterNoticeInput,
   DirectUpload,
+  EpisodePlayback,
+  EpisodeReviewDecision,
   Error,
   HealthStatus,
   ImportInput,
@@ -57,6 +60,7 @@ import type {
   ReviewDecision,
   RightsInput,
   RightsRecord,
+  SeriesEpisodeImportInput,
   SiteConfig,
   StaffInput,
   StaffMember,
@@ -496,6 +500,115 @@ export function useGetPlayback<TData = Awaited<ReturnType<typeof getPlayback>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetPlaybackQueryOptions(slug,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEpisodePlaybackUrl = (slug: string,
+    episodeId: string,) => {
+
+
+
+
+  return `/api/playback/${slug}/episodes/${episodeId}`
+}
+
+/**
+ * @summary Get an approved episode playback source
+ */
+export const getEpisodePlayback = async (slug: string,
+    episodeId: string, options?: Parameters<typeof customFetch>[1]): Promise<EpisodePlayback> => {
+
+  return customFetch<EpisodePlayback>(getGetEpisodePlaybackUrl(slug,episodeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEpisodePlaybackQueryKey = (slug: string,
+    episodeId: string,) => {
+    return [
+    `/api/playback/${slug}/episodes/${episodeId}`
+    ] as const;
+    }
+
+
+export const getGetEpisodePlaybackQueryOptions = <TData = Awaited<ReturnType<typeof getEpisodePlayback>>, TError = ErrorType<Error>>(slug: string,
+    episodeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlayback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEpisodePlaybackQueryKey(slug,episodeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEpisodePlayback>>> = ({ signal }) => getEpisodePlayback(slug,episodeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: slug !== null && slug !== undefined && episodeId !== null && episodeId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlayback>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetEpisodePlaybackQueryResult = NonNullable<Awaited<ReturnType<typeof getEpisodePlayback>>>
+export type GetEpisodePlaybackQueryError = ErrorType<Error>
+
+
+export function useGetEpisodePlayback<TData = Awaited<ReturnType<typeof getEpisodePlayback>>, TError = ErrorType<Error>>(
+ slug: string,
+    episodeId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlayback>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEpisodePlayback>>,
+          TError,
+          Awaited<ReturnType<typeof getEpisodePlayback>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEpisodePlayback<TData = Awaited<ReturnType<typeof getEpisodePlayback>>, TError = ErrorType<Error>>(
+ slug: string,
+    episodeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlayback>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEpisodePlayback>>,
+          TError,
+          Awaited<ReturnType<typeof getEpisodePlayback>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEpisodePlayback<TData = Awaited<ReturnType<typeof getEpisodePlayback>>, TError = ErrorType<Error>>(
+ slug: string,
+    episodeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlayback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get an approved episode playback source
+ */
+
+export function useGetEpisodePlayback<TData = Awaited<ReturnType<typeof getEpisodePlayback>>, TError = ErrorType<Error>>(
+ slug: string,
+    episodeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlayback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetEpisodePlaybackQueryOptions(slug,episodeId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -1697,6 +1810,359 @@ export const usePublishAdminTitle = <TError = ErrorType<Error>,
         TContext
       > => {
       return useMutation(getPublishAdminTitleMutationOptions(options), queryClient);
+    }
+
+export const getListAdminSeriesEpisodesUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/titles/${id}/episodes`
+}
+
+/**
+ * @summary List seasons and episodes for an admin series
+ */
+export const listAdminSeriesEpisodes = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<AdminSeriesEpisode[]> => {
+
+  return customFetch<AdminSeriesEpisode[]>(getListAdminSeriesEpisodesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminSeriesEpisodesQueryKey = (id: string,) => {
+    return [
+    `/api/admin/titles/${id}/episodes`
+    ] as const;
+    }
+
+
+export const getListAdminSeriesEpisodesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError = ErrorType<unknown>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminSeriesEpisodesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminSeriesEpisodes>>> = ({ signal }) => listAdminSeriesEpisodes(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAdminSeriesEpisodesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminSeriesEpisodes>>>
+export type ListAdminSeriesEpisodesQueryError = ErrorType<unknown>
+
+
+export function useListAdminSeriesEpisodes<TData = Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError = ErrorType<unknown>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminSeriesEpisodes>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminSeriesEpisodes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminSeriesEpisodes<TData = Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminSeriesEpisodes>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminSeriesEpisodes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminSeriesEpisodes<TData = Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List seasons and episodes for an admin series
+ */
+
+export function useListAdminSeriesEpisodes<TData = Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminSeriesEpisodes>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAdminSeriesEpisodesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getImportAdminSeriesEpisodesUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/titles/${id}/episodes`
+}
+
+/**
+ * @summary Create draft episodes from a documented JSON seasons format
+ */
+export const importAdminSeriesEpisodes = async (id: string,
+    seriesEpisodeImportInput: SeriesEpisodeImportInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminSeriesEpisode[]> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminSeriesEpisode[]>(getImportAdminSeriesEpisodesUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(seriesEpisodeImportInput)
+  }
+);}
+
+
+
+
+
+export const getImportAdminSeriesEpisodesMutationKey = () => ['importAdminSeriesEpisodes'] as const;
+
+export const getImportAdminSeriesEpisodesMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importAdminSeriesEpisodes>>, TError,ImportAdminSeriesEpisodesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importAdminSeriesEpisodes>>, TError,ImportAdminSeriesEpisodesMutationVariables, TContext> => {
+
+const mutationKey = getImportAdminSeriesEpisodesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importAdminSeriesEpisodes>>, ImportAdminSeriesEpisodesMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  importAdminSeriesEpisodes(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportAdminSeriesEpisodesMutationResult = NonNullable<Awaited<ReturnType<typeof importAdminSeriesEpisodes>>>
+    export type ImportAdminSeriesEpisodesMutationBody = BodyType<SeriesEpisodeImportInput>
+    export type ImportAdminSeriesEpisodesMutationError = ErrorType<Error>
+    export type ImportAdminSeriesEpisodesMutationVariables = {id: string;data: BodyType<SeriesEpisodeImportInput>}
+
+    /**
+ * @summary Create draft episodes from a documented JSON seasons format
+ */
+export const useImportAdminSeriesEpisodes = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importAdminSeriesEpisodes>>, TError,ImportAdminSeriesEpisodesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof importAdminSeriesEpisodes>>,
+        TError,
+        ImportAdminSeriesEpisodesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getImportAdminSeriesEpisodesMutationOptions(options), queryClient);
+    }
+
+export const getReviewSeriesEpisodeUrl = (episodeId: string,) => {
+
+
+
+
+  return `/api/admin/episodes/${episodeId}/review`
+}
+
+/**
+ * @summary Review one episode rights record
+ */
+export const reviewSeriesEpisode = async (episodeId: string,
+    episodeReviewDecision: EpisodeReviewDecision, options?: Parameters<typeof customFetch>[1]): Promise<AdminSeriesEpisode> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminSeriesEpisode>(getReviewSeriesEpisodeUrl(episodeId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(episodeReviewDecision)
+  }
+);}
+
+
+
+
+
+export const getReviewSeriesEpisodeMutationKey = () => ['reviewSeriesEpisode'] as const;
+
+export const getReviewSeriesEpisodeMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewSeriesEpisode>>, TError,ReviewSeriesEpisodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewSeriesEpisode>>, TError,ReviewSeriesEpisodeMutationVariables, TContext> => {
+
+const mutationKey = getReviewSeriesEpisodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewSeriesEpisode>>, ReviewSeriesEpisodeMutationVariables> = (props) => {
+          const {episodeId,data} = props ?? {};
+
+          return  reviewSeriesEpisode(episodeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewSeriesEpisodeMutationResult = NonNullable<Awaited<ReturnType<typeof reviewSeriesEpisode>>>
+    export type ReviewSeriesEpisodeMutationBody = BodyType<EpisodeReviewDecision>
+    export type ReviewSeriesEpisodeMutationError = ErrorType<Error>
+    export type ReviewSeriesEpisodeMutationVariables = {episodeId: string;data: BodyType<EpisodeReviewDecision>}
+
+    /**
+ * @summary Review one episode rights record
+ */
+export const useReviewSeriesEpisode = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewSeriesEpisode>>, TError,ReviewSeriesEpisodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reviewSeriesEpisode>>,
+        TError,
+        ReviewSeriesEpisodeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewSeriesEpisodeMutationOptions(options), queryClient);
+    }
+
+export const getPublishSeriesEpisodeUrl = (episodeId: string,) => {
+
+
+
+
+  return `/api/admin/episodes/${episodeId}/publish`
+}
+
+/**
+ * @summary Publish an episode after rights and stream checks
+ */
+export const publishSeriesEpisode = async (episodeId: string, options?: Parameters<typeof customFetch>[1]): Promise<AdminSeriesEpisode> => {
+
+  return customFetch<AdminSeriesEpisode>(getPublishSeriesEpisodeUrl(episodeId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getPublishSeriesEpisodeMutationKey = () => ['publishSeriesEpisode'] as const;
+
+export const getPublishSeriesEpisodeMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishSeriesEpisode>>, TError,PublishSeriesEpisodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof publishSeriesEpisode>>, TError,PublishSeriesEpisodeMutationVariables, TContext> => {
+
+const mutationKey = getPublishSeriesEpisodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof publishSeriesEpisode>>, PublishSeriesEpisodeMutationVariables> = (props) => {
+          const {episodeId} = props ?? {};
+
+          return  publishSeriesEpisode(episodeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PublishSeriesEpisodeMutationResult = NonNullable<Awaited<ReturnType<typeof publishSeriesEpisode>>>
+
+    export type PublishSeriesEpisodeMutationError = ErrorType<Error>
+    export type PublishSeriesEpisodeMutationVariables = {episodeId: string}
+
+    /**
+ * @summary Publish an episode after rights and stream checks
+ */
+export const usePublishSeriesEpisode = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publishSeriesEpisode>>, TError,PublishSeriesEpisodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof publishSeriesEpisode>>,
+        TError,
+        PublishSeriesEpisodeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPublishSeriesEpisodeMutationOptions(options), queryClient);
     }
 
 export const getImportTitlesUrl = () => {

@@ -5,6 +5,8 @@ import {
   mediaRights,
   movieGenres,
   movies,
+  seriesEpisodes,
+  seriesSeasons,
   subtitles,
   videoAssets,
   type MediaRight,
@@ -15,14 +17,26 @@ import type {
   PublicRightsRecord,
   PublicTitle,
   PublicTitleDetail,
+  PublicSeriesEpisode,
+  EpisodePlayback,
 } from "@workspace/api-zod";
 import { isEvidenceComplete, isRightCurrent, validatePublicHttpUrl } from "./rights";
+import { isEpisodePubliclyPlayable, isSeriesPubliclyVisible } from "./episode-eligibility";
+
+type EpisodeCatalogRow = {
+  episode: typeof seriesEpisodes.$inferSelect;
+  seasonNumber: number;
+  seasonName: string | null;
+  rights: MediaRight[];
+  video: (typeof videoAssets.$inferSelect) | null;
+};
 
 type CatalogRow = {
   movie: Movie;
   rights: MediaRight[];
   video: (typeof videoAssets.$inferSelect) | null;
   genres: string[];
+  episodes: EpisodeCatalogRow[];
 };
 
 export async function getCatalogRows(options: {
@@ -64,7 +78,7 @@ export async function getCatalogRows(options: {
 async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
   if (!movieRows.length) return [];
   const ids = movieRows.map((movie) => movie.id);
-  const [rightsRows, videoRows, genreRows] = await Promise.all([
+  const [rightsRows, videoRows, genreRows, episodeRows] = await Promise.all([
     db.select().from(mediaRights).where(inArray(mediaRights.movieId, ids)),
     db.select().from(videoAssets).where(inArray(videoAssets.movieId, ids)),
     db
@@ -72,6 +86,7 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
       .from(movieGenres)
       .innerJoin(genres, eq(movieGenres.genreId, genres.id))
       .where(inArray(movieGenres.movieId, ids)),
+    getPublicEpisodeRows(movieRows.filter((movie) => movie.kind === "series").map((movie) => movie.id)),
   ]);
 
   const rightsByMovie = new Map<string, MediaRight[]>();
@@ -89,12 +104,10 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
     const rights = rightsByMovie.get(movie.id) ?? [];
     const mainRight = rights.find((right) => right.assetKind === "main_video");
     const video = videoByMovie.get(movie.id) ?? null;
-    if (
-      !mainRight ||
-      !video ||
-      video.status !== "ready" ||
-      video.mediaRightId !== mainRight.id
-    ) {
+    const episodes = episodeRows.get(movie.id) ?? [];
+    if (movie.kind === "series"
+      ? !isSeriesPubliclyVisible({ kind: movie.kind, status: movie.status, playableEpisodeCount: episodes.length })
+      : (!mainRight || !video || video.status !== "ready" || video.mediaRightId !== mainRight.id)) {
       return [];
     }
     return [{
@@ -102,8 +115,66 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
       rights,
       video,
       genres: genresByMovie.get(movie.id) ?? [],
+      episodes,
     }];
   });
+}
+
+async function getPublicEpisodeRows(seriesIds: string[]): Promise<Map<string, EpisodeCatalogRow[]>> {
+  const result = new Map<string, EpisodeCatalogRow[]>();
+  if (!seriesIds.length) return result;
+  const rows = await db
+    .select({
+      episode: seriesEpisodes,
+      seasonId: seriesSeasons.id,
+      seasonNumber: seriesSeasons.seasonNumber,
+      seasonName: seriesSeasons.name,
+      movieId: seriesSeasons.movieId,
+    })
+    .from(seriesEpisodes)
+    .innerJoin(seriesSeasons, eq(seriesEpisodes.seasonId, seriesSeasons.id))
+    .where(and(inArray(seriesSeasons.movieId, seriesIds), eq(seriesEpisodes.status, "published")));
+  if (!rows.length) return result;
+  const episodeIds = rows.map(({ episode }) => episode.id);
+  const [rightsRows, videoRows] = await Promise.all([
+    db.select().from(mediaRights).where(inArray(mediaRights.episodeId, episodeIds)),
+    db.select().from(videoAssets).where(inArray(videoAssets.episodeId, episodeIds)),
+  ]);
+  const rightsByEpisode = new Map<string, MediaRight[]>();
+  for (const right of rightsRows) {
+    if (!right.episodeId || !isRightCurrent(right) || !isEvidenceComplete(right)) continue;
+    rightsByEpisode.set(right.episodeId, [...(rightsByEpisode.get(right.episodeId) ?? []), right]);
+  }
+  const videoByEpisode = new Map(
+    videoRows.filter((video) => video.episodeId).map((video) => [video.episodeId!, video]),
+  );
+  for (const { episode, seasonNumber, seasonName, movieId } of rows) {
+    const rights = rightsByEpisode.get(episode.id) ?? [];
+    const video = videoByEpisode.get(episode.id) ?? null;
+    if (!isEpisodePubliclyPlayable({
+      parentSeriesId: movieId,
+      episodeSeriesId: movieId,
+      parentStatus: "published",
+      parentKind: "series",
+      episodeIsPublished: episode.status === "published",
+      rights,
+      video,
+    })) continue;
+    result.set(movieId, [...(result.get(movieId) ?? []), {
+      episode,
+      seasonNumber,
+      seasonName,
+      rights,
+      video,
+    }]);
+  }
+  for (const episodes of result.values()) {
+    episodes.sort((a, b) =>
+      a.seasonNumber - b.seasonNumber ||
+      a.episode.episodeNumber - b.episode.episodeNumber,
+    );
+  }
+  return result;
 }
 
 function toPublicRightsRecord(right: MediaRight): PublicRightsRecord {
@@ -166,6 +237,20 @@ export function toPublicTitleDetail(row: CatalogRow): PublicTitleDetail {
     rating: row.movie.rating,
     durationMinutes: row.movie.durationMinutes,
     rights: row.rights.map(toPublicRightsRecord),
+    episodes: row.episodes.map(toPublicEpisode),
+  };
+}
+
+function toPublicEpisode(row: EpisodeCatalogRow): PublicSeriesEpisode {
+  return {
+    id: row.episode.id,
+    seasonNumber: row.seasonNumber,
+    seasonName: row.seasonName,
+    episodeNumber: row.episode.episodeNumber,
+    name: row.episode.name,
+    synopsis: row.episode.synopsis,
+    durationMinutes: row.episode.durationMinutes,
+    rights: row.rights.map(toPublicRightsRecord),
   };
 }
 
@@ -179,6 +264,7 @@ export async function getPublicCatalogRowBySlug(slug: string): Promise<CatalogRo
 }
 
 export async function getPlaybackForRow(row: CatalogRow): Promise<Playback | null> {
+  if (row.movie.kind === "series") return null;
   const video = row.video;
   const primaryRight = row.rights.find((right) => right.id === video?.mediaRightId);
   if (!video || !primaryRight || primaryRight.assetKind !== "main_video") return null;
@@ -232,5 +318,43 @@ export async function getPlaybackForRow(row: CatalogRow): Promise<Playback | nul
         url: subtitleUrl,
         isDefault,
       })),
+  };
+}
+
+export async function getEpisodePlaybackForRow(
+  row: CatalogRow,
+  episodeId: string,
+): Promise<EpisodePlayback | null> {
+  const episode = row.episodes.find((candidate) => candidate.episode.id === episodeId);
+  const video = episode?.video;
+  const primaryRight = episode?.rights.find((right) => right.id === video?.mediaRightId);
+  if (!episode || !video || !primaryRight || primaryRight.assetKind !== "main_video") return null;
+
+  let url: string | null = null;
+  let streamType: EpisodePlayback["streamType"] | null = null;
+  if (video.provider === "cloudflare") {
+    const base = process.env.CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN?.trim();
+    url = video.hlsUrl ?? (base && video.playbackId
+      ? `https://${base}.cloudflarestream.com/${encodeURIComponent(video.playbackId)}/manifest/video.m3u8`
+      : null);
+    streamType = "cloudflare";
+  } else if (video.hlsUrl) {
+    url = video.hlsUrl;
+    streamType = "hls";
+  } else if (video.mp4Url) {
+    url = video.mp4Url;
+    streamType = "mp4";
+  }
+  if (!url || !streamType || !url.startsWith("https://") || validatePublicHttpUrl(url)) return null;
+  return {
+    titleName: `${row.movie.name} · S${episode.seasonNumber} E${episode.episode.episodeNumber}: ${episode.episode.name}`,
+    streamType,
+    url,
+    posterUrl: row.rights.find((right) => right.assetKind === "poster")?.assetUrl ?? null,
+    subtitles: [],
+    episodeId: episode.episode.id,
+    seasonNumber: episode.seasonNumber,
+    episodeNumber: episode.episode.episodeNumber,
+    episodeName: episode.episode.name,
   };
 }

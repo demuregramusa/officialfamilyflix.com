@@ -107,6 +107,19 @@ export interface PublicRightsRecord {
   expiresAt?: string | null;
 }
 
+export interface PublicSeriesEpisode {
+  id: string;
+  seasonNumber: number;
+  /** @nullable */
+  seasonName: string | null;
+  episodeNumber: number;
+  name: string;
+  synopsis: string;
+  /** @nullable */
+  durationMinutes: number | null;
+  rights: PublicRightsRecord[];
+}
+
 export type PublicTitleDetail = PublicTitle & ({
   /** @nullable */
   tagline: string | null;
@@ -118,6 +131,8 @@ export type PublicTitleDetail = PublicTitle & ({
   /** @nullable */
   durationMinutes: number | null;
   rights: PublicRightsRecord[];
+  /** Only currently playable, published episodes are returned for series. */
+  episodes: PublicSeriesEpisode[];
 });
 
 export type PlaybackStreamType = typeof PlaybackStreamType[keyof typeof PlaybackStreamType];
@@ -145,6 +160,13 @@ export interface Playback {
   posterUrl?: string | null;
   subtitles: PublicSubtitle[];
 }
+
+export type EpisodePlayback = Playback & {
+  episodeId: string;
+  seasonNumber: number;
+  episodeNumber: number;
+  episodeName: string;
+};
 
 export interface RightsInput {
   assetKind: AssetKind;
@@ -380,6 +402,110 @@ export interface AdminTitle {
   streamStatus: AdminTitleStreamStatus;
   stream?: StreamInput | null;
   createdAt: string;
+}
+
+export type SeriesEpisodeInputStream = {
+  /** @maxLength 2048 */
+  url: string;
+};
+
+export interface SeriesEpisodeInput {
+  /** @minimum 1 */
+  episodeNumber: number;
+  /**
+     * @minLength 1
+     * @maxLength 240
+     */
+  name: string;
+  /** @maxLength 10000 */
+  synopsis?: string;
+  /**
+     * @minimum 1
+     * @maximum 1000
+     * @nullable
+     */
+  durationMinutes?: number | null;
+  rights: RightsInput;
+  stream: SeriesEpisodeInputStream;
+}
+
+export interface SeriesSeasonInput {
+  /** @minimum 1 */
+  seasonNumber: number;
+  /**
+     * @maxLength 240
+     * @nullable
+     */
+  name?: string | null;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  episodes: SeriesEpisodeInput[];
+}
+
+export interface SeriesEpisodeImportInput {
+  /**
+     * @minItems 1
+     * @maxItems 50
+     */
+  seasons: SeriesSeasonInput[];
+  uploaderAttested: true;
+}
+
+export type EpisodeReviewDecisionDecision = typeof EpisodeReviewDecisionDecision[keyof typeof EpisodeReviewDecisionDecision];
+
+
+export const EpisodeReviewDecisionDecision = {
+  approve: 'approve',
+  reject: 'reject',
+  restrict: 'restrict',
+  restore: 'restore',
+} as const;
+
+export interface EpisodeReviewDecision {
+  decision: EpisodeReviewDecisionDecision;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  note: string;
+}
+
+export type AdminSeriesEpisodeStatus = typeof AdminSeriesEpisodeStatus[keyof typeof AdminSeriesEpisodeStatus];
+
+
+export const AdminSeriesEpisodeStatus = {
+  draft: 'draft',
+  published: 'published',
+  archived: 'archived',
+} as const;
+
+export type AdminSeriesEpisodeStreamStatus = typeof AdminSeriesEpisodeStreamStatus[keyof typeof AdminSeriesEpisodeStreamStatus];
+
+
+export const AdminSeriesEpisodeStreamStatus = {
+  missing: 'missing',
+  pending: 'pending',
+  processing: 'processing',
+  ready: 'ready',
+  error: 'error',
+  disabled: 'disabled',
+} as const;
+
+export interface AdminSeriesEpisode {
+  id: string;
+  seasonNumber: number;
+  /** @nullable */
+  seasonName: string | null;
+  episodeNumber: number;
+  name: string;
+  synopsis: string;
+  /** @nullable */
+  durationMinutes: number | null;
+  status: AdminSeriesEpisodeStatus;
+  rights: RightsRecord[];
+  streamStatus: AdminSeriesEpisodeStreamStatus;
 }
 
 export type ReviewDecisionDecision = typeof ReviewDecisionDecision[keyof typeof ReviewDecisionDecision];
