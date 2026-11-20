@@ -15,14 +15,22 @@ localPort = 23453
 run = "pnpm --filter @workspace/familyflix run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/familyflix", "run", "build" ]
-serve = "static"
-publicDir = "artifacts/familyflix/dist/public"
 
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/familyflix", "run", "build"]
+
+[services.production.build.env]
+NODE_ENV = "production"
+NEXT_PUBLIC_BASE_PATH = "/familyflix"
+
+[services.production.run]
+args = ["pnpm", "--filter", "@workspace/familyflix", "run", "start"]
+
+[services.production.run.env]
+PORT = "23453"
+NODE_ENV = "production"
+NEXT_PUBLIC_BASE_PATH = "/familyflix"
 
 [services.env]
 PORT = "23453"
-BASE_PATH = "/familyflix/"
+NEXT_PUBLIC_BASE_PATH = "/familyflix"
