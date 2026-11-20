@@ -1337,6 +1337,257 @@ export const ImportTitlesResponse = zod.object({
 
 
 /**
+ * @summary Dry-run a movie catalog ZIP
+ */
+
+export const validateMovieArchiveImportResponseJobProgressPercentMin = 0;
+export const validateMovieArchiveImportResponseJobProgressPercentMax = 100;
+
+
+
+
+export const ValidateMovieArchiveImportResponse = zod.object({
+  "job": zod.object({
+  "id": zod.string().uuid(),
+  "archiveName": zod.string(),
+  "archiveSha256": zod.string(),
+  "status": zod.enum(['validated', 'running', 'paused', 'completed', 'failed']),
+  "totalPages": zod.number().int(),
+  "nextPageIndex": zod.number().int(),
+  "totalRecords": zod.number().int(),
+  "expectedNewTitles": zod.number().int(),
+  "expectedMatchedTitles": zod.number().int(),
+  "expectedSourceRecords": zod.number().int(),
+  "expectedTorrentSources": zod.number().int(),
+  "processedRecords": zod.number().int(),
+  "createdTitles": zod.number().int(),
+  "matchedTitles": zod.number().int(),
+  "updatedTitles": zod.number().int(),
+  "duplicateRecords": zod.number().int(),
+  "duplicateSourceRecords": zod.number().int(),
+  "duplicateImdbRecords": zod.number().int(),
+  "importedSourceRecords": zod.number().int(),
+  "importedTorrentSources": zod.number().int(),
+  "malformedPages": zod.number().int(),
+  "recoveredRecords": zod.number().int(),
+  "skippedRecords": zod.number().int(),
+  "failedRecords": zod.number().int(),
+  "issues": zod.array(zod.object({
+  "page": zod.number().int().min(1),
+  "sourceId": zod.string().nullish(),
+  "message": zod.string()
+})),
+  "lastError": zod.string().nullish(),
+  "progressPercent": zod.number().int().min(validateMovieArchiveImportResponseJobProgressPercentMin).max(validateMovieArchiveImportResponseJobProgressPercentMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "archivePages": zod.number().int(),
+  "totalRecords": zod.number().int(),
+  "duplicateSourceRecords": zod.number().int(),
+  "duplicateImdbRecords": zod.number().int(),
+  "invalidRecords": zod.number().int(),
+  "malformedPages": zod.number().int(),
+  "recoveredRecords": zod.number().int(),
+  "nonCatalogEntries": zod.number().int(),
+  "existingTitles": zod.number().int(),
+  "expectedNewTitles": zod.number().int(),
+  "expectedMatchedTitles": zod.number().int(),
+  "protectedTitles": zod.number().int(),
+  "expectedSourceRecords": zod.number().int(),
+  "expectedTorrentSources": zod.number().int(),
+  "expectedDatabaseWrites": zod.number().int(),
+  "issues": zod.array(zod.object({
+  "page": zod.number().int().min(1),
+  "sourceId": zod.string().nullish(),
+  "message": zod.string()
+}))
+})
+
+
+/**
+ * @summary List recent movie archive imports
+ */
+
+export const listMovieArchiveImportJobsResponseProgressPercentMin = 0;
+export const listMovieArchiveImportJobsResponseProgressPercentMax = 100;
+
+
+
+export const ListMovieArchiveImportJobsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "archiveName": zod.string(),
+  "archiveSha256": zod.string(),
+  "status": zod.enum(['validated', 'running', 'paused', 'completed', 'failed']),
+  "totalPages": zod.number().int(),
+  "nextPageIndex": zod.number().int(),
+  "totalRecords": zod.number().int(),
+  "expectedNewTitles": zod.number().int(),
+  "expectedMatchedTitles": zod.number().int(),
+  "expectedSourceRecords": zod.number().int(),
+  "expectedTorrentSources": zod.number().int(),
+  "processedRecords": zod.number().int(),
+  "createdTitles": zod.number().int(),
+  "matchedTitles": zod.number().int(),
+  "updatedTitles": zod.number().int(),
+  "duplicateRecords": zod.number().int(),
+  "duplicateSourceRecords": zod.number().int(),
+  "duplicateImdbRecords": zod.number().int(),
+  "importedSourceRecords": zod.number().int(),
+  "importedTorrentSources": zod.number().int(),
+  "malformedPages": zod.number().int(),
+  "recoveredRecords": zod.number().int(),
+  "skippedRecords": zod.number().int(),
+  "failedRecords": zod.number().int(),
+  "issues": zod.array(zod.object({
+  "page": zod.number().int().min(1),
+  "sourceId": zod.string().nullish(),
+  "message": zod.string()
+})),
+  "lastError": zod.string().nullish(),
+  "progressPercent": zod.number().int().min(listMovieArchiveImportJobsResponseProgressPercentMin).max(listMovieArchiveImportJobsResponseProgressPercentMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListMovieArchiveImportJobsResponse = zod.array(ListMovieArchiveImportJobsResponseItem)
+
+
+/**
+ * @summary Get movie archive import progress
+ */
+export const GetMovieArchiveImportJobParams = zod.object({
+  "jobId": zod.coerce.string().uuid()
+})
+
+
+export const getMovieArchiveImportJobResponseProgressPercentMin = 0;
+export const getMovieArchiveImportJobResponseProgressPercentMax = 100;
+
+
+
+export const GetMovieArchiveImportJobResponse = zod.object({
+  "id": zod.string().uuid(),
+  "archiveName": zod.string(),
+  "archiveSha256": zod.string(),
+  "status": zod.enum(['validated', 'running', 'paused', 'completed', 'failed']),
+  "totalPages": zod.number().int(),
+  "nextPageIndex": zod.number().int(),
+  "totalRecords": zod.number().int(),
+  "expectedNewTitles": zod.number().int(),
+  "expectedMatchedTitles": zod.number().int(),
+  "expectedSourceRecords": zod.number().int(),
+  "expectedTorrentSources": zod.number().int(),
+  "processedRecords": zod.number().int(),
+  "createdTitles": zod.number().int(),
+  "matchedTitles": zod.number().int(),
+  "updatedTitles": zod.number().int(),
+  "duplicateRecords": zod.number().int(),
+  "duplicateSourceRecords": zod.number().int(),
+  "duplicateImdbRecords": zod.number().int(),
+  "importedSourceRecords": zod.number().int(),
+  "importedTorrentSources": zod.number().int(),
+  "malformedPages": zod.number().int(),
+  "recoveredRecords": zod.number().int(),
+  "skippedRecords": zod.number().int(),
+  "failedRecords": zod.number().int(),
+  "issues": zod.array(zod.object({
+  "page": zod.number().int().min(1),
+  "sourceId": zod.string().nullish(),
+  "message": zod.string()
+})),
+  "lastError": zod.string().nullish(),
+  "progressPercent": zod.number().int().min(getMovieArchiveImportJobResponseProgressPercentMin).max(getMovieArchiveImportJobResponseProgressPercentMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Start or resume an import with the validated ZIP
+ */
+export const StartMovieArchiveImportParams = zod.object({
+  "jobId": zod.coerce.string().uuid()
+})
+
+
+export const startMovieArchiveImportResponseProgressPercentMin = 0;
+export const startMovieArchiveImportResponseProgressPercentMax = 100;
+
+
+
+export const StartMovieArchiveImportResponse = zod.object({
+  "id": zod.string().uuid(),
+  "archiveName": zod.string(),
+  "archiveSha256": zod.string(),
+  "status": zod.enum(['validated', 'running', 'paused', 'completed', 'failed']),
+  "totalPages": zod.number().int(),
+  "nextPageIndex": zod.number().int(),
+  "totalRecords": zod.number().int(),
+  "expectedNewTitles": zod.number().int(),
+  "expectedMatchedTitles": zod.number().int(),
+  "expectedSourceRecords": zod.number().int(),
+  "expectedTorrentSources": zod.number().int(),
+  "processedRecords": zod.number().int(),
+  "createdTitles": zod.number().int(),
+  "matchedTitles": zod.number().int(),
+  "updatedTitles": zod.number().int(),
+  "duplicateRecords": zod.number().int(),
+  "duplicateSourceRecords": zod.number().int(),
+  "duplicateImdbRecords": zod.number().int(),
+  "importedSourceRecords": zod.number().int(),
+  "importedTorrentSources": zod.number().int(),
+  "malformedPages": zod.number().int(),
+  "recoveredRecords": zod.number().int(),
+  "skippedRecords": zod.number().int(),
+  "failedRecords": zod.number().int(),
+  "issues": zod.array(zod.object({
+  "page": zod.number().int().min(1),
+  "sourceId": zod.string().nullish(),
+  "message": zod.string()
+})),
+  "lastError": zod.string().nullish(),
+  "progressPercent": zod.number().int().min(startMovieArchiveImportResponseProgressPercentMin).max(startMovieArchiveImportResponseProgressPercentMax),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary View private imported catalog and torrent references
+ */
+export const GetAdminArchiveSourcesParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetAdminArchiveSourcesResponseItem = zod.object({
+  "provider": zod.string(),
+  "sourceId": zod.string(),
+  "imdbCode": zod.string().nullable(),
+  "sourceUrl": zod.string().nullable(),
+  "metadata": zod.record(zod.string(), zod.unknown()),
+  "torrents": zod.array(zod.object({
+  "sourceUrl": zod.string().nullable(),
+  "infoHash": zod.string().nullable(),
+  "quality": zod.string().nullable(),
+  "sourceType": zod.string().nullable(),
+  "isRepack": zod.boolean().nullable(),
+  "videoCodec": zod.string().nullable(),
+  "bitDepth": zod.string().nullable(),
+  "audioChannels": zod.string().nullable(),
+  "seeders": zod.number().int().nullable(),
+  "peers": zod.number().int().nullable(),
+  "size": zod.string().nullable(),
+  "sizeBytes": zod.number().int().nullable(),
+  "uploadedAt": zod.string().nullable(),
+  "playbackStatus": zod.enum(['disabled']),
+  "rightsStatus": zod.enum(['unverified']),
+  "metadata": zod.record(zod.string(), zod.unknown())
+}))
+})
+export const GetAdminArchiveSourcesResponse = zod.array(GetAdminArchiveSourcesResponseItem)
+
+
+/**
  * @summary Attach an authorized direct stream
  */
 export const SetTitleStreamParams = zod.object({

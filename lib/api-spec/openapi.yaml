@@ -543,6 +543,127 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admin/import/archive/validate:
+    post:
+      operationId: validateMovieArchiveImport
+      tags: [administration]
+      summary: Dry-run a movie catalog ZIP
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema:
+              $ref: "#/components/schemas/ArchiveZipFile"
+      responses:
+        "200":
+          description: Archive validation report; no titles or sources are written
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveValidationReport"
+        "400":
+          description: Invalid or unsupported archive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/import/archive-jobs:
+    get:
+      operationId: listMovieArchiveImportJobs
+      tags: [administration]
+      summary: List recent movie archive imports
+      responses:
+        "200":
+          description: Recent import jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArchiveImportJob"
+  /admin/import/archive-jobs/{jobId}:
+    get:
+      operationId: getMovieArchiveImportJob
+      tags: [administration]
+      summary: Get movie archive import progress
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Import job status and progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveImportJob"
+        "404":
+          description: Import job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/import/archive-jobs/{jobId}/start:
+    post:
+      operationId: startMovieArchiveImport
+      tags: [administration]
+      summary: Start or resume an import with the validated ZIP
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/zip:
+            schema:
+              $ref: "#/components/schemas/ArchiveZipFile"
+      responses:
+        "202":
+          description: Import started or resumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArchiveImportJob"
+        "400":
+          description: The archive does not match the validated file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Import job cannot be started in its current state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /admin/titles/{id}/archive-sources:
+    get:
+      operationId: getAdminArchiveSources
+      tags: [administration]
+      summary: View private imported catalog and torrent references
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Imported source metadata, visible only to authorized staff
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImportedMovieSource"
+        "404":
+          description: Title not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /admin/titles/{id}/stream:
     put:
       operationId: setTitleStream
@@ -1345,6 +1466,174 @@ components:
           type: array
           items: { $ref: "#/components/schemas/ImportIssue" }
         pendingReview: { type: integer }
+    ArchiveZipFile:
+      type: string
+      description: Raw ZIP bytes sent with Content-Type application/zip.
+    ArchiveImportStatus:
+      type: string
+      enum: [validated, running, paused, completed, failed]
+    ArchiveImportIssue:
+      type: object
+      required: [page, message]
+      properties:
+        page: { type: integer, minimum: 1 }
+        sourceId: { type: ["string", "null"] }
+        message: { type: string }
+    ArchiveImportJob:
+      type: object
+      required:
+        - id
+        - archiveName
+        - archiveSha256
+        - status
+        - totalPages
+        - nextPageIndex
+        - totalRecords
+        - expectedNewTitles
+        - expectedMatchedTitles
+        - expectedSourceRecords
+        - expectedTorrentSources
+        - processedRecords
+        - createdTitles
+        - matchedTitles
+        - updatedTitles
+        - duplicateRecords
+        - duplicateSourceRecords
+        - duplicateImdbRecords
+        - importedSourceRecords
+        - importedTorrentSources
+        - malformedPages
+        - recoveredRecords
+        - skippedRecords
+        - failedRecords
+        - issues
+        - progressPercent
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        archiveName: { type: string }
+        archiveSha256: { type: string }
+        status: { $ref: "#/components/schemas/ArchiveImportStatus" }
+        totalPages: { type: integer }
+        nextPageIndex: { type: integer }
+        totalRecords: { type: integer }
+        expectedNewTitles: { type: integer }
+        expectedMatchedTitles: { type: integer }
+        expectedSourceRecords: { type: integer }
+        expectedTorrentSources: { type: integer }
+        processedRecords: { type: integer }
+        createdTitles: { type: integer }
+        matchedTitles: { type: integer }
+        updatedTitles: { type: integer }
+        duplicateRecords: { type: integer }
+        duplicateSourceRecords: { type: integer }
+        duplicateImdbRecords: { type: integer }
+        importedSourceRecords: { type: integer }
+        importedTorrentSources: { type: integer }
+        malformedPages: { type: integer }
+        recoveredRecords: { type: integer }
+        skippedRecords: { type: integer }
+        failedRecords: { type: integer }
+        issues:
+          type: array
+          items: { $ref: "#/components/schemas/ArchiveImportIssue" }
+        lastError: { type: ["string", "null"] }
+        progressPercent: { type: integer, minimum: 0, maximum: 100 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ArchiveValidationReport:
+      type: object
+      required:
+        - job
+        - archivePages
+        - totalRecords
+        - duplicateSourceRecords
+        - duplicateImdbRecords
+        - invalidRecords
+        - malformedPages
+        - recoveredRecords
+        - nonCatalogEntries
+        - existingTitles
+        - expectedNewTitles
+        - expectedMatchedTitles
+        - protectedTitles
+        - expectedSourceRecords
+        - expectedTorrentSources
+        - expectedDatabaseWrites
+        - issues
+      properties:
+        job: { $ref: "#/components/schemas/ArchiveImportJob" }
+        archivePages: { type: integer }
+        totalRecords: { type: integer }
+        duplicateSourceRecords: { type: integer }
+        duplicateImdbRecords: { type: integer }
+        invalidRecords: { type: integer }
+        malformedPages: { type: integer }
+        recoveredRecords: { type: integer }
+        nonCatalogEntries: { type: integer }
+        existingTitles: { type: integer }
+        expectedNewTitles: { type: integer }
+        expectedMatchedTitles: { type: integer }
+        protectedTitles: { type: integer }
+        expectedSourceRecords: { type: integer }
+        expectedTorrentSources: { type: integer }
+        expectedDatabaseWrites: { type: integer }
+        issues:
+          type: array
+          items: { $ref: "#/components/schemas/ArchiveImportIssue" }
+    ImportedTorrentSource:
+      type: object
+      required:
+        - sourceUrl
+        - infoHash
+        - quality
+        - sourceType
+        - isRepack
+        - videoCodec
+        - bitDepth
+        - audioChannels
+        - seeders
+        - peers
+        - size
+        - sizeBytes
+        - uploadedAt
+        - playbackStatus
+        - rightsStatus
+        - metadata
+      properties:
+        sourceUrl: { type: ["string", "null"] }
+        infoHash: { type: ["string", "null"] }
+        quality: { type: ["string", "null"] }
+        sourceType: { type: ["string", "null"] }
+        isRepack: { type: ["boolean", "null"] }
+        videoCodec: { type: ["string", "null"] }
+        bitDepth: { type: ["string", "null"] }
+        audioChannels: { type: ["string", "null"] }
+        seeders: { type: ["integer", "null"] }
+        peers: { type: ["integer", "null"] }
+        size: { type: ["string", "null"] }
+        sizeBytes: { type: ["integer", "null"], format: int64 }
+        uploadedAt: { type: ["string", "null"] }
+        playbackStatus: { type: string, enum: [disabled] }
+        rightsStatus: { type: string, enum: [unverified] }
+        metadata:
+          type: object
+          additionalProperties: true
+    ImportedMovieSource:
+      type: object
+      required: [provider, sourceId, imdbCode, sourceUrl, metadata, torrents]
+      properties:
+        provider: { type: string }
+        sourceId: { type: string }
+        imdbCode: { type: ["string", "null"] }
+        sourceUrl: { type: ["string", "null"] }
+        metadata:
+          type: object
+          additionalProperties: true
+        torrents:
+          type: array
+          items: { $ref: "#/components/schemas/ImportedTorrentSource" }
     SubtitleInput:
       type: object
       required: [language, label, url, rights, uploaderAttested]

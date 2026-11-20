@@ -30,6 +30,8 @@ import type {
   AdminSettings,
   AdminSettingsInput,
   AdminTitle,
+  ArchiveImportJob,
+  ArchiveValidationReport,
   AuditEvent,
   CaseDecision,
   CaseReceipt,
@@ -48,6 +50,7 @@ import type {
   HealthStatus,
   ImportInput,
   ImportReport,
+  ImportedMovieSource,
   ListAdminActivityParams,
   ListAdminTitlesParams,
   ListCopyrightCasesParams,
@@ -2252,6 +2255,486 @@ export const useImportTitles = <TError = ErrorType<Error>,
       > => {
       return useMutation(getImportTitlesMutationOptions(options), queryClient);
     }
+
+export const getValidateMovieArchiveImportUrl = () => {
+
+
+
+
+  return `/api/admin/import/archive/validate`
+}
+
+/**
+ * @summary Dry-run a movie catalog ZIP
+ */
+export const validateMovieArchiveImport = async (validateMovieArchiveImportBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<ArchiveValidationReport> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ArchiveValidationReport>(getValidateMovieArchiveImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/zip', ...getHeaders(options?.headers) },
+    body: validateMovieArchiveImportBody
+  }
+);}
+
+
+
+
+
+export const getValidateMovieArchiveImportMutationKey = () => ['validateMovieArchiveImport'] as const;
+
+export const getValidateMovieArchiveImportMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateMovieArchiveImport>>, TError,ValidateMovieArchiveImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof validateMovieArchiveImport>>, TError,ValidateMovieArchiveImportMutationVariables, TContext> => {
+
+const mutationKey = getValidateMovieArchiveImportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof validateMovieArchiveImport>>, ValidateMovieArchiveImportMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  validateMovieArchiveImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ValidateMovieArchiveImportMutationResult = NonNullable<Awaited<ReturnType<typeof validateMovieArchiveImport>>>
+    export type ValidateMovieArchiveImportMutationBody = BodyType<Blob>
+    export type ValidateMovieArchiveImportMutationError = ErrorType<Error>
+    export type ValidateMovieArchiveImportMutationVariables = {data: BodyType<Blob>}
+
+    /**
+ * @summary Dry-run a movie catalog ZIP
+ */
+export const useValidateMovieArchiveImport = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateMovieArchiveImport>>, TError,ValidateMovieArchiveImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof validateMovieArchiveImport>>,
+        TError,
+        ValidateMovieArchiveImportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getValidateMovieArchiveImportMutationOptions(options), queryClient);
+    }
+
+export const getListMovieArchiveImportJobsUrl = () => {
+
+
+
+
+  return `/api/admin/import/archive-jobs`
+}
+
+/**
+ * @summary List recent movie archive imports
+ */
+export const listMovieArchiveImportJobs = async ( options?: Parameters<typeof customFetch>[1]): Promise<ArchiveImportJob[]> => {
+
+  return customFetch<ArchiveImportJob[]>(getListMovieArchiveImportJobsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMovieArchiveImportJobsQueryKey = () => {
+    return [
+    `/api/admin/import/archive-jobs`
+    ] as const;
+    }
+
+
+export const getListMovieArchiveImportJobsQueryOptions = <TData = Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMovieArchiveImportJobsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMovieArchiveImportJobs>>> = ({ signal }) => listMovieArchiveImportJobs({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMovieArchiveImportJobsQueryResult = NonNullable<Awaited<ReturnType<typeof listMovieArchiveImportJobs>>>
+export type ListMovieArchiveImportJobsQueryError = ErrorType<unknown>
+
+
+export function useListMovieArchiveImportJobs<TData = Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMovieArchiveImportJobs>>,
+          TError,
+          Awaited<ReturnType<typeof listMovieArchiveImportJobs>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMovieArchiveImportJobs<TData = Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMovieArchiveImportJobs>>,
+          TError,
+          Awaited<ReturnType<typeof listMovieArchiveImportJobs>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMovieArchiveImportJobs<TData = Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List recent movie archive imports
+ */
+
+export function useListMovieArchiveImportJobs<TData = Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMovieArchiveImportJobs>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMovieArchiveImportJobsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMovieArchiveImportJobUrl = (jobId: string,) => {
+
+
+
+
+  return `/api/admin/import/archive-jobs/${jobId}`
+}
+
+/**
+ * @summary Get movie archive import progress
+ */
+export const getMovieArchiveImportJob = async (jobId: string, options?: Parameters<typeof customFetch>[1]): Promise<ArchiveImportJob> => {
+
+  return customFetch<ArchiveImportJob>(getGetMovieArchiveImportJobUrl(jobId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMovieArchiveImportJobQueryKey = (jobId: string,) => {
+    return [
+    `/api/admin/import/archive-jobs/${jobId}`
+    ] as const;
+    }
+
+
+export const getGetMovieArchiveImportJobQueryOptions = <TData = Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError = ErrorType<Error>>(jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMovieArchiveImportJobQueryKey(jobId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMovieArchiveImportJob>>> = ({ signal }) => getMovieArchiveImportJob(jobId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMovieArchiveImportJobQueryResult = NonNullable<Awaited<ReturnType<typeof getMovieArchiveImportJob>>>
+export type GetMovieArchiveImportJobQueryError = ErrorType<Error>
+
+
+export function useGetMovieArchiveImportJob<TData = Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError = ErrorType<Error>>(
+ jobId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMovieArchiveImportJob>>,
+          TError,
+          Awaited<ReturnType<typeof getMovieArchiveImportJob>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMovieArchiveImportJob<TData = Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError = ErrorType<Error>>(
+ jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMovieArchiveImportJob>>,
+          TError,
+          Awaited<ReturnType<typeof getMovieArchiveImportJob>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMovieArchiveImportJob<TData = Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError = ErrorType<Error>>(
+ jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get movie archive import progress
+ */
+
+export function useGetMovieArchiveImportJob<TData = Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError = ErrorType<Error>>(
+ jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMovieArchiveImportJob>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMovieArchiveImportJobQueryOptions(jobId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartMovieArchiveImportUrl = (jobId: string,) => {
+
+
+
+
+  return `/api/admin/import/archive-jobs/${jobId}/start`
+}
+
+/**
+ * @summary Start or resume an import with the validated ZIP
+ */
+export const startMovieArchiveImport = async (jobId: string,
+    startMovieArchiveImportBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<ArchiveImportJob> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ArchiveImportJob>(getStartMovieArchiveImportUrl(jobId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/zip', ...getHeaders(options?.headers) },
+    body: startMovieArchiveImportBody
+  }
+);}
+
+
+
+
+
+export const getStartMovieArchiveImportMutationKey = () => ['startMovieArchiveImport'] as const;
+
+export const getStartMovieArchiveImportMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startMovieArchiveImport>>, TError,StartMovieArchiveImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startMovieArchiveImport>>, TError,StartMovieArchiveImportMutationVariables, TContext> => {
+
+const mutationKey = getStartMovieArchiveImportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startMovieArchiveImport>>, StartMovieArchiveImportMutationVariables> = (props) => {
+          const {jobId,data} = props ?? {};
+
+          return  startMovieArchiveImport(jobId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartMovieArchiveImportMutationResult = NonNullable<Awaited<ReturnType<typeof startMovieArchiveImport>>>
+    export type StartMovieArchiveImportMutationBody = BodyType<Blob>
+    export type StartMovieArchiveImportMutationError = ErrorType<Error>
+    export type StartMovieArchiveImportMutationVariables = {jobId: string;data: BodyType<Blob>}
+
+    /**
+ * @summary Start or resume an import with the validated ZIP
+ */
+export const useStartMovieArchiveImport = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startMovieArchiveImport>>, TError,StartMovieArchiveImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof startMovieArchiveImport>>,
+        TError,
+        StartMovieArchiveImportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStartMovieArchiveImportMutationOptions(options), queryClient);
+    }
+
+export const getGetAdminArchiveSourcesUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/titles/${id}/archive-sources`
+}
+
+/**
+ * @summary View private imported catalog and torrent references
+ */
+export const getAdminArchiveSources = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<ImportedMovieSource[]> => {
+
+  return customFetch<ImportedMovieSource[]>(getGetAdminArchiveSourcesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminArchiveSourcesQueryKey = (id: string,) => {
+    return [
+    `/api/admin/titles/${id}/archive-sources`
+    ] as const;
+    }
+
+
+export const getGetAdminArchiveSourcesQueryOptions = <TData = Awaited<ReturnType<typeof getAdminArchiveSources>>, TError = ErrorType<Error>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminArchiveSources>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminArchiveSourcesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminArchiveSources>>> = ({ signal }) => getAdminArchiveSources(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminArchiveSources>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAdminArchiveSourcesQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminArchiveSources>>>
+export type GetAdminArchiveSourcesQueryError = ErrorType<Error>
+
+
+export function useGetAdminArchiveSources<TData = Awaited<ReturnType<typeof getAdminArchiveSources>>, TError = ErrorType<Error>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminArchiveSources>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminArchiveSources>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminArchiveSources>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAdminArchiveSources<TData = Awaited<ReturnType<typeof getAdminArchiveSources>>, TError = ErrorType<Error>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminArchiveSources>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminArchiveSources>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminArchiveSources>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAdminArchiveSources<TData = Awaited<ReturnType<typeof getAdminArchiveSources>>, TError = ErrorType<Error>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminArchiveSources>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary View private imported catalog and torrent references
+ */
+
+export function useGetAdminArchiveSources<TData = Awaited<ReturnType<typeof getAdminArchiveSources>>, TError = ErrorType<Error>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminArchiveSources>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAdminArchiveSourcesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getSetTitleStreamUrl = (id: string,) => {
 

@@ -21,6 +21,13 @@ import { user } from "./auth";
 
 export const titleKind = pgEnum("title_kind", ["movie", "series", "live"]);
 export const movieStatus = pgEnum("movie_status", ["draft", "published", "archived"]);
+export const archiveImportStatus = pgEnum("archive_import_status", [
+  "validated",
+  "running",
+  "paused",
+  "completed",
+  "failed",
+]);
 export const licenseType = pgEnum("license_type", [
   "owned",
   "public_domain",
@@ -121,6 +128,116 @@ export const movies = pgTable(
     uniqueIndex("movies_slug_unique").on(table.slug),
     index("movies_status_idx").on(table.status),
     index("movies_kind_idx").on(table.kind),
+  ],
+);
+
+export const archiveImportJobs = pgTable(
+  "archive_import_jobs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    archiveName: text("archive_name").notNull(),
+    archiveSha256: text("archive_sha256").notNull(),
+    status: archiveImportStatus("status").notNull().default("validated"),
+    createdBy: text("created_by")
+      .references(() => user.id, { onDelete: "restrict" }),
+    totalPages: integer("total_pages").notNull().default(0),
+    nextPageIndex: integer("next_page_index").notNull().default(0),
+    totalRecords: integer("total_records").notNull().default(0),
+    expectedNewTitles: integer("expected_new_titles").notNull().default(0),
+    expectedMatchedTitles: integer("expected_matched_titles").notNull().default(0),
+    expectedSourceRecords: integer("expected_source_records").notNull().default(0),
+    expectedTorrentSources: integer("expected_torrent_sources").notNull().default(0),
+    processedRecords: integer("processed_records").notNull().default(0),
+    createdTitles: integer("created_titles").notNull().default(0),
+    matchedTitles: integer("matched_titles").notNull().default(0),
+    updatedTitles: integer("updated_titles").notNull().default(0),
+    duplicateRecords: integer("duplicate_records").notNull().default(0),
+    duplicateSourceRecords: integer("duplicate_source_records").notNull().default(0),
+    duplicateImdbRecords: integer("duplicate_imdb_records").notNull().default(0),
+    importedSourceRecords: integer("imported_source_records").notNull().default(0),
+    importedTorrentSources: integer("imported_torrent_sources").notNull().default(0),
+    malformedPages: integer("malformed_pages").notNull().default(0),
+    recoveredRecords: integer("recovered_records").notNull().default(0),
+    skippedRecords: integer("skipped_records").notNull().default(0),
+    failedRecords: integer("failed_records").notNull().default(0),
+    issues: jsonb("issues")
+      .$type<Array<{ page: number; sourceId?: string | null; message: string }>>()
+      .notNull()
+      .default([]),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("archive_import_jobs_sha256_unique").on(table.archiveSha256),
+    index("archive_import_jobs_status_created_idx").on(table.status, table.createdAt),
+    index("archive_import_jobs_creator_created_idx").on(table.createdBy, table.createdAt),
+  ],
+);
+
+export const importedMovieSources = pgTable(
+  "imported_movie_sources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    movieId: uuid("movie_id")
+      .notNull()
+      .references(() => movies.id, { onDelete: "cascade" }),
+    importJobId: uuid("import_job_id")
+      .notNull()
+      .references(() => archiveImportJobs.id, { onDelete: "restrict" }),
+    provider: text("provider").notNull(),
+    sourceId: text("source_id").notNull(),
+    imdbCode: text("imdb_code"),
+    sourceUrl: text("source_url"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("imported_movie_sources_provider_source_unique").on(
+      table.provider,
+      table.sourceId,
+    ),
+    index("imported_movie_sources_movie_idx").on(table.movieId),
+    index("imported_movie_sources_imdb_idx").on(table.imdbCode),
+  ],
+);
+
+export const importedTorrentSources = pgTable(
+  "imported_torrent_sources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    movieSourceId: uuid("movie_source_id")
+      .notNull()
+      .references(() => importedMovieSources.id, { onDelete: "cascade" }),
+    sourceIndex: integer("source_index").notNull(),
+    sourceUrl: text("source_url"),
+    infoHash: text("info_hash"),
+    quality: text("quality"),
+    sourceType: text("source_type"),
+    isRepack: boolean("is_repack"),
+    videoCodec: text("video_codec"),
+    bitDepth: text("bit_depth"),
+    audioChannels: text("audio_channels"),
+    seeders: integer("seeders"),
+    peers: integer("peers"),
+    size: text("size"),
+    sizeBytes: bigint("size_bytes", { mode: "number" }),
+    uploadedAt: text("uploaded_at"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull(),
+    playbackStatus: text("playback_status").notNull().default("disabled"),
+    rightsStatus: text("rights_status").notNull().default("unverified"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("imported_torrent_sources_parent_idx").on(table.movieSourceId),
+    uniqueIndex("imported_torrent_sources_position_unique").on(
+      table.movieSourceId,
+      table.sourceIndex,
+    ),
+    uniqueIndex("imported_torrent_sources_hash_unique")
+      .on(table.movieSourceId, table.infoHash)
+      .where(sql`${table.infoHash} IS NOT NULL`),
   ],
 );
 
@@ -328,6 +445,27 @@ export const moviesRelations = relations(movies, ({ many, one }) => ({
   subtitles: many(subtitles),
   rights: many(mediaRights),
   seasons: many(seriesSeasons),
+  importedSources: many(importedMovieSources),
+}));
+
+export const archiveImportJobsRelations = relations(archiveImportJobs, ({ many }) => ({
+  importedSources: many(importedMovieSources),
+}));
+
+export const importedMovieSourcesRelations = relations(importedMovieSources, ({ many, one }) => ({
+  movie: one(movies, { fields: [importedMovieSources.movieId], references: [movies.id] }),
+  importJob: one(archiveImportJobs, {
+    fields: [importedMovieSources.importJobId],
+    references: [archiveImportJobs.id],
+  }),
+  torrents: many(importedTorrentSources),
+}));
+
+export const importedTorrentSourcesRelations = relations(importedTorrentSources, ({ one }) => ({
+  movieSource: one(importedMovieSources, {
+    fields: [importedTorrentSources.movieSourceId],
+    references: [importedMovieSources.id],
+  }),
 }));
 
 export const seriesSeasonsRelations = relations(seriesSeasons, ({ one, many }) => ({

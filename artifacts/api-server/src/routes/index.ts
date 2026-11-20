@@ -7,6 +7,7 @@ import adminTitlesRouter from "./admin-titles";
 import adminContentRouter from "./admin-content";
 import adminOperationsRouter from "./admin-operations";
 import seriesEpisodesRouter from "./series-episodes";
+import adminMovieArchiveRouter from "./admin-movie-archive";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(adminTitlesRouter);
 router.use(adminContentRouter);
 router.use(adminOperationsRouter);
 router.use(seriesEpisodesRouter);
+router.use(adminMovieArchiveRouter);
 
 export default router;

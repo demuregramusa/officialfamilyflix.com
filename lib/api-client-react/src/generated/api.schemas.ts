@@ -567,6 +567,148 @@ export interface ImportReport {
   pendingReview?: number;
 }
 
+/**
+ * Raw ZIP bytes sent with Content-Type application/zip.
+ */
+export type ArchiveZipFile = string;
+
+export type ArchiveImportStatus = typeof ArchiveImportStatus[keyof typeof ArchiveImportStatus];
+
+
+export const ArchiveImportStatus = {
+  validated: 'validated',
+  running: 'running',
+  paused: 'paused',
+  completed: 'completed',
+  failed: 'failed',
+} as const;
+
+export interface ArchiveImportIssue {
+  /** @minimum 1 */
+  page: number;
+  /** @nullable */
+  sourceId?: string | null;
+  message: string;
+}
+
+export interface ArchiveImportJob {
+  id: string;
+  archiveName: string;
+  archiveSha256: string;
+  status: ArchiveImportStatus;
+  totalPages: number;
+  nextPageIndex: number;
+  totalRecords: number;
+  expectedNewTitles: number;
+  expectedMatchedTitles: number;
+  expectedSourceRecords: number;
+  expectedTorrentSources: number;
+  processedRecords: number;
+  createdTitles: number;
+  matchedTitles: number;
+  updatedTitles: number;
+  duplicateRecords: number;
+  duplicateSourceRecords: number;
+  duplicateImdbRecords: number;
+  importedSourceRecords: number;
+  importedTorrentSources: number;
+  malformedPages: number;
+  recoveredRecords: number;
+  skippedRecords: number;
+  failedRecords: number;
+  issues: ArchiveImportIssue[];
+  /** @nullable */
+  lastError?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  progressPercent: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ArchiveValidationReport {
+  job: ArchiveImportJob;
+  archivePages: number;
+  totalRecords: number;
+  duplicateSourceRecords: number;
+  duplicateImdbRecords: number;
+  invalidRecords: number;
+  malformedPages: number;
+  recoveredRecords: number;
+  nonCatalogEntries: number;
+  existingTitles: number;
+  expectedNewTitles: number;
+  expectedMatchedTitles: number;
+  protectedTitles: number;
+  expectedSourceRecords: number;
+  expectedTorrentSources: number;
+  expectedDatabaseWrites: number;
+  issues: ArchiveImportIssue[];
+}
+
+export type ImportedTorrentSourcePlaybackStatus = typeof ImportedTorrentSourcePlaybackStatus[keyof typeof ImportedTorrentSourcePlaybackStatus];
+
+
+export const ImportedTorrentSourcePlaybackStatus = {
+  disabled: 'disabled',
+} as const;
+
+export type ImportedTorrentSourceRightsStatus = typeof ImportedTorrentSourceRightsStatus[keyof typeof ImportedTorrentSourceRightsStatus];
+
+
+export const ImportedTorrentSourceRightsStatus = {
+  unverified: 'unverified',
+} as const;
+
+export type ImportedTorrentSourceMetadata = { [key: string]: unknown };
+
+export interface ImportedTorrentSource {
+  /** @nullable */
+  sourceUrl: string | null;
+  /** @nullable */
+  infoHash: string | null;
+  /** @nullable */
+  quality: string | null;
+  /** @nullable */
+  sourceType: string | null;
+  /** @nullable */
+  isRepack: boolean | null;
+  /** @nullable */
+  videoCodec: string | null;
+  /** @nullable */
+  bitDepth: string | null;
+  /** @nullable */
+  audioChannels: string | null;
+  /** @nullable */
+  seeders: number | null;
+  /** @nullable */
+  peers: number | null;
+  /** @nullable */
+  size: string | null;
+  /** @nullable */
+  sizeBytes: number | null;
+  /** @nullable */
+  uploadedAt: string | null;
+  playbackStatus: ImportedTorrentSourcePlaybackStatus;
+  rightsStatus: ImportedTorrentSourceRightsStatus;
+  metadata: ImportedTorrentSourceMetadata;
+}
+
+export type ImportedMovieSourceMetadata = { [key: string]: unknown };
+
+export interface ImportedMovieSource {
+  provider: string;
+  sourceId: string;
+  /** @nullable */
+  imdbCode: string | null;
+  /** @nullable */
+  sourceUrl: string | null;
+  metadata: ImportedMovieSourceMetadata;
+  torrents: ImportedTorrentSource[];
+}
+
 export interface SubtitleInput {
   /**
      * @minLength 2
