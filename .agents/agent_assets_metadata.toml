@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "PRlsWxhMfVBBeI03WIHBD"
+uri = "file://movie-input/familyflix_final_source.txt"
+type = "text"
+title = "FamilyFlix final source"
+description = "Download the FamilyFlix final source text file."
+logical_id = "5590d374-aed1-4d53-acf6-207a672c7df8"
+content_hash = "sha256:5d78a724053b2c3372c89cce340fcc3dc43cd556756940ff31ef20c20a4a51ed"
+size = 75647
+mtime_ms = 1795229823477
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:b1184dc6-7a0b-482e-9291-ea81a1a7ebc0/5590d374-aed1-4d53-acf6-207a672c7df8/36ded18e-0145-4073-835f-edb1debf3bc1"
+storage_version_token = "1795231154970760"
+content_type = "text/plain"
