@@ -664,6 +664,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /admin/titles/{id}/archive-torrents/{torrentId}/rights-review:
+    patch:
+      operationId: reviewImportedTorrentRights
+      tags: [administration]
+      summary: Record a rights decision for one imported torrent source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: torrentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportedTorrentRightsReviewInput" }
+      responses:
+        "200":
+          description: Rights decision recorded; activation is still separate
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportedTorrentSource" }
+        "400":
+          description: Invalid rights evidence or decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Torrent source not found for this title
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /admin/titles/{id}/archive-torrents/{torrentId}/playback:
+    patch:
+      operationId: setImportedTorrentPlayback
+      tags: [administration]
+      summary: Activate or deactivate one rights-reviewed torrent source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: torrentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportedTorrentPlaybackInput" }
+      responses:
+        "200":
+          description: Playback state updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportedTorrentSource" }
+        "400":
+          description: Source is not eligible for activation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Torrent source not found for this title
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /admin/import/public-domain-starter-pack:
     get:
       operationId: getCuratedPublicDomainTitles
@@ -1261,7 +1331,7 @@ components:
       properties:
         titleName: { type: string }
         streamType: { type: string, enum: [mp4, hls, cloudflare] }
-        url: { type: string, format: uri }
+        url: { type: string, format: uri-reference }
         posterUrl: { type: ["string", "null"], format: uri }
         subtitles:
           type: array
@@ -1610,7 +1680,7 @@ components:
     ImportedTorrentSource:
       type: object
       required:
-        - sourceUrl
+        - id
         - infoHash
         - quality
         - sourceType
@@ -1625,9 +1695,13 @@ components:
         - uploadedAt
         - playbackStatus
         - rightsStatus
-        - metadata
+        - rightsEvidenceUrl
+        - rightsEvidenceNotes
+        - rightsReviewNote
+        - rightsReviewedAt
+        - activatedAt
       properties:
-        sourceUrl: { type: ["string", "null"] }
+        id: { type: string, format: uuid }
         infoHash: { type: ["string", "null"] }
         quality: { type: ["string", "null"] }
         sourceType: { type: ["string", "null"] }
@@ -1640,11 +1714,26 @@ components:
         size: { type: ["string", "null"] }
         sizeBytes: { type: ["integer", "null"], format: int64 }
         uploadedAt: { type: ["string", "null"] }
-        playbackStatus: { type: string, enum: [disabled] }
-        rightsStatus: { type: string, enum: [unverified] }
-        metadata:
-          type: object
-          additionalProperties: true
+        playbackStatus: { type: string, enum: [disabled, active] }
+        rightsStatus: { type: string, enum: [unverified, approved, rejected, restricted] }
+        rightsEvidenceUrl: { type: ["string", "null"], format: uri }
+        rightsEvidenceNotes: { type: ["string", "null"] }
+        rightsReviewNote: { type: ["string", "null"] }
+        rightsReviewedAt: { type: ["string", "null"], format: date-time }
+        activatedAt: { type: ["string", "null"], format: date-time }
+    ImportedTorrentRightsReviewInput:
+      type: object
+      required: [decision, evidenceUrl, evidenceNotes, reviewerNote]
+      properties:
+        decision: { type: string, enum: [approve, reject, restrict] }
+        evidenceUrl: { type: string, format: uri }
+        evidenceNotes: { type: string, minLength: 20, maxLength: 4000 }
+        reviewerNote: { type: string, minLength: 1, maxLength: 4000 }
+    ImportedTorrentPlaybackInput:
+      type: object
+      required: [active]
+      properties:
+        active: { type: boolean }
     ImportedMovieSource:
       type: object
       required: [provider, sourceId, imdbCode, sourceUrl, metadata, torrents]

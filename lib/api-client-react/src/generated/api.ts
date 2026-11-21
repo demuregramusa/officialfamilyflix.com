@@ -51,6 +51,9 @@ import type {
   ImportInput,
   ImportReport,
   ImportedMovieSource,
+  ImportedTorrentPlaybackInput,
+  ImportedTorrentRightsReviewInput,
+  ImportedTorrentSource,
   ListAdminActivityParams,
   ListAdminTitlesParams,
   ListCopyrightCasesParams,
@@ -2735,6 +2738,188 @@ export function useGetAdminArchiveSources<TData = Awaited<ReturnType<typeof getA
 
 
 
+
+export const getReviewImportedTorrentRightsUrl = (id: string,
+    torrentId: string,) => {
+
+
+
+
+  return `/api/admin/titles/${id}/archive-torrents/${torrentId}/rights-review`
+}
+
+/**
+ * @summary Record a rights decision for one imported torrent source
+ */
+export const reviewImportedTorrentRights = async (id: string,
+    torrentId: string,
+    importedTorrentRightsReviewInput: ImportedTorrentRightsReviewInput, options?: Parameters<typeof customFetch>[1]): Promise<ImportedTorrentSource> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ImportedTorrentSource>(getReviewImportedTorrentRightsUrl(id,torrentId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(importedTorrentRightsReviewInput)
+  }
+);}
+
+
+
+
+
+export const getReviewImportedTorrentRightsMutationKey = () => ['reviewImportedTorrentRights'] as const;
+
+export const getReviewImportedTorrentRightsMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewImportedTorrentRights>>, TError,ReviewImportedTorrentRightsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewImportedTorrentRights>>, TError,ReviewImportedTorrentRightsMutationVariables, TContext> => {
+
+const mutationKey = getReviewImportedTorrentRightsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewImportedTorrentRights>>, ReviewImportedTorrentRightsMutationVariables> = (props) => {
+          const {id,torrentId,data} = props ?? {};
+
+          return  reviewImportedTorrentRights(id,torrentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewImportedTorrentRightsMutationResult = NonNullable<Awaited<ReturnType<typeof reviewImportedTorrentRights>>>
+    export type ReviewImportedTorrentRightsMutationBody = BodyType<ImportedTorrentRightsReviewInput>
+    export type ReviewImportedTorrentRightsMutationError = ErrorType<Error>
+    export type ReviewImportedTorrentRightsMutationVariables = {id: string;torrentId: string;data: BodyType<ImportedTorrentRightsReviewInput>}
+
+    /**
+ * @summary Record a rights decision for one imported torrent source
+ */
+export const useReviewImportedTorrentRights = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewImportedTorrentRights>>, TError,ReviewImportedTorrentRightsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reviewImportedTorrentRights>>,
+        TError,
+        ReviewImportedTorrentRightsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewImportedTorrentRightsMutationOptions(options), queryClient);
+    }
+
+export const getSetImportedTorrentPlaybackUrl = (id: string,
+    torrentId: string,) => {
+
+
+
+
+  return `/api/admin/titles/${id}/archive-torrents/${torrentId}/playback`
+}
+
+/**
+ * @summary Activate or deactivate one rights-reviewed torrent source
+ */
+export const setImportedTorrentPlayback = async (id: string,
+    torrentId: string,
+    importedTorrentPlaybackInput: ImportedTorrentPlaybackInput, options?: Parameters<typeof customFetch>[1]): Promise<ImportedTorrentSource> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ImportedTorrentSource>(getSetImportedTorrentPlaybackUrl(id,torrentId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(importedTorrentPlaybackInput)
+  }
+);}
+
+
+
+
+
+export const getSetImportedTorrentPlaybackMutationKey = () => ['setImportedTorrentPlayback'] as const;
+
+export const getSetImportedTorrentPlaybackMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setImportedTorrentPlayback>>, TError,SetImportedTorrentPlaybackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setImportedTorrentPlayback>>, TError,SetImportedTorrentPlaybackMutationVariables, TContext> => {
+
+const mutationKey = getSetImportedTorrentPlaybackMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setImportedTorrentPlayback>>, SetImportedTorrentPlaybackMutationVariables> = (props) => {
+          const {id,torrentId,data} = props ?? {};
+
+          return  setImportedTorrentPlayback(id,torrentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetImportedTorrentPlaybackMutationResult = NonNullable<Awaited<ReturnType<typeof setImportedTorrentPlayback>>>
+    export type SetImportedTorrentPlaybackMutationBody = BodyType<ImportedTorrentPlaybackInput>
+    export type SetImportedTorrentPlaybackMutationError = ErrorType<Error>
+    export type SetImportedTorrentPlaybackMutationVariables = {id: string;torrentId: string;data: BodyType<ImportedTorrentPlaybackInput>}
+
+    /**
+ * @summary Activate or deactivate one rights-reviewed torrent source
+ */
+export const useSetImportedTorrentPlayback = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setImportedTorrentPlayback>>, TError,SetImportedTorrentPlaybackMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setImportedTorrentPlayback>>,
+        TError,
+        SetImportedTorrentPlaybackMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSetImportedTorrentPlaybackMutationOptions(options), queryClient);
+    }
 
 export const getGetCuratedPublicDomainTitlesUrl = () => {
 

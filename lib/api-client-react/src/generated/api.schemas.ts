@@ -653,6 +653,7 @@ export type ImportedTorrentSourcePlaybackStatus = typeof ImportedTorrentSourcePl
 
 export const ImportedTorrentSourcePlaybackStatus = {
   disabled: 'disabled',
+  active: 'active',
 } as const;
 
 export type ImportedTorrentSourceRightsStatus = typeof ImportedTorrentSourceRightsStatus[keyof typeof ImportedTorrentSourceRightsStatus];
@@ -660,13 +661,13 @@ export type ImportedTorrentSourceRightsStatus = typeof ImportedTorrentSourceRigh
 
 export const ImportedTorrentSourceRightsStatus = {
   unverified: 'unverified',
+  approved: 'approved',
+  rejected: 'rejected',
+  restricted: 'restricted',
 } as const;
 
-export type ImportedTorrentSourceMetadata = { [key: string]: unknown };
-
 export interface ImportedTorrentSource {
-  /** @nullable */
-  sourceUrl: string | null;
+  id: string;
   /** @nullable */
   infoHash: string | null;
   /** @nullable */
@@ -693,7 +694,44 @@ export interface ImportedTorrentSource {
   uploadedAt: string | null;
   playbackStatus: ImportedTorrentSourcePlaybackStatus;
   rightsStatus: ImportedTorrentSourceRightsStatus;
-  metadata: ImportedTorrentSourceMetadata;
+  /** @nullable */
+  rightsEvidenceUrl: string | null;
+  /** @nullable */
+  rightsEvidenceNotes: string | null;
+  /** @nullable */
+  rightsReviewNote: string | null;
+  /** @nullable */
+  rightsReviewedAt: string | null;
+  /** @nullable */
+  activatedAt: string | null;
+}
+
+export type ImportedTorrentRightsReviewInputDecision = typeof ImportedTorrentRightsReviewInputDecision[keyof typeof ImportedTorrentRightsReviewInputDecision];
+
+
+export const ImportedTorrentRightsReviewInputDecision = {
+  approve: 'approve',
+  reject: 'reject',
+  restrict: 'restrict',
+} as const;
+
+export interface ImportedTorrentRightsReviewInput {
+  decision: ImportedTorrentRightsReviewInputDecision;
+  evidenceUrl: string;
+  /**
+     * @minLength 20
+     * @maxLength 4000
+     */
+  evidenceNotes: string;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  reviewerNote: string;
+}
+
+export interface ImportedTorrentPlaybackInput {
+  active: boolean;
 }
 
 export type ImportedMovieSourceMetadata = { [key: string]: unknown };

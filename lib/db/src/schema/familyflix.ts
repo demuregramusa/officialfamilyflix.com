@@ -227,6 +227,13 @@ export const importedTorrentSources = pgTable(
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull(),
     playbackStatus: text("playback_status").notNull().default("disabled"),
     rightsStatus: text("rights_status").notNull().default("unverified"),
+    rightsEvidenceUrl: text("rights_evidence_url"),
+    rightsEvidenceNotes: text("rights_evidence_notes"),
+    rightsReviewNote: text("rights_review_note"),
+    rightsReviewedBy: text("rights_reviewed_by"),
+    rightsReviewedAt: timestamp("rights_reviewed_at", { withTimezone: true }),
+    activatedBy: text("activated_by"),
+    activatedAt: timestamp("activated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

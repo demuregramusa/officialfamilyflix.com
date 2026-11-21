@@ -11,4 +11,7 @@ export type ImportedTorrentSourceRightsStatus = typeof ImportedTorrentSourceRigh
 
 export const ImportedTorrentSourceRightsStatus = {
   unverified: 'unverified',
+  approved: 'approved',
+  rejected: 'rejected',
+  restricted: 'restricted',
 } as const;

@@ -20,6 +20,8 @@ import {
   disabledTorrentSource,
   isProtectedArchiveTarget,
   privateArchiveMovieDraft,
+  redactTorrentLocators,
+  toAdminTorrentSourceView,
 } from "./movie-archive-policy";
 
 const PROVIDER = "yts";
@@ -726,25 +728,10 @@ export async function getImportedMovieSources(movieId: string) {
     provider: source.provider,
     sourceId: source.sourceId,
     imdbCode: source.imdbCode,
-    sourceUrl: source.sourceUrl,
-    metadata: source.metadata,
-    torrents: (torrentsBySource.get(source.id) ?? []).map((torrent) => ({
-      sourceUrl: torrent.sourceUrl,
-      infoHash: torrent.infoHash,
-      quality: torrent.quality,
-      sourceType: torrent.sourceType,
-      isRepack: torrent.isRepack,
-      videoCodec: torrent.videoCodec,
-      bitDepth: torrent.bitDepth,
-      audioChannels: torrent.audioChannels,
-      seeders: torrent.seeders,
-      peers: torrent.peers,
-      size: torrent.size,
-      sizeBytes: torrent.sizeBytes,
-      uploadedAt: torrent.uploadedAt,
-      playbackStatus: torrent.playbackStatus,
-      rightsStatus: torrent.rightsStatus,
-      metadata: torrent.metadata,
-    })),
+    sourceUrl: typeof redactTorrentLocators(source.sourceUrl) === "string"
+      ? redactTorrentLocators(source.sourceUrl) as string
+      : null,
+    metadata: redactTorrentLocators(source.metadata) as Record<string, unknown>,
+    torrents: (torrentsBySource.get(source.id) ?? []).map(toAdminTorrentSourceView),
   }));
 }

@@ -15,6 +15,7 @@ import {
   useCreateCloudflareUpload, useCreateStaff, useDecideCopyrightCase,
   useDeleteAdminTitle, useDeleteTitleSubtitle, useGetAdminDashboard,
   useGetAdminSettings, useGetAdminTitle, useGetCopyrightCase, useGetEpisodePlayback, useGetPlayback,
+  useGetAdminArchiveSources,
   useGetPublicTitle, useGetSiteConfig, useGetUserPreferences,
   useHealthCheck, useImportTitles, useListAdminActivity, useListAdminTitles,
   useListCopyrightCases, useListPublicTitles, useListRepeatInfringers,
@@ -27,6 +28,7 @@ import {
   getCuratedPublicDomainTitles,
   useUpdateStaff, getGetAdminDashboardQueryKey, getGetAdminSettingsQueryKey,
   getGetAdminTitleQueryKey, getGetCopyrightCaseQueryKey, getGetPlaybackQueryKey,
+  getGetAdminArchiveSourcesQueryKey,
   getGetEpisodePlaybackQueryKey, getGetPublicTitleQueryKey, getGetSiteConfigQueryKey,
   getGetUserPreferencesQueryKey, getListAdminTitlesQueryKey,
   getListCopyrightCasesQueryKey, getListPublicTitlesQueryKey,
@@ -306,7 +308,10 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
   const isLoading = episodeId ? episode.isLoading : p.isLoading;
   const isError = episodeId ? episode.isError : p.isError;
   const playbackError = episodeId ? episode.error : p.error;
-  const isSafeUrl = !!playback?.url && /^https?:/i.test(playback.url) && !/^(magnet:|torrent:)/i.test(playback.url);
+  const isSafeUrl = !!playback?.url && (
+    (/^https?:/i.test(playback.url) && !/^(magnet:|torrent:)/i.test(playback.url)) ||
+    (/^\/api\/playback\/[^/]+\/media$/.test(playback.url) && !playback.url.startsWith("//"))
+  );
   useEffect(() => {
     const video = videoRef.current;
     const url = playback?.url;
@@ -462,6 +467,7 @@ function AdminTitleCreate() {
 }
 function AdminTitleDetail({id}:{id:string}) {
   const qc=useQueryClient(); const q=useGetAdminTitle(id,{query:{enabled:!!id,queryKey:getGetAdminTitleQueryKey(id)}});
+  const archiveSources=useGetAdminArchiveSources(id,{query:{enabled:!!id,queryKey:getGetAdminArchiveSourcesQueryKey(id)}});
   const assets=useListTitleRightsAssets(id,{query:{enabled:!!id,queryKey:getListTitleRightsAssetsQueryKey(id)}});
   const subtitles=useListTitleSubtitles(id,{query:{enabled:!!id,queryKey:getListTitleSubtitlesQueryKey(id)}});
   const addAsset=useAddTitleRightsAsset(); const review=useReviewTitleRights(); const publish=usePublishAdminTitle(); const update=useUpdateAdminTitle(); const remove=useDeleteAdminTitle();
@@ -480,10 +486,11 @@ function AdminTitleDetail({id}:{id:string}) {
   function streamSubmit(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const url=String(f.get("url")||"");let parsed:URL;try{parsed=new URL(url);}catch{setMessage("Enter one direct HTTPS .mp4 or .m3u8 URL.");return;}if(parsed.protocol!=="https:"||!/\.(?:mp4|m3u8)$/i.test(parsed.pathname)){setMessage("Enter exactly one HTTPS direct-video URL ending in .mp4 or .m3u8. Torrent, magnet and non-video links are not accepted.");return;}const streamUrl=/\.m3u8$/i.test(parsed.pathname)?{hlsUrl:url}:{mp4Url:url};setStream.mutate({id,data:{provider:"manual",...streamUrl,signedPlayback:false}},{onSuccess:()=>{refresh();setMessage("Stream source saved. Availability still depends on approval and server checks.");},onError:e=>setMessage(errorText(e))});}
    function requestUpload(){if(!uploadFile){setMessage("Choose a local MP4 or MOV file before requesting a Cloudflare upload.");return;}if(!/\.(mp4|mov)$/i.test(uploadFile.name)||uploadFile.size===0){setMessage("Choose a non-empty local .mp4 or .mov video file.");return;}if(uploadFile.size>MAX_UPLOAD_BYTES){setMessage("Choose a video file smaller than 30 GB.");return;}setUploadProgress(0);setMessage("Requesting a secure Cloudflare upload destination…");upload.mutate({id},{onSuccess:direct=>{setUploadAssetId(direct.assetId);refresh();const transfer=new TusUpload(uploadFile,{endpoint:direct.uploadUrl,retryDelays:[0,3000,5000,10000,20000],chunkSize:50*1024*1024,metadata:{filename:uploadFile.name,filetype:uploadFile.type||"video/mp4"},onProgress:(sent,total)=>setUploadProgress(total>0?Math.floor(sent/total*100):0),onError:error=>{setUploadProgress(null);setMessage(`Upload failed: ${error.message}`);},onSuccess:()=>{setUploadProgress(100);setMessage(`Upload transfer completed. Cloudflare asset ID: ${direct.assetId}. Use Sync to refresh processing status.`);}});transfer.start();},onError:e=>{setUploadProgress(null);setMessage(errorText(e));}});}
   const mainVideoCount=t.rights?.filter(r=>r.assetKind==="main-video").length??0;
-  const publishReady=mainVideoCount===1&&!!t.rights?.length&&t.rights.every(r=>r.reviewStatus==="approved")&&(t.kind==="series"||t.streamStatus==="ready");
+  const activeTorrent=archiveSources.data?.some(source=>source.torrents.some(torrent=>torrent.rightsStatus==="approved"&&torrent.playbackStatus==="active"))??false;
+  const publishReady=mainVideoCount===1&&!!t.rights?.length&&t.rights.every(r=>r.reviewStatus==="approved")&&(t.kind==="series"||t.streamStatus==="ready"||activeTorrent);
   return <Shell admin><div><Heading eyebrow="Studio / rights record" title={t.name} description={`/${t.slug} · ${t.kind}`} action={<div className="form-actions" style={{marginTop:0}}><button className="button" disabled={!publishReady||publish.isPending} onClick={()=>publish.mutate({id},{onSuccess:()=>{refresh();setMessage("Title published to the approved catalog.");},onError:e=>setMessage(errorText(e))})} data-testid="button-publish-title">{publish.isPending?"Publishing…":"Publish to catalog"}</button><button className="button-danger" onClick={()=>{if(confirm("Archive this title?"))remove.mutate({id},{onSuccess:()=>{qc.invalidateQueries({queryKey:getListAdminTitlesQueryKey()});setMessage("Title archived.");},onError:e=>setMessage(errorText(e))});}} data-testid="button-archive-title">Archive title</button></div>}/>
-      {t.slug.startsWith("yts-")&&t.status==="draft"&&<div className="notice" style={{marginTop:18}} data-testid="status-metadata-only-draft"><ShieldCheck size={18}/><span><strong>Unlicensed metadata draft.</strong> Archive metadata and source references do not establish rights. Any imported torrent or magnet reference stays private, unverified, and disabled. Add independently verified rights evidence and an authorized supported video source before publication.</span></div>}
-      {t.slug.startsWith("yts-")&&<ArchiveSourcePanel id={id}/>}
+      {t.slug.startsWith("yts-")&&t.status==="draft"&&<div className="notice" style={{marginTop:18}} data-testid="status-metadata-only-draft"><ShieldCheck size={18}/><span><strong>Unlicensed metadata draft.</strong> Archive metadata and source references do not establish rights. Every imported torrent starts private, unverified, and disabled; it requires separate evidence review and activation before playback. Add independently verified title rights before publication.</span></div>}
+      <ArchiveSourcePanel id={id}/>
      {mainVideoCount!==1&&<p className="form-message error" role="status">Exactly one main-video rights record is required before publication. Current count: {mainVideoCount}.</p>}
     <div className="metric-grid"><div className="metric"><span>Publication state</span><strong style={{fontSize:17}}>{t.status}</strong></div><div className="metric"><span>Stream</span><strong style={{fontSize:17}}>{t.streamStatus}</strong></div><div className="metric"><span>Rights records</span><strong>{t.rights?.length??0}</strong></div><div className="metric"><span>Created</span><strong style={{fontSize:17}}>{stamp(t.createdAt)}</strong></div></div>
     <form className="panel" style={{marginTop:18}} onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);update.mutate({id,data:{name:String(f.get("name")),synopsis:String(f.get("synopsis"))}},{onSuccess:()=>{refresh();setMessage("Title metadata saved.");},onError:e=>setMessage(errorText(e))});}}><h2>Title metadata</h2><div className="field-grid"><div className="field"><label>Name</label><input name="name" required defaultValue={t.name} data-testid="input-edit-title-name"/></div><div className="field full"><label>Synopsis</label><textarea name="synopsis" defaultValue={t.synopsis} data-testid="input-edit-title-synopsis"/></div></div><div className="form-actions"><button className="button-secondary" disabled={update.isPending} data-testid="button-update-title">{update.isPending?"Saving…":"Save title details"}</button></div></form>

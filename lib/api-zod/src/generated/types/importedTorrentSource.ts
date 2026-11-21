@@ -5,13 +5,11 @@
  * FamilyFlix catalog, playback, rights review, and copyright case API.
  * OpenAPI spec version: 0.1.0
  */
-import type { ImportedTorrentSourceMetadata } from './importedTorrentSourceMetadata';
 import type { ImportedTorrentSourcePlaybackStatus } from './importedTorrentSourcePlaybackStatus';
 import type { ImportedTorrentSourceRightsStatus } from './importedTorrentSourceRightsStatus';
 
 export interface ImportedTorrentSource {
-  /** @nullable */
-  sourceUrl: string | null;
+  id: string;
   /** @nullable */
   infoHash: string | null;
   /** @nullable */
@@ -38,5 +36,14 @@ export interface ImportedTorrentSource {
   uploadedAt: string | null;
   playbackStatus: ImportedTorrentSourcePlaybackStatus;
   rightsStatus: ImportedTorrentSourceRightsStatus;
-  metadata: ImportedTorrentSourceMetadata;
+  /** @nullable */
+  rightsEvidenceUrl: string | null;
+  /** @nullable */
+  rightsEvidenceNotes: string | null;
+  /** @nullable */
+  rightsReviewNote: string | null;
+  /** @nullable */
+  rightsReviewedAt: Date | null;
+  /** @nullable */
+  activatedAt: Date | null;
 }

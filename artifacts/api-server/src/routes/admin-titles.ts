@@ -17,6 +17,8 @@ import {
 import {
   db,
   genres,
+  importedMovieSources,
+  importedTorrentSources,
   mediaRights,
   movieGenres,
   movies,
@@ -37,6 +39,7 @@ import {
   validatePublicHttpUrl,
   validateRightsInput,
 } from "../lib/rights";
+import { isTorrentPlaybackEligible } from "../lib/torrent-source-policy.mjs";
 
 const router = Router();
 
@@ -356,16 +359,24 @@ router.post("/admin/titles/:id/publish", requireCapability("library.publish"), a
     response.status(404).json({ error: "Title not found." });
     return;
   }
-  const [rights, video] = await Promise.all([
+  const [rights, video, torrentRows] = await Promise.all([
     db.select().from(mediaRights).where(eq(mediaRights.movieId, movie.id)),
     db.select().from(videoAssets).where(eq(videoAssets.movieId, movie.id)).limit(1),
+    db.select({ torrent: importedTorrentSources })
+      .from(importedTorrentSources)
+      .innerJoin(importedMovieSources, eq(importedTorrentSources.movieSourceId, importedMovieSources.id))
+      .where(eq(importedMovieSources.movieId, movie.id)),
   ]);
   const currentRights = rights.filter((record) => record.movieId === movie.id);
   const main = currentRights.find((record) => record.assetKind === "main_video");
   const stream = video[0];
+  const activeTorrent = torrentRows.some(({ torrent }) => isTorrentPlaybackEligible(torrent, true));
   const mediaReady = movie.kind === "series" ||
     (currentRights.filter((record) => record.assetKind === "main_video").length === 1 &&
-      !!main && !!stream && stream.status === "ready" && stream.mediaRightId === main.id);
+      !!main && (
+        (!!stream && stream.status === "ready" && stream.mediaRightId === main.id) ||
+        activeTorrent
+      ));
   if (
     !currentRights.length ||
     currentRights.some((record) => !isEvidenceComplete(record) || record.reviewStatus !== "approved") ||
@@ -373,7 +384,7 @@ router.post("/admin/titles/:id/publish", requireCapability("library.publish"), a
   ) {
     response.status(409).json({ error: movie.kind === "series"
       ? "All series-level rights must be reviewed and current before publication."
-      : "All media rights must be reviewed, current, and linked to a ready main-video stream before publication." });
+      : "All media rights must be reviewed and current, with either a ready hosted stream or an active, rights-approved torrent source." });
     return;
   }
   await db.update(movies).set({

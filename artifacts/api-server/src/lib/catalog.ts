@@ -2,6 +2,8 @@ import { and, desc, eq, ilike, inArray, or, isNull, gt } from "drizzle-orm";
 import {
   db,
   genres,
+  importedMovieSources,
+  importedTorrentSources,
   mediaRights,
   movieGenres,
   movies,
@@ -22,6 +24,7 @@ import type {
 } from "@workspace/api-zod";
 import { isEvidenceComplete, isRightCurrent, validatePublicHttpUrl } from "./rights";
 import { isEpisodePubliclyPlayable, isSeriesPubliclyVisible } from "./episode-eligibility";
+import { isTorrentPlaybackEligible } from "./movie-archive-policy";
 
 type EpisodeCatalogRow = {
   episode: typeof seriesEpisodes.$inferSelect;
@@ -35,6 +38,7 @@ type CatalogRow = {
   movie: Movie;
   rights: MediaRight[];
   video: (typeof videoAssets.$inferSelect) | null;
+  torrent: (typeof importedTorrentSources.$inferSelect) | null;
   genres: string[];
   episodes: EpisodeCatalogRow[];
 };
@@ -78,9 +82,20 @@ export async function getCatalogRows(options: {
 async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
   if (!movieRows.length) return [];
   const ids = movieRows.map((movie) => movie.id);
-  const [rightsRows, videoRows, genreRows, episodeRows] = await Promise.all([
+  const [rightsRows, videoRows, torrentRows, genreRows, episodeRows] = await Promise.all([
     db.select().from(mediaRights).where(inArray(mediaRights.movieId, ids)),
     db.select().from(videoAssets).where(inArray(videoAssets.movieId, ids)),
+    db.select({
+      movieId: importedMovieSources.movieId,
+      torrent: importedTorrentSources,
+    })
+      .from(importedTorrentSources)
+      .innerJoin(importedMovieSources, eq(importedTorrentSources.movieSourceId, importedMovieSources.id))
+      .where(and(
+        inArray(importedMovieSources.movieId, ids),
+        eq(importedTorrentSources.playbackStatus, "active"),
+        eq(importedTorrentSources.rightsStatus, "approved"),
+      )),
     db
       .select({ movieId: movieGenres.movieId, genreName: genres.name })
       .from(movieGenres)
@@ -91,10 +106,21 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
 
   const rightsByMovie = new Map<string, MediaRight[]>();
   for (const rights of rightsRows) {
-    if (!rights.movieId || !isRightCurrent(rights) || !isEvidenceComplete(rights)) continue;
+    if (
+      !rights.movieId ||
+      rights.reviewStatus !== "approved" ||
+      !isRightCurrent(rights) ||
+      !isEvidenceComplete(rights)
+    ) continue;
     rightsByMovie.set(rights.movieId, [...(rightsByMovie.get(rights.movieId) ?? []), rights]);
   }
   const videoByMovie = new Map(videoRows.map((video) => [video.movieId, video]));
+  const torrentByMovie = new Map<string, typeof importedTorrentSources.$inferSelect>();
+  for (const row of torrentRows) {
+    if (isTorrentPlaybackEligible(row.torrent, true) && !torrentByMovie.has(row.movieId)) {
+      torrentByMovie.set(row.movieId, row.torrent);
+    }
+  }
   const genresByMovie = new Map<string, string[]>();
   for (const genre of genreRows) {
     genresByMovie.set(genre.movieId, [...(genresByMovie.get(genre.movieId) ?? []), genre.genreName]);
@@ -104,16 +130,21 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
     const rights = rightsByMovie.get(movie.id) ?? [];
     const mainRight = rights.find((right) => right.assetKind === "main_video");
     const video = videoByMovie.get(movie.id) ?? null;
+    const torrent = torrentByMovie.get(movie.id) ?? null;
     const episodes = episodeRows.get(movie.id) ?? [];
     if (movie.kind === "series"
       ? !isSeriesPubliclyVisible({ kind: movie.kind, status: movie.status, playableEpisodeCount: episodes.length })
-      : (!mainRight || !video || video.status !== "ready" || video.mediaRightId !== mainRight.id)) {
+      : (!mainRight || !(
+          (video && video.status === "ready" && video.mediaRightId === mainRight.id) ||
+          torrent
+        ))) {
       return [];
     }
     return [{
       movie,
       rights,
       video,
+      torrent,
       genres: genresByMovie.get(movie.id) ?? [],
       episodes,
     }];
@@ -210,7 +241,8 @@ function toPublicRightsRecord(right: MediaRight): PublicRightsRecord {
 }
 
 export function toPublicTitle(row: CatalogRow): PublicTitle {
-  const mainRight = row.rights.find((right) => right.id === row.video?.mediaRightId);
+  const mainRight = row.rights.find((right) => right.id === row.video?.mediaRightId) ??
+    row.rights.find((right) => right.assetKind === "main_video");
   const poster = row.rights.find((right) => right.assetKind === "poster");
   return {
     id: row.movie.id,
@@ -267,26 +299,28 @@ export async function getPlaybackForRow(row: CatalogRow): Promise<Playback | nul
   if (row.movie.kind === "series") return null;
   const video = row.video;
   const primaryRight = row.rights.find((right) => right.id === video?.mediaRightId);
-  if (!video || !primaryRight || primaryRight.assetKind !== "main_video") return null;
 
   let url: string | null = null;
   let streamType: Playback["streamType"] | null = null;
-  if (video.provider === "cloudflare") {
+  if (video && primaryRight?.assetKind === "main_video" && video.provider === "cloudflare") {
     const base = process.env.CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN?.trim();
     url = video.hlsUrl ?? (base && video.playbackId
       ? `https://${base}.cloudflarestream.com/${encodeURIComponent(video.playbackId)}/manifest/video.m3u8`
       : null);
     streamType = "cloudflare";
-  } else if (video.hlsUrl) {
+  } else if (video && primaryRight?.assetKind === "main_video" && video.hlsUrl) {
     url = video.hlsUrl;
     streamType = "hls";
-  } else if (video.mp4Url) {
+  } else if (video && primaryRight?.assetKind === "main_video" && video.mp4Url) {
     url = video.mp4Url;
+    streamType = "mp4";
+  } else if (row.torrent && isTorrentPlaybackEligible(row.torrent, true)) {
+    url = `/api/playback/${encodeURIComponent(row.movie.slug)}/media`;
     streamType = "mp4";
   }
 
   if (!url || !streamType) return null;
-  if (!url.startsWith("https://") || validatePublicHttpUrl(url)) return null;
+  if (!url.startsWith("/") && (!url.startsWith("https://") || validatePublicHttpUrl(url))) return null;
   const subtitlesForTitle = await db
     .select({
       id: subtitles.id,

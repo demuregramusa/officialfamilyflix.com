@@ -4,6 +4,8 @@ import {
   disabledTorrentSource,
   isProtectedArchiveTarget,
   privateArchiveMovieDraft,
+  redactTorrentLocators,
+  toAdminTorrentSourceView,
 } from "./movie-archive-policy.ts";
 
 const movieRecord = {
@@ -52,6 +54,35 @@ test("every imported torrent reference starts disabled and unverified", () => {
   assert.equal(source.rightsStatus, "unverified");
   assert.match(source.sourceUrl, /^magnet:/);
   assert.equal("mediaUrl" in source, false);
+});
+
+test("admin torrent views redact raw locators and torrent metadata", () => {
+  const view = toAdminTorrentSourceView({
+    ...disabledTorrentSource("source-row-1", torrentRecord),
+    id: "torrent-row-1",
+    rightsEvidenceUrl: null,
+    rightsEvidenceNotes: null,
+    rightsReviewNote: null,
+    rightsReviewedAt: null,
+    activatedAt: null,
+    sourceUrl: torrentRecord.sourceUrl,
+    metadata: { url: torrentRecord.sourceUrl },
+  });
+  assert.equal("sourceUrl" in view, false);
+  assert.equal("metadata" in view, false);
+  assert.equal(JSON.stringify(view).includes("magnet:"), false);
+  assert.equal(redactTorrentLocators({
+    description: "A source link: https://example.org/media/download.torrent?raw=1",
+    magnet: "magnet:?xt=urn:btih:1234",
+  }).description.includes(".torrent"), false);
+  assert.equal(
+    redactTorrentLocators({ description: "Primary source magnet:?xt=urn:btih:0123" }).description,
+    "[private torrent locator]",
+  );
+  assert.equal(
+    redactTorrentLocators({ link: "https://files.example.test/download/item.torrent?token=hidden" }).link,
+    "[private torrent locator]",
+  );
 });
 
 test("published, licensed, or rights-documented movie records are protected", () => {

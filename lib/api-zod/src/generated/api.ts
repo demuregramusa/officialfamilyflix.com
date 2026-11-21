@@ -117,7 +117,7 @@ export const GetPlaybackParams = zod.object({
 export const GetPlaybackResponse = zod.object({
   "titleName": zod.string(),
   "streamType": zod.enum(['mp4', 'hls', 'cloudflare']),
-  "url": zod.string().url(),
+  "url": zod.string(),
   "posterUrl": zod.string().url().nullish(),
   "subtitles": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -140,7 +140,7 @@ export const GetEpisodePlaybackParams = zod.object({
 export const GetEpisodePlaybackResponse = zod.object({
   "titleName": zod.string(),
   "streamType": zod.enum(['mp4', 'hls', 'cloudflare']),
-  "url": zod.string().url(),
+  "url": zod.string(),
   "posterUrl": zod.string().url().nullish(),
   "subtitles": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -1566,7 +1566,7 @@ export const GetAdminArchiveSourcesResponseItem = zod.object({
   "sourceUrl": zod.string().nullable(),
   "metadata": zod.record(zod.string(), zod.unknown()),
   "torrents": zod.array(zod.object({
-  "sourceUrl": zod.string().nullable(),
+  "id": zod.string().uuid(),
   "infoHash": zod.string().nullable(),
   "quality": zod.string().nullable(),
   "sourceType": zod.string().nullable(),
@@ -1579,12 +1579,98 @@ export const GetAdminArchiveSourcesResponseItem = zod.object({
   "size": zod.string().nullable(),
   "sizeBytes": zod.number().int().nullable(),
   "uploadedAt": zod.string().nullable(),
-  "playbackStatus": zod.enum(['disabled']),
-  "rightsStatus": zod.enum(['unverified']),
-  "metadata": zod.record(zod.string(), zod.unknown())
+  "playbackStatus": zod.enum(['disabled', 'active']),
+  "rightsStatus": zod.enum(['unverified', 'approved', 'rejected', 'restricted']),
+  "rightsEvidenceUrl": zod.string().url().nullable(),
+  "rightsEvidenceNotes": zod.string().nullable(),
+  "rightsReviewNote": zod.string().nullable(),
+  "rightsReviewedAt": zod.coerce.date().nullable(),
+  "activatedAt": zod.coerce.date().nullable()
 }))
 })
 export const GetAdminArchiveSourcesResponse = zod.array(GetAdminArchiveSourcesResponseItem)
+
+
+/**
+ * @summary Record a rights decision for one imported torrent source
+ */
+export const ReviewImportedTorrentRightsParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "torrentId": zod.coerce.string().uuid()
+})
+
+export const reviewImportedTorrentRightsBodyEvidenceNotesMin = 20;
+export const reviewImportedTorrentRightsBodyEvidenceNotesMax = 4000;
+
+export const reviewImportedTorrentRightsBodyReviewerNoteMax = 4000;
+
+
+
+export const ReviewImportedTorrentRightsBody = zod.object({
+  "decision": zod.enum(['approve', 'reject', 'restrict']),
+  "evidenceUrl": zod.string().url(),
+  "evidenceNotes": zod.string().min(reviewImportedTorrentRightsBodyEvidenceNotesMin).max(reviewImportedTorrentRightsBodyEvidenceNotesMax),
+  "reviewerNote": zod.string().min(1).max(reviewImportedTorrentRightsBodyReviewerNoteMax)
+})
+
+export const ReviewImportedTorrentRightsResponse = zod.object({
+  "id": zod.string().uuid(),
+  "infoHash": zod.string().nullable(),
+  "quality": zod.string().nullable(),
+  "sourceType": zod.string().nullable(),
+  "isRepack": zod.boolean().nullable(),
+  "videoCodec": zod.string().nullable(),
+  "bitDepth": zod.string().nullable(),
+  "audioChannels": zod.string().nullable(),
+  "seeders": zod.number().int().nullable(),
+  "peers": zod.number().int().nullable(),
+  "size": zod.string().nullable(),
+  "sizeBytes": zod.number().int().nullable(),
+  "uploadedAt": zod.string().nullable(),
+  "playbackStatus": zod.enum(['disabled', 'active']),
+  "rightsStatus": zod.enum(['unverified', 'approved', 'rejected', 'restricted']),
+  "rightsEvidenceUrl": zod.string().url().nullable(),
+  "rightsEvidenceNotes": zod.string().nullable(),
+  "rightsReviewNote": zod.string().nullable(),
+  "rightsReviewedAt": zod.coerce.date().nullable(),
+  "activatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Activate or deactivate one rights-reviewed torrent source
+ */
+export const SetImportedTorrentPlaybackParams = zod.object({
+  "id": zod.coerce.string().uuid(),
+  "torrentId": zod.coerce.string().uuid()
+})
+
+export const SetImportedTorrentPlaybackBody = zod.object({
+  "active": zod.boolean()
+})
+
+export const SetImportedTorrentPlaybackResponse = zod.object({
+  "id": zod.string().uuid(),
+  "infoHash": zod.string().nullable(),
+  "quality": zod.string().nullable(),
+  "sourceType": zod.string().nullable(),
+  "isRepack": zod.boolean().nullable(),
+  "videoCodec": zod.string().nullable(),
+  "bitDepth": zod.string().nullable(),
+  "audioChannels": zod.string().nullable(),
+  "seeders": zod.number().int().nullable(),
+  "peers": zod.number().int().nullable(),
+  "size": zod.string().nullable(),
+  "sizeBytes": zod.number().int().nullable(),
+  "uploadedAt": zod.string().nullable(),
+  "playbackStatus": zod.enum(['disabled', 'active']),
+  "rightsStatus": zod.enum(['unverified', 'approved', 'rejected', 'restricted']),
+  "rightsEvidenceUrl": zod.string().url().nullable(),
+  "rightsEvidenceNotes": zod.string().nullable(),
+  "rightsReviewNote": zod.string().nullable(),
+  "rightsReviewedAt": zod.coerce.date().nullable(),
+  "activatedAt": zod.coerce.date().nullable()
+})
 
 
 /**

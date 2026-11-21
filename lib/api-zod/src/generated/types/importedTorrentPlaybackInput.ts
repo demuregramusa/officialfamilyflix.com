@@ -6,4 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ImportedTorrentSourceMetadata = { [key: string]: unknown };
+export interface ImportedTorrentPlaybackInput {
+  active: boolean;
+}

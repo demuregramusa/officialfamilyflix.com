@@ -1,4 +1,10 @@
 import type { ImportedMovieRecord, ImportedTorrentRecord } from "./movie-archive-parser";
+export {
+  hasReviewedTorrentRights,
+  isTorrentPlaybackEligible,
+  isValidTorrentInfoHash,
+  type TorrentRightsState,
+} from "./torrent-source-policy.mjs";
 
 export function isProtectedArchiveTarget(
   status: string,
@@ -51,4 +57,68 @@ export function disabledTorrentSource(
     playbackStatus: "disabled" as const,
     rightsStatus: "unverified" as const,
   };
+}
+
+export function toAdminTorrentSourceView(source: {
+  id: string;
+  infoHash: string | null;
+  quality: string | null;
+  sourceType: string | null;
+  isRepack: boolean | null;
+  videoCodec: string | null;
+  bitDepth: string | null;
+  audioChannels: string | null;
+  seeders: number | null;
+  peers: number | null;
+  size: string | null;
+  sizeBytes: number | null;
+  uploadedAt: string | null;
+  playbackStatus: string;
+  rightsStatus: string;
+  rightsEvidenceUrl: string | null;
+  rightsEvidenceNotes: string | null;
+  rightsReviewNote: string | null;
+  rightsReviewedAt: Date | null;
+  activatedAt: Date | null;
+}) {
+  return {
+    id: source.id,
+    infoHash: source.infoHash,
+    quality: source.quality,
+    sourceType: source.sourceType,
+    isRepack: source.isRepack,
+    videoCodec: source.videoCodec,
+    bitDepth: source.bitDepth,
+    audioChannels: source.audioChannels,
+    seeders: source.seeders,
+    peers: source.peers,
+    size: source.size,
+    sizeBytes: source.sizeBytes,
+    uploadedAt: source.uploadedAt,
+    playbackStatus: source.playbackStatus,
+    rightsStatus: source.rightsStatus,
+    rightsEvidenceUrl: source.rightsEvidenceUrl,
+    rightsEvidenceNotes: source.rightsEvidenceNotes,
+    rightsReviewNote: source.rightsReviewNote,
+    rightsReviewedAt: source.rightsReviewedAt,
+    activatedAt: source.activatedAt,
+  };
+}
+
+export function redactTorrentLocators(value: unknown): unknown {
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (
+      /^(?:magnet:|torrent:)/i.test(text) ||
+      /magnet:\?[^\s"'<>]+/i.test(text) ||
+      /https?:\/\/[^\s"'<>]*(?:\.torrent|\/torrent(?:\/|[?#]|$)|magnet:)[^\s"'<>]*/i.test(text)
+    ) return "[private torrent locator]";
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(redactTorrentLocators);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).map(([key, child]) => [
+    key,
+    /torrent|magnet/i.test(key) ? "[private torrent data]" : redactTorrentLocators(child),
+  ]));
 }

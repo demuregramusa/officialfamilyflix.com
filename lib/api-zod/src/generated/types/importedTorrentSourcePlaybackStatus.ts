@@ -11,4 +11,5 @@ export type ImportedTorrentSourcePlaybackStatus = typeof ImportedTorrentSourcePl
 
 export const ImportedTorrentSourcePlaybackStatus = {
   disabled: 'disabled',
+  active: 'active',
 } as const;
