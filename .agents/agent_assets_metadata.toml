@@ -42,3 +42,17 @@ mtime_ms = 1795232098237
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:b1184dc6-7a0b-482e-9291-ea81a1a7ebc0/a0922927-97e2-4a0b-aad4-f69f57102d30/131a6fb8-6c8b-472f-a266-e2987f857b52"
 storage_version_token = "1795232124397683"
 content_type = "text/plain"
+
+[[outputs]]
+id = "j-3fjA1UV7UGI41S-aH2M"
+uri = "file://movie-input/familyflix-torrent-current.txt"
+type = "text"
+title = "FamilyFlix torrent current source"
+description = "Download the current FamilyFlix torrent source text file."
+logical_id = "977ac1b5-6817-4129-a2e4-61cf9f535b7e"
+content_hash = "sha256:fe463c453a722a863befe6f72fb26c597e8b3743474db1695864f68c1d611ab9"
+size = 75637
+mtime_ms = 1795232773920
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:b1184dc6-7a0b-482e-9291-ea81a1a7ebc0/977ac1b5-6817-4129-a2e4-61cf9f535b7e/d7d126ab-44c7-4cc4-8ff6-52c9271b1f3a"
+storage_version_token = "1795232799196451"
+content_type = "text/plain"
