@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  checkManualMediaSource,
   checkDirectMediaSource,
   isPublicMediaSourceAddress,
 } from "./rights.ts";
@@ -134,4 +135,50 @@ test("source probe accepts supported HLS media types and rejects unsafe URL form
   ]) {
     assert.ok(await checkDirectMediaSource(value, "mp4", hlsTransport.transport), value);
   }
+});
+
+test("manual admin title sources are marked ready only when the direct probe succeeds", async () => {
+  const successful = createTransport();
+  assert.equal(
+    await checkManualMediaSource({ mp4Url: mediaUrl }, successful.transport),
+    null,
+  );
+  assert.equal(successful.requests.length, 1);
+
+  const hls = createTransport({
+    responses: [{
+      status: 200,
+      contentType: "application/vnd.apple.mpegurl",
+      location: null,
+    }],
+  });
+  assert.equal(
+    await checkManualMediaSource({ hlsUrl: "https://media.example.com/film.m3u8" }, hls.transport),
+    null,
+  );
+
+  const unavailable = createTransport({
+    responses: [{ status: 404, contentType: "text/html", location: null }],
+  });
+  assert.equal(
+    await checkManualMediaSource({ mp4Url: mediaUrl }, unavailable.transport),
+    "The media source returned HTTP 404.",
+  );
+  assert.equal(unavailable.requests.length, 1);
+});
+
+test("manual admin title sources reject unsafe destinations and ambiguous source choices", async () => {
+  const privateAddress = createTransport({ addresses: ["192.168.1.12"] });
+  assert.match(
+    await checkManualMediaSource({ mp4Url: mediaUrl }, privateAddress.transport),
+    /public internet addresses/,
+  );
+  assert.equal(privateAddress.requests.length, 0);
+  assert.equal(
+    await checkManualMediaSource({
+      mp4Url: mediaUrl,
+      hlsUrl: "https://media.example.com/film.m3u8",
+    }),
+    "Provide exactly one direct MP4 or HLS source.",
+  );
 });

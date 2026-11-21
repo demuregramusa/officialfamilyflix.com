@@ -34,9 +34,9 @@ import {
   mapCloudflareStatus,
 } from "../lib/cloudflare";
 import {
+  checkManualMediaSource,
   isEvidenceComplete,
   rightsToInsert,
-  validatePublicHttpUrl,
   validateRightsInput,
 } from "../lib/rights";
 import { isTorrentPlaybackEligible } from "../lib/torrent-source-policy.mjs";
@@ -114,18 +114,8 @@ async function storeStream(
 ) {
   let status: "ready" | "processing" | "pending_upload" = "pending_upload";
   if (input.provider === "manual") {
-    const urls = [input.mp4Url, input.hlsUrl].filter((value): value is string => Boolean(value));
-    if (urls.length !== 1) throw new Error("Provide exactly one direct MP4 or HLS source.");
-    for (const url of urls) {
-      const issue = validatePublicHttpUrl(url);
-      if (issue) throw new Error(issue);
-      if (!url.startsWith("https://")) throw new Error("Manual playback sources must use HTTPS.");
-      const parsed = new URL(url);
-      const expectedSuffix = input.hlsUrl ? ".m3u8" : ".mp4";
-      if (!parsed.pathname.toLowerCase().endsWith(expectedSuffix)) {
-        throw new Error(`The ${input.hlsUrl ? "HLS" : "MP4"} URL must end in ${expectedSuffix}.`);
-      }
-    }
+    const issue = await checkManualMediaSource(input);
+    if (issue) throw new Error(issue);
     status = "ready";
   } else if (!input.playbackId) {
     throw new Error("A Cloudflare playback ID is required.");

@@ -235,6 +235,18 @@ export async function checkDirectMediaSource(
   }
 }
 
+export async function checkManualMediaSource(
+  input: { mp4Url?: string | null; hlsUrl?: string | null },
+  transport: MediaSourceProbeTransport = defaultMediaSourceProbeTransport,
+): Promise<string | null> {
+  const urls = [input.mp4Url, input.hlsUrl].filter((value): value is string => Boolean(value));
+  if (urls.length !== 1) return "Provide exactly one direct MP4 or HLS source.";
+  const publicUrlIssue = validatePublicHttpUrl(urls[0]!);
+  if (publicUrlIssue) return publicUrlIssue;
+  const type = input.hlsUrl ? "hls" : "mp4";
+  return checkDirectMediaSource(urls[0]!, type, transport);
+}
+
 const licenseToDb: Record<LicenseType, string> = {
   "cc-by-4.0": "cc_by_4_0",
   "cc-by-sa-4.0": "cc_by_sa_4_0",
