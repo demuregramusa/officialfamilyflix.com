@@ -168,6 +168,26 @@ export type EpisodePlayback = Playback & {
   episodeName: string;
 };
 
+export interface PlaybackProgress {
+  progressSeconds: number;
+  durationSeconds: number;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
+export interface PlaybackProgressInput {
+  /**
+     * @minimum 0
+     * @maximum 86400
+     */
+  progressSeconds: number;
+  /**
+     * @minimum 1
+     * @maximum 86400
+     */
+  durationSeconds: number;
+}
+
 export interface RightsInput {
   assetKind: AssetKind;
   /**

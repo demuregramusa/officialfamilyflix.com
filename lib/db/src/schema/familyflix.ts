@@ -424,6 +424,41 @@ export const userFavorites = pgTable(
   ],
 );
 
+export const playbackProgress = pgTable(
+  "playback_progress",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    movieId: uuid("movie_id")
+      .notNull()
+      .references(() => movies.id, { onDelete: "cascade" }),
+    episodeId: uuid("episode_id")
+      .references(() => seriesEpisodes.id, { onDelete: "cascade" }),
+    progressSeconds: integer("progress_seconds").notNull(),
+    durationSeconds: integer("duration_seconds").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("playback_progress_movie_unique")
+      .on(table.userId, table.movieId)
+      .where(sql`${table.episodeId} IS NULL`),
+    uniqueIndex("playback_progress_episode_unique")
+      .on(table.userId, table.episodeId)
+      .where(sql`${table.episodeId} IS NOT NULL`),
+    index("playback_progress_user_updated_idx").on(table.userId, table.updatedAt),
+    check("playback_progress_seconds_nonnegative", sql`${table.progressSeconds} >= 0`),
+    check("playback_progress_duration_positive", sql`${table.durationSeconds} > 0`),
+    check(
+      "playback_progress_within_duration",
+      sql`${table.progressSeconds} <= ${table.durationSeconds}`,
+    ),
+  ],
+);
+
 export const auditLogs = pgTable(
   "audit_logs",
   {

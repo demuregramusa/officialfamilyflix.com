@@ -3,12 +3,18 @@ import {
   GetPublicTitleParams,
   GetPlaybackParams,
   GetEpisodePlaybackParams,
+  GetEpisodePlaybackProgressParams,
   ListPublicTitlesQueryParams,
+  GetPlaybackProgressParams,
+  SaveEpisodePlaybackProgressBody,
+  SaveEpisodePlaybackProgressParams,
+  SavePlaybackProgressBody,
+  SavePlaybackProgressParams,
 } from "@workspace/api-zod";
-import { db, siteSettings } from "@workspace/db";
+import { db, playbackProgress, siteSettings } from "@workspace/db";
 import { getCatalogRows, getEpisodePlaybackForRow, getPlaybackForRow, getPublicCatalogRowBySlug, toPublicTitle, toPublicTitleDetail } from "../lib/catalog";
 import { validatePublicHttpUrl } from "../lib/rights";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { importedTorrentSources } from "@workspace/db";
 import {
   openApprovedTorrentMedia,
@@ -18,6 +24,7 @@ import {
 } from "../lib/torrent-playback";
 import { logger } from "../lib/logger";
 import { isTorrentPlaybackEligible } from "../lib/torrent-source-policy.mjs";
+import { requireSession } from "../lib/auth-middleware";
 
 setTorrentClientErrorHandler((error) => {
   logger.error({ err: error }, "Torrent client reported an error");
@@ -211,6 +218,154 @@ router.get("/playback/:slug/episodes/:episodeId", async (request, response) => {
     return;
   }
   response.json(playback);
+});
+
+async function getPlayableProgressTarget(slug: string, episodeId?: string | null) {
+  const row = await getPublicCatalogRowBySlug(slug);
+  if (!row) return null;
+  if (episodeId) {
+    const playback = await getEpisodePlaybackForRow(row, episodeId);
+    return playback ? { row, episodeId } : null;
+  }
+  return await getPlaybackForRow(row) ? { row, episodeId: null } : null;
+}
+
+function progressResponse(record?: typeof playbackProgress.$inferSelect) {
+  return {
+    progressSeconds: record?.progressSeconds ?? 0,
+    durationSeconds: record?.durationSeconds ?? 0,
+    updatedAt: record?.updatedAt?.toISOString() ?? null,
+  };
+}
+
+async function readPlaybackProgress(
+  slug: string,
+  episodeId: string | null,
+  userId: string,
+  response: import("express").Response,
+): Promise<void> {
+  const target = await getPlayableProgressTarget(slug, episodeId);
+  if (!target) {
+    response.status(404).json({ error: "This title or episode is not currently playable." });
+    return;
+  }
+  const filters = [
+    eq(playbackProgress.userId, userId),
+    eq(playbackProgress.movieId, target.row.movie.id),
+    target.episodeId
+      ? eq(playbackProgress.episodeId, target.episodeId)
+      : isNull(playbackProgress.episodeId),
+  ];
+  const [record] = await db.select().from(playbackProgress).where(and(...filters)).limit(1);
+  response.json(progressResponse(record));
+}
+
+async function savePlaybackProgress(
+  slug: string,
+  episodeId: string | null,
+  userId: string,
+  progressSeconds: number,
+  durationSeconds: number,
+  response: import("express").Response,
+): Promise<void> {
+  if (
+    progressSeconds > durationSeconds ||
+    durationSeconds <= 0 ||
+    progressSeconds > 86400 ||
+    durationSeconds > 86400
+  ) {
+    response.status(400).json({ error: "Playback progress must be within the video duration." });
+    return;
+  }
+  const target = await getPlayableProgressTarget(slug, episodeId);
+  if (!target) {
+    response.status(404).json({ error: "This title or episode is not currently playable." });
+    return;
+  }
+  const values = {
+    userId,
+    movieId: target.row.movie.id,
+    episodeId: target.episodeId,
+    progressSeconds,
+    durationSeconds,
+    updatedAt: new Date(),
+  };
+  if (target.episodeId) {
+    await db.insert(playbackProgress).values(values).onConflictDoUpdate({
+      target: [playbackProgress.userId, playbackProgress.episodeId],
+      targetWhere: sql`${playbackProgress.episodeId} IS NOT NULL`,
+      set: { progressSeconds, durationSeconds, updatedAt: values.updatedAt },
+    });
+  } else {
+    await db.insert(playbackProgress).values(values).onConflictDoUpdate({
+      target: [playbackProgress.userId, playbackProgress.movieId],
+      targetWhere: sql`${playbackProgress.episodeId} IS NULL`,
+      set: { progressSeconds, durationSeconds, updatedAt: values.updatedAt },
+    });
+  }
+  response.json(progressResponse(values));
+}
+
+router.get("/playback/:slug/progress", requireSession, async (request, response): Promise<void> => {
+  const params = GetPlaybackProgressParams.safeParse(request.params);
+  if (!params.success) {
+    response.status(400).json({ error: "Invalid playback progress request." });
+    return;
+  }
+  await readPlaybackProgress(
+    params.data.slug,
+    null,
+    response.locals.session.user.id,
+    response,
+  );
+});
+
+router.get("/playback/:slug/episodes/:episodeId/progress", requireSession, async (request, response): Promise<void> => {
+  const params = GetEpisodePlaybackProgressParams.safeParse(request.params);
+  if (!params.success) {
+    response.status(400).json({ error: "Invalid episode progress request." });
+    return;
+  }
+  await readPlaybackProgress(
+    params.data.slug,
+    params.data.episodeId,
+    response.locals.session.user.id,
+    response,
+  );
+});
+
+router.put("/playback/:slug/progress", requireSession, async (request, response): Promise<void> => {
+  const params = SavePlaybackProgressParams.safeParse(request.params);
+  const parsed = SavePlaybackProgressBody.safeParse(request.body);
+  if (!params.success || !parsed.success) {
+    response.status(400).json({ error: "Invalid playback progress." });
+    return;
+  }
+  await savePlaybackProgress(
+    params.data.slug,
+    null,
+    response.locals.session.user.id,
+    parsed.data.progressSeconds,
+    parsed.data.durationSeconds,
+    response,
+  );
+});
+
+router.put("/playback/:slug/episodes/:episodeId/progress", requireSession, async (request, response): Promise<void> => {
+  const params = SaveEpisodePlaybackProgressParams.safeParse(request.params);
+  const parsed = SaveEpisodePlaybackProgressBody.safeParse(request.body);
+  if (!params.success || !parsed.success) {
+    response.status(400).json({ error: "Invalid episode progress." });
+    return;
+  }
+  await savePlaybackProgress(
+    params.data.slug,
+    params.data.episodeId,
+    response.locals.session.user.id,
+    parsed.data.progressSeconds,
+    parsed.data.durationSeconds,
+    response,
+  );
 });
 
 router.get("/site-config", async (_request, response) => {

@@ -158,6 +158,88 @@ export const GetEpisodePlaybackResponse = zod.object({
 
 
 /**
+ * @summary Get signed-in viewer playback progress
+ */
+export const GetPlaybackProgressParams = zod.object({
+  "slug": zod.coerce.string()
+})
+
+export const GetPlaybackProgressResponse = zod.object({
+  "progressSeconds": zod.number().int(),
+  "durationSeconds": zod.number().int(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Save signed-in viewer playback progress
+ */
+export const SavePlaybackProgressParams = zod.object({
+  "slug": zod.coerce.string()
+})
+
+export const savePlaybackProgressBodyProgressSecondsMin = 0;
+export const savePlaybackProgressBodyProgressSecondsMax = 86400;
+
+export const savePlaybackProgressBodyDurationSecondsMax = 86400;
+
+
+
+export const SavePlaybackProgressBody = zod.object({
+  "progressSeconds": zod.number().int().min(savePlaybackProgressBodyProgressSecondsMin).max(savePlaybackProgressBodyProgressSecondsMax),
+  "durationSeconds": zod.number().int().min(1).max(savePlaybackProgressBodyDurationSecondsMax)
+})
+
+export const SavePlaybackProgressResponse = zod.object({
+  "progressSeconds": zod.number().int(),
+  "durationSeconds": zod.number().int(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Get signed-in viewer episode progress
+ */
+export const GetEpisodePlaybackProgressParams = zod.object({
+  "slug": zod.coerce.string(),
+  "episodeId": zod.coerce.string().uuid()
+})
+
+export const GetEpisodePlaybackProgressResponse = zod.object({
+  "progressSeconds": zod.number().int(),
+  "durationSeconds": zod.number().int(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Save signed-in viewer episode progress
+ */
+export const SaveEpisodePlaybackProgressParams = zod.object({
+  "slug": zod.coerce.string(),
+  "episodeId": zod.coerce.string().uuid()
+})
+
+export const saveEpisodePlaybackProgressBodyProgressSecondsMin = 0;
+export const saveEpisodePlaybackProgressBodyProgressSecondsMax = 86400;
+
+export const saveEpisodePlaybackProgressBodyDurationSecondsMax = 86400;
+
+
+
+export const SaveEpisodePlaybackProgressBody = zod.object({
+  "progressSeconds": zod.number().int().min(saveEpisodePlaybackProgressBodyProgressSecondsMin).max(saveEpisodePlaybackProgressBodyProgressSecondsMax),
+  "durationSeconds": zod.number().int().min(1).max(saveEpisodePlaybackProgressBodyDurationSecondsMax)
+})
+
+export const SaveEpisodePlaybackProgressResponse = zod.object({
+  "progressSeconds": zod.number().int(),
+  "durationSeconds": zod.number().int(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
  * @summary Get public site configuration
  */
 export const GetSiteConfigResponse = zod.object({

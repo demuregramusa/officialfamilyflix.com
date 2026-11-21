@@ -15,12 +15,14 @@ import {
   useCreateCloudflareUpload, useCreateStaff, useDecideCopyrightCase,
   useDeleteAdminTitle, useDeleteTitleSubtitle, useGetAdminDashboard,
   useGetAdminSettings, useGetAdminTitle, useGetCopyrightCase, useGetEpisodePlayback, useGetPlayback,
+  useGetEpisodePlaybackProgress, useGetPlaybackProgress,
   useGetAdminArchiveSources,
   useGetPublicTitle, useGetSiteConfig, useGetUserPreferences,
   useHealthCheck, useImportTitles, useListAdminActivity, useListAdminTitles,
   useListCopyrightCases, useListPublicTitles, useListRepeatInfringers,
   useListStaff, useListTitleRightsAssets, useListTitleSubtitles,
   usePublishAdminTitle, useRecordRepeatInfringer, useReviewTitleRights, useSaveUserPreferences,
+  useSaveEpisodePlaybackProgress, useSavePlaybackProgress,
   usePreviewCopyrightCaseCommunication, useRetryCopyrightCaseCommunication,
   useSendCopyrightCaseCommunication,
   useSetTitleStream, useSubmitCopyrightReport, useSubmitCounterNotice,
@@ -28,6 +30,7 @@ import {
   getCuratedPublicDomainTitles,
   useUpdateStaff, getGetAdminDashboardQueryKey, getGetAdminSettingsQueryKey,
   getGetAdminTitleQueryKey, getGetCopyrightCaseQueryKey, getGetPlaybackQueryKey,
+  getGetEpisodePlaybackProgressQueryKey, getGetPlaybackProgressQueryKey,
   getGetAdminArchiveSourcesQueryKey,
   getGetEpisodePlaybackQueryKey, getGetPublicTitleQueryKey, getGetSiteConfigQueryKey,
   getGetUserPreferencesQueryKey, getListAdminTitlesQueryKey,
@@ -53,6 +56,11 @@ import { ArchiveImportPanel } from "@/components/admin/archive-import-panel";
 import { ArchiveSourcePanel } from "@/components/admin/archive-source-panel";
 import { SeriesEpisodeManager } from "@/components/admin/series-episode-manager";
 import { curatedPublicDomainTitles } from "@/lib/curated-public-domain-titles";
+import {
+  getNextPlaybackTarget,
+  getResumePosition,
+  startAutoplayCountdown,
+} from "@/lib/playback-controls";
 
 const genres = ["Adventure", "Animation", "Comedy", "Documentary", "Drama", "Family", "Fantasy", "History", "Mystery", "Music", "Science fiction"];
 const ADMIN_NAV: [string, string, typeof LayoutDashboard][] = [
@@ -298,20 +306,124 @@ function DetailPage({ slug }: { slug: string }) {
 }
 function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const resumeAppliedRef = useRef("");
+  const lastSavedAtRef = useRef(0);
+  const autoStartHandledRef = useRef("");
+  const countdownCancelRef = useRef<(() => void) | null>(null);
+  const [, navigate] = useLocation();
+  const { data: sessionData } = authClient.useSession();
+  const session = sessionData as unknown as { user?: { id?: string } } | null | undefined;
+  const userId = session?.user?.id;
+  const queryClient = useQueryClient();
+  const previousUserIdRef = useRef(userId);
+  const [autoplayEnabled, setAutoplayEnabled] = useState(() => {
+    try { return localStorage.getItem("ff-autoplay") === "true"; } catch { return false; }
+  });
+  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
+  const [playbackFailure, setPlaybackFailure] = useState("");
+  const [resumeNotice, setResumeNotice] = useState("");
   const p = useGetPlayback(slug, { query: { enabled: !!slug && !episodeId, queryKey: getGetPlaybackQueryKey(slug), retry: false } });
   const episode = useGetEpisodePlayback(slug, episodeId ?? "", { query: {
     enabled: !!slug && !!episodeId,
     queryKey: getGetEpisodePlaybackQueryKey(slug, episodeId ?? ""),
     retry: false,
   } });
+  const movieProgress = useGetPlaybackProgress(slug, { query: {
+    enabled: !!userId && !episodeId,
+    queryKey: [...getGetPlaybackProgressQueryKey(slug), userId ?? "signed-out"],
+    retry: false,
+  } });
+  const episodeProgress = useGetEpisodePlaybackProgress(slug, episodeId ?? "", { query: {
+    enabled: !!userId && !!episodeId,
+    queryKey: [...getGetEpisodePlaybackProgressQueryKey(slug, episodeId ?? ""), userId ?? "signed-out"],
+    retry: false,
+  } });
+  const saveMovieProgress = useSavePlaybackProgress();
+  const saveEpisodeProgress = useSaveEpisodePlaybackProgress();
+  const publicTitle = useGetPublicTitle(slug, { query: {
+    enabled: !!episodeId,
+    queryKey: getGetPublicTitleQueryKey(slug),
+  } });
+  const movies = useListPublicTitles({ kind: "movie", limit: 100 }, { query: { enabled: true } });
   const playback = episodeId ? episode.data : p.data;
   const isLoading = episodeId ? episode.isLoading : p.isLoading;
   const isError = episodeId ? episode.isError : p.isError;
-  const playbackError = episodeId ? episode.error : p.error;
+  const progress = episodeId ? episodeProgress.data : movieProgress.data;
   const isSafeUrl = !!playback?.url && (
     (/^https?:/i.test(playback.url) && !/^(magnet:|torrent:)/i.test(playback.url)) ||
     (/^\/api\/playback\/[^/]+\/media$/.test(playback.url) && !playback.url.startsWith("//"))
   );
+  const nextTarget = getNextPlaybackTarget({
+    slug,
+    ...(episodeId ? { episodeId } : {}),
+    episodes: publicTitle.data?.episodes ?? [],
+    titles: movies.data ?? [],
+  });
+
+  function saveProgress(force = false) {
+    const video = videoRef.current;
+    if (!userId || !isSafeUrl || !video || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    const now = Date.now();
+    if (!force && now - lastSavedAtRef.current < 15000) return;
+    lastSavedAtRef.current = now;
+    const durationSeconds = Math.max(1, Math.min(Math.floor(video.duration), 86400));
+    const data = {
+      progressSeconds: Math.min(Math.floor(video.currentTime), durationSeconds),
+      durationSeconds,
+    };
+    if (episodeId) {
+      saveEpisodeProgress.mutate({ slug, episodeId, data }, {
+        onError: () => setPlaybackFailure("Watch progress could not be saved. Check your connection and try again."),
+      });
+    } else {
+      saveMovieProgress.mutate({ slug, data }, {
+        onError: () => setPlaybackFailure("Watch progress could not be saved. Check your connection and try again."),
+      });
+    }
+  }
+
+  function cancelCountdown() {
+    countdownCancelRef.current?.();
+    countdownCancelRef.current = null;
+    setCountdownSeconds(null);
+  }
+
+  function beginNextPlayback() {
+    saveProgress(true);
+    setPlaybackFailure("");
+    if (!autoplayEnabled || !nextTarget) return;
+    cancelCountdown();
+    countdownCancelRef.current = startAutoplayCountdown(
+      true,
+      10,
+      setCountdownSeconds,
+      () => {
+        try {
+          sessionStorage.setItem("ff-autoplay-target", nextTarget.href);
+        } catch {
+          // Navigation still proceeds if session storage is unavailable.
+        }
+        navigate(nextTarget.href);
+      },
+    );
+  }
+
+  function updateAutoplay(enabled: boolean) {
+    setAutoplayEnabled(enabled);
+    try { localStorage.setItem("ff-autoplay", String(enabled)); } catch { /* Keep the setting for this session. */ }
+    if (!enabled) cancelCountdown();
+  }
+
+  useEffect(() => {
+    if (previousUserIdRef.current !== userId) {
+      queryClient.removeQueries({
+        predicate: query => typeof query.queryKey[0] === "string" &&
+          query.queryKey[0].includes("/progress"),
+      });
+      previousUserIdRef.current = userId;
+    }
+  }, [queryClient, userId]);
+
   useEffect(() => {
     const video = videoRef.current;
     const url = playback?.url;
@@ -322,12 +434,101 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
     }
     if (!Hls.isSupported()) return;
     const hls = new Hls();
+    hls.on(Hls.Events.ERROR, (_event, data) => {
+      if (!data.fatal) return;
+      video.pause();
+      setPlaybackFailure("Playback stopped because the approved video stream could not be loaded. Please try again later.");
+    });
     hls.loadSource(url);
     hls.attachMedia(video);
     return () => hls.destroy();
   }, [playback?.url]);
-  return <Shell><Heading eyebrow={episodeId ? "Approved episode playback" : "Approved playback"} title={playback?.titleName || "Playback check"} description="Playback is available only when the server returns an approved media source for this title or episode." />
-    {isLoading ? <div className="skeleton" style={{ height: 400 }} /> : isError ? <div className="empty-state"><span className="empty-icon"><LockKeyhole size={20} /></span><h3>Playback is not available</h3><p>This title or episode has no server-approved stream available right now. No external or peer-to-peer media links are offered.</p><Link href={`/title/${slug}`} className="button-secondary" style={{ marginTop: 16 }} data-testid="link-playback-title">View title and rights details</Link></div> : isSafeUrl ? <div className="panel"><div className="feature-line" data-testid="status-approved-playback"><ShieldCheck size={16} /> Server-approved source · {playback.streamType}</div><video ref={videoRef} controls playsInline preload="metadata" poster={playback.posterUrl || undefined} src={/\.m3u8(?:$|[?#])/i.test(playback.url) ? undefined : playback.url} style={{ width: "100%", marginTop: 18, borderRadius: 12, background: "#09070d" }} data-testid="video-approved-playback">{playback.subtitles?.map(s => <track key={s.id} kind="subtitles" src={s.url} srcLang={s.language} label={s.label} default={s.isDefault} />)}</video>{episodeId && <p className="helper">Season {episode.data?.seasonNumber}, Episode {episode.data?.episodeNumber}: {episode.data?.episodeName}</p>}<p className="helper">This playback URL was returned by the FamilyFlix server. If it stops working, return to the title page to review its current rights information.</p></div> : <ErrorBox message={playbackError ? errorText(playbackError) : "The server did not return a safe, approved media URL. Playback has been withheld."} />}</Shell>;
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isSafeUrl) return;
+    const onMetadata = () => {
+      if (video.readyState < 1) return;
+      const progressLoading = userId ? (episodeId ? episodeProgress.isLoading : movieProgress.isLoading) : false;
+      const contentKey = `${userId ?? "guest"}:${slug}:${episodeId ?? "movie"}`;
+      if (!progressLoading && userId && progress && resumeAppliedRef.current !== contentKey) {
+        resumeAppliedRef.current = contentKey;
+        const position = getResumePosition(progress.progressSeconds, progress.durationSeconds, video.duration);
+        if (position > 0) {
+          video.currentTime = position;
+          setResumeNotice(`Resuming from ${Math.floor(position / 60)}:${String(Math.floor(position % 60)).padStart(2, "0")}.`);
+        }
+      }
+      if (autoStartHandledRef.current === contentKey) return;
+      autoStartHandledRef.current = contentKey;
+      let pendingTarget: string | null = null;
+      try {
+        pendingTarget = sessionStorage.getItem("ff-autoplay-target");
+        sessionStorage.removeItem("ff-autoplay-target");
+      } catch {
+        pendingTarget = null;
+      }
+      if (pendingTarget === window.location.pathname) {
+        void video.play().catch(() => {
+          setPlaybackFailure("Your browser blocked automatic playback. Press Play to continue.");
+        });
+      }
+    };
+    video.addEventListener("loadedmetadata", onMetadata);
+    if (video.readyState >= 1) onMetadata();
+    return () => video.removeEventListener("loadedmetadata", onMetadata);
+  }, [
+    episodeId,
+    episodeProgress.isLoading,
+    isSafeUrl,
+    movieProgress.isLoading,
+    progress,
+    slug,
+    userId,
+  ]);
+
+  useEffect(() => () => {
+    countdownCancelRef.current?.();
+  }, []);
+  useEffect(() => {
+    cancelCountdown();
+    resumeAppliedRef.current = "";
+    autoStartHandledRef.current = "";
+    setPlaybackFailure("");
+    setResumeNotice("");
+  }, [slug, episodeId]);
+
+  return <Shell>
+    <Heading eyebrow={episodeId ? "Approved episode playback" : "Approved playback"} title={playback?.titleName || "Playback check"} description="Playback is available only when the server returns an approved media source for this title or episode." />
+    {isLoading ? <div className="skeleton" style={{ height: 400 }} /> : isError ? <div className="empty-state"><span className="empty-icon"><LockKeyhole size={20} /></span><h3>Playback is not available</h3><p>This title or episode has no server-approved stream available right now. No external or peer-to-peer media links are offered.</p><Link href={`/title/${slug}`} className="button-secondary" style={{ marginTop: 16 }} data-testid="link-playback-title">View title and rights details</Link></div> : isSafeUrl ? <div className="panel">
+      <div className="feature-line" data-testid="status-approved-playback"><ShieldCheck size={16} /> Server-approved source · {playback.streamType}</div>
+      <video
+        ref={videoRef}
+        controls
+        playsInline
+        preload="metadata"
+        poster={playback.posterUrl || undefined}
+        src={/\.m3u8(?:$|[?#])/i.test(playback.url) ? undefined : playback.url}
+        onTimeUpdate={() => saveProgress()}
+        onPause={() => saveProgress(true)}
+        onEnded={beginNextPlayback}
+        onError={() => setPlaybackFailure("Playback stopped because the approved video stream could not be played. Please try again later.")}
+        style={{ width: "100%", marginTop: 18, borderRadius: 12, background: "#09070d" }}
+        data-testid="video-approved-playback"
+      >{playback.subtitles?.map(s => <track key={s.id} kind="subtitles" src={s.url} srcLang={s.language} label={s.label} default={s.isDefault} />)}</video>
+      {episodeId && <p className="helper">Season {episode.data?.seasonNumber}, Episode {episode.data?.episodeNumber}: {episode.data?.episodeName}</p>}
+      {resumeNotice && <p className="helper" role="status" data-testid="status-resume">{resumeNotice}</p>}
+      {playbackFailure && <p className="form-message error" role="alert" data-testid="status-playback-error">{playbackFailure}</p>}
+      {userId ? <p className="helper">Watch progress saves to your signed-in account while this title remains approved and playable.</p> : <p className="helper">Sign in to save and resume watch progress across visits.</p>}
+      <label className="field" style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }} data-testid="control-autoplay">
+        <input type="checkbox" checked={autoplayEnabled} onChange={event => updateAutoplay(event.target.checked)} />
+        <span>Autoplay the next approved title</span>
+      </label>
+      {countdownSeconds !== null && nextTarget && <div className="notice" role="status" aria-live="polite" data-testid="status-autoplay-countdown">
+        <span>Next up: <strong>{nextTarget.label}</strong> in {countdownSeconds} seconds.</span>
+        <button className="button-secondary" onClick={cancelCountdown} data-testid="button-cancel-autoplay">Cancel autoplay</button>
+      </div>}
+    </div> : <ErrorBox message="The server did not return a safe, approved media source. Playback has been withheld." />}
+  </Shell>;
 }
 function MyListPage() {
   const [slugs, setSlugs] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("ff-list") || "[]"); } catch { return []; } });

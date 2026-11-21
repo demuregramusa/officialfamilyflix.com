@@ -66,6 +66,8 @@ export * from './listAdminTitlesParams';
 export * from './listCopyrightCasesParams';
 export * from './listPublicTitlesParams';
 export * from './playback';
+export * from './playbackProgress';
+export * from './playbackProgressInput';
 export * from './playbackStreamType';
 export * from './publicRightsRecord';
 export * from './publicSeriesEpisode';

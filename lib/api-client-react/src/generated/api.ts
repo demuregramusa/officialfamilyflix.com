@@ -59,6 +59,8 @@ import type {
   ListCopyrightCasesParams,
   ListPublicTitlesParams,
   Playback,
+  PlaybackProgress,
+  PlaybackProgressInput,
   PublicTitle,
   PublicTitleDetail,
   RepeatInfringer,
@@ -626,6 +628,396 @@ export function useGetEpisodePlayback<TData = Awaited<ReturnType<typeof getEpiso
 
 
 
+
+export const getGetPlaybackProgressUrl = (slug: string,) => {
+
+
+
+
+  return `/api/playback/${slug}/progress`
+}
+
+/**
+ * @summary Get signed-in viewer playback progress
+ */
+export const getPlaybackProgress = async (slug: string, options?: Parameters<typeof customFetch>[1]): Promise<PlaybackProgress> => {
+
+  return customFetch<PlaybackProgress>(getGetPlaybackProgressUrl(slug),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPlaybackProgressQueryKey = (slug: string,) => {
+    return [
+    `/api/playback/${slug}/progress`
+    ] as const;
+    }
+
+
+export const getGetPlaybackProgressQueryOptions = <TData = Awaited<ReturnType<typeof getPlaybackProgress>>, TError = ErrorType<Error>>(slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlaybackProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlaybackProgressQueryKey(slug);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlaybackProgress>>> = ({ signal }) => getPlaybackProgress(slug, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: slug !== null && slug !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlaybackProgress>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPlaybackProgressQueryResult = NonNullable<Awaited<ReturnType<typeof getPlaybackProgress>>>
+export type GetPlaybackProgressQueryError = ErrorType<Error>
+
+
+export function useGetPlaybackProgress<TData = Awaited<ReturnType<typeof getPlaybackProgress>>, TError = ErrorType<Error>>(
+ slug: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlaybackProgress>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPlaybackProgress>>,
+          TError,
+          Awaited<ReturnType<typeof getPlaybackProgress>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPlaybackProgress<TData = Awaited<ReturnType<typeof getPlaybackProgress>>, TError = ErrorType<Error>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlaybackProgress>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPlaybackProgress>>,
+          TError,
+          Awaited<ReturnType<typeof getPlaybackProgress>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPlaybackProgress<TData = Awaited<ReturnType<typeof getPlaybackProgress>>, TError = ErrorType<Error>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlaybackProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get signed-in viewer playback progress
+ */
+
+export function useGetPlaybackProgress<TData = Awaited<ReturnType<typeof getPlaybackProgress>>, TError = ErrorType<Error>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlaybackProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPlaybackProgressQueryOptions(slug,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSavePlaybackProgressUrl = (slug: string,) => {
+
+
+
+
+  return `/api/playback/${slug}/progress`
+}
+
+/**
+ * @summary Save signed-in viewer playback progress
+ */
+export const savePlaybackProgress = async (slug: string,
+    playbackProgressInput: PlaybackProgressInput, options?: Parameters<typeof customFetch>[1]): Promise<PlaybackProgress> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlaybackProgress>(getSavePlaybackProgressUrl(slug),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(playbackProgressInput)
+  }
+);}
+
+
+
+
+
+export const getSavePlaybackProgressMutationKey = () => ['savePlaybackProgress'] as const;
+
+export const getSavePlaybackProgressMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePlaybackProgress>>, TError,SavePlaybackProgressMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof savePlaybackProgress>>, TError,SavePlaybackProgressMutationVariables, TContext> => {
+
+const mutationKey = getSavePlaybackProgressMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof savePlaybackProgress>>, SavePlaybackProgressMutationVariables> = (props) => {
+          const {slug,data} = props ?? {};
+
+          return  savePlaybackProgress(slug,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SavePlaybackProgressMutationResult = NonNullable<Awaited<ReturnType<typeof savePlaybackProgress>>>
+    export type SavePlaybackProgressMutationBody = BodyType<PlaybackProgressInput>
+    export type SavePlaybackProgressMutationError = ErrorType<Error>
+    export type SavePlaybackProgressMutationVariables = {slug: string;data: BodyType<PlaybackProgressInput>}
+
+    /**
+ * @summary Save signed-in viewer playback progress
+ */
+export const useSavePlaybackProgress = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePlaybackProgress>>, TError,SavePlaybackProgressMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof savePlaybackProgress>>,
+        TError,
+        SavePlaybackProgressMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSavePlaybackProgressMutationOptions(options), queryClient);
+    }
+
+export const getGetEpisodePlaybackProgressUrl = (slug: string,
+    episodeId: string,) => {
+
+
+
+
+  return `/api/playback/${slug}/episodes/${episodeId}/progress`
+}
+
+/**
+ * @summary Get signed-in viewer episode progress
+ */
+export const getEpisodePlaybackProgress = async (slug: string,
+    episodeId: string, options?: Parameters<typeof customFetch>[1]): Promise<PlaybackProgress> => {
+
+  return customFetch<PlaybackProgress>(getGetEpisodePlaybackProgressUrl(slug,episodeId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEpisodePlaybackProgressQueryKey = (slug: string,
+    episodeId: string,) => {
+    return [
+    `/api/playback/${slug}/episodes/${episodeId}/progress`
+    ] as const;
+    }
+
+
+export const getGetEpisodePlaybackProgressQueryOptions = <TData = Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError = ErrorType<Error>>(slug: string,
+    episodeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEpisodePlaybackProgressQueryKey(slug,episodeId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEpisodePlaybackProgress>>> = ({ signal }) => getEpisodePlaybackProgress(slug,episodeId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: slug !== null && slug !== undefined && episodeId !== null && episodeId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetEpisodePlaybackProgressQueryResult = NonNullable<Awaited<ReturnType<typeof getEpisodePlaybackProgress>>>
+export type GetEpisodePlaybackProgressQueryError = ErrorType<Error>
+
+
+export function useGetEpisodePlaybackProgress<TData = Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError = ErrorType<Error>>(
+ slug: string,
+    episodeId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEpisodePlaybackProgress>>,
+          TError,
+          Awaited<ReturnType<typeof getEpisodePlaybackProgress>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEpisodePlaybackProgress<TData = Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError = ErrorType<Error>>(
+ slug: string,
+    episodeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEpisodePlaybackProgress>>,
+          TError,
+          Awaited<ReturnType<typeof getEpisodePlaybackProgress>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEpisodePlaybackProgress<TData = Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError = ErrorType<Error>>(
+ slug: string,
+    episodeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get signed-in viewer episode progress
+ */
+
+export function useGetEpisodePlaybackProgress<TData = Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError = ErrorType<Error>>(
+ slug: string,
+    episodeId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEpisodePlaybackProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetEpisodePlaybackProgressQueryOptions(slug,episodeId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveEpisodePlaybackProgressUrl = (slug: string,
+    episodeId: string,) => {
+
+
+
+
+  return `/api/playback/${slug}/episodes/${episodeId}/progress`
+}
+
+/**
+ * @summary Save signed-in viewer episode progress
+ */
+export const saveEpisodePlaybackProgress = async (slug: string,
+    episodeId: string,
+    playbackProgressInput: PlaybackProgressInput, options?: Parameters<typeof customFetch>[1]): Promise<PlaybackProgress> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PlaybackProgress>(getSaveEpisodePlaybackProgressUrl(slug,episodeId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(playbackProgressInput)
+  }
+);}
+
+
+
+
+
+export const getSaveEpisodePlaybackProgressMutationKey = () => ['saveEpisodePlaybackProgress'] as const;
+
+export const getSaveEpisodePlaybackProgressMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveEpisodePlaybackProgress>>, TError,SaveEpisodePlaybackProgressMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveEpisodePlaybackProgress>>, TError,SaveEpisodePlaybackProgressMutationVariables, TContext> => {
+
+const mutationKey = getSaveEpisodePlaybackProgressMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveEpisodePlaybackProgress>>, SaveEpisodePlaybackProgressMutationVariables> = (props) => {
+          const {slug,episodeId,data} = props ?? {};
+
+          return  saveEpisodePlaybackProgress(slug,episodeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveEpisodePlaybackProgressMutationResult = NonNullable<Awaited<ReturnType<typeof saveEpisodePlaybackProgress>>>
+    export type SaveEpisodePlaybackProgressMutationBody = BodyType<PlaybackProgressInput>
+    export type SaveEpisodePlaybackProgressMutationError = ErrorType<Error>
+    export type SaveEpisodePlaybackProgressMutationVariables = {slug: string;episodeId: string;data: BodyType<PlaybackProgressInput>}
+
+    /**
+ * @summary Save signed-in viewer episode progress
+ */
+export const useSaveEpisodePlaybackProgress = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveEpisodePlaybackProgress>>, TError,SaveEpisodePlaybackProgressMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof saveEpisodePlaybackProgress>>,
+        TError,
+        SaveEpisodePlaybackProgressMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveEpisodePlaybackProgressMutationOptions(options), queryClient);
+    }
 
 export const getGetSiteConfigUrl = () => {
 

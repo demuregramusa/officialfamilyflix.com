@@ -150,6 +150,160 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /playback/{slug}/progress:
+    get:
+      operationId: getPlaybackProgress
+      tags: [playback]
+      summary: Get signed-in viewer playback progress
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Saved progress for a currently playable title or episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaybackProgress"
+        "401":
+          description: Sign in is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Title or episode is not currently playable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      operationId: savePlaybackProgress
+      tags: [playback]
+      summary: Save signed-in viewer playback progress
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaybackProgressInput"
+      responses:
+        "200":
+          description: Saved progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaybackProgress"
+        "400":
+          description: Progress is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Sign in is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Title or episode is not currently playable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /playback/{slug}/episodes/{episodeId}/progress:
+    get:
+      operationId: getEpisodePlaybackProgress
+      tags: [playback]
+      summary: Get signed-in viewer episode progress
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: episodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Saved progress for a currently playable episode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaybackProgress"
+        "401":
+          description: Sign in is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Episode is not currently playable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      operationId: saveEpisodePlaybackProgress
+      tags: [playback]
+      summary: Save signed-in viewer episode progress
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: episodeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaybackProgressInput"
+      responses:
+        "200":
+          description: Saved progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaybackProgress"
+        "400":
+          description: Progress is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Sign in is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Episode is not currently playable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /site-config:
     get:
       operationId: getSiteConfig
@@ -1346,6 +1500,19 @@ components:
             seasonNumber: { type: integer }
             episodeNumber: { type: integer }
             episodeName: { type: string }
+    PlaybackProgress:
+      type: object
+      required: [progressSeconds, durationSeconds, updatedAt]
+      properties:
+        progressSeconds: { type: integer }
+        durationSeconds: { type: integer }
+        updatedAt: { type: ["string", "null"], format: date-time }
+    PlaybackProgressInput:
+      type: object
+      required: [progressSeconds, durationSeconds]
+      properties:
+        progressSeconds: { type: integer, minimum: 0, maximum: 86400 }
+        durationSeconds: { type: integer, minimum: 1, maximum: 86400 }
     PublicSubtitle:
       type: object
       required: [id, language, label, url, isDefault]
