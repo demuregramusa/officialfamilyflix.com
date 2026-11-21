@@ -28,3 +28,17 @@ mtime_ms = 1795231659729
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:b1184dc6-7a0b-482e-9291-ea81a1a7ebc0/0ae5d121-a2c4-42bb-9961-dc26d2456062/ce432eb0-84c8-49df-8ab5-192b21631836"
 storage_version_token = "1795231776522799"
 content_type = "text/plain"
+
+[[outputs]]
+id = "FK5FDoZj7IyTbjIxY85N3"
+uri = "file://movie-input/familyflix_torrent_integration_source.txt"
+type = "text"
+title = "FamilyFlix torrent integration source"
+description = "Download the FamilyFlix torrent integration source text file."
+logical_id = "a0922927-97e2-4a0b-aad4-f69f57102d30"
+content_hash = "sha256:f6ff1040e7cada62aa9bfa758ad34697cbff691db4fe58247020019507008d6e"
+size = 157440
+mtime_ms = 1795232098237
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:b1184dc6-7a0b-482e-9291-ea81a1a7ebc0/a0922927-97e2-4a0b-aad4-f69f57102d30/131a6fb8-6c8b-472f-a266-e2987f857b52"
+storage_version_token = "1795232124397683"
+content_type = "text/plain"
