@@ -4,6 +4,8 @@ import {
   checkManualMediaSource,
   checkDirectMediaSource,
   isPublicMediaSourceAddress,
+  validateEpisodeMediaSources,
+  validateEpisodeMediaSourcesBeforeSave,
 } from "./rights.ts";
 
 const mediaUrl = "https://media.example.com/film.mp4";
@@ -181,4 +183,52 @@ test("manual admin title sources reject unsafe destinations and ambiguous source
     }),
     "Provide exactly one direct MP4 or HLS source.",
   );
+});
+
+test("episode source dry validation probes each MP4 and HLS without saving", async () => {
+  const calls = [];
+  const seasons = [{
+    seasonNumber: 2,
+    episodes: [
+      { episodeNumber: 1, stream: { url: "https://media.example.com/episode-1.mp4" } },
+      { episodeNumber: 2, stream: { url: "https://media.example.com/episode-2.m3u8" } },
+    ],
+  }];
+  const issues = await validateEpisodeMediaSources(seasons, async (url, type) => {
+    calls.push({ url, type });
+    return null;
+  });
+
+  assert.deepEqual(calls, [
+    { url: "https://media.example.com/episode-1.mp4", type: "mp4" },
+    { url: "https://media.example.com/episode-2.m3u8", type: "hls" },
+  ]);
+  assert.deepEqual(issues, []);
+});
+
+test("failed episode source validation identifies its season and episode and prevents saving", async () => {
+  let saveCalled = false;
+  const result = await validateEpisodeMediaSourcesBeforeSave(
+    [{
+      seasonNumber: 3,
+      episodes: [
+        { episodeNumber: 4, stream: { url: "https://media.example.com/episode-4.mp4" } },
+      ],
+    }],
+    async () => {
+      saveCalled = true;
+      return ["saved"];
+    },
+    async () => "The media source returned HTTP 404.",
+  );
+
+  assert.deepEqual(result, {
+    ok: false,
+    issues: [{
+      seasonNumber: 3,
+      episodeNumber: 4,
+      message: "The media source returned HTTP 404.",
+    }],
+  });
+  assert.equal(saveCalled, false);
 });

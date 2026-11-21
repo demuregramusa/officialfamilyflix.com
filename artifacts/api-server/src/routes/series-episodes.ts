@@ -25,7 +25,15 @@ import {
 import { requireCapability } from "../lib/auth-middleware";
 import { logAudit } from "../lib/audit";
 import { hasEpisodePlaybackAssets } from "../lib/episode-eligibility";
-import { isEvidenceComplete, isRightCurrent, rightsFromDb, rightsToInsert, validatePublicHttpUrl, validateRightsInput } from "../lib/rights";
+import {
+  isEvidenceComplete,
+  isRightCurrent,
+  rightsFromDb,
+  rightsToInsert,
+  validateEpisodeMediaSourcesBeforeSave,
+  validatePublicHttpUrl,
+  validateRightsInput,
+} from "../lib/rights";
 
 const router = Router();
 
@@ -186,7 +194,7 @@ router.post("/admin/titles/:id/episodes", requireCapability("rights.manage"), as
 
   const session = response.locals.session;
   try {
-    const episodeIds = await db.transaction(async (tx) => {
+    const importResult = await validateEpisodeMediaSourcesBeforeSave(input.seasons, () => db.transaction(async (tx) => {
       const created: string[] = [];
       for (const seasonInput of input.seasons) {
         const [createdSeason] = await tx.insert(seriesSeasons).values({
@@ -233,7 +241,21 @@ router.post("/admin/titles/:id/episodes", requireCapability("rights.manage"), as
         }
       }
       return created;
-    });
+    }));
+    if (!importResult.ok) {
+      const issues = importResult.issues.map((issue) => ({
+        seasonNumber: issue.seasonNumber,
+        episodeNumber: issue.episodeNumber,
+        message: issue.message,
+      }));
+      const firstIssue = issues[0]!;
+      response.status(400).json({
+        error: `Season ${firstIssue.seasonNumber}, episode ${firstIssue.episodeNumber}: ${firstIssue.message}`,
+        issues,
+      });
+      return;
+    }
+    const episodeIds = importResult.value;
     await logAudit(session, "series.episodes.import", "series", series.id, {
       episodeCount: episodeIds.length,
       seasonNumbers,

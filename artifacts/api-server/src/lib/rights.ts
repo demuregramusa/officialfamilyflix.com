@@ -235,6 +235,69 @@ export async function checkDirectMediaSource(
   }
 }
 
+export interface EpisodeMediaSourceInput {
+  seasonNumber: number;
+  episodes: {
+    episodeNumber: number;
+    stream: { url: string };
+  }[];
+}
+
+export interface EpisodeMediaSourceIssue {
+  seasonNumber: number;
+  episodeNumber: number;
+  message: string;
+}
+
+type DirectMediaSourceCheck = (value: string, type: "mp4" | "hls") => Promise<string | null>;
+
+export async function validateEpisodeMediaSources(
+  seasons: EpisodeMediaSourceInput[],
+  checkSource: DirectMediaSourceCheck = checkDirectMediaSource,
+): Promise<EpisodeMediaSourceIssue[]> {
+  const sources = seasons.flatMap((season) => season.episodes.map((episode) => ({
+    seasonNumber: season.seasonNumber,
+    episodeNumber: episode.episodeNumber,
+    url: episode.stream.url,
+    type: /\.m3u8$/i.test(new URL(episode.stream.url).pathname) ? "hls" as const : "mp4" as const,
+  })));
+  const issues: (EpisodeMediaSourceIssue | null)[] = Array(sources.length).fill(null);
+  let nextSource = 0;
+  const workerCount = Math.min(5, sources.length);
+
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextSource < sources.length) {
+      const index = nextSource++;
+      const source = sources[index]!;
+      let message: string | null;
+      try {
+        message = await checkSource(source.url, source.type);
+      } catch {
+        message = "The media source could not be checked.";
+      }
+      if (message) {
+        issues[index] = {
+          seasonNumber: source.seasonNumber,
+          episodeNumber: source.episodeNumber,
+          message,
+        };
+      }
+    }
+  }));
+
+  return issues.filter((issue): issue is EpisodeMediaSourceIssue => issue !== null);
+}
+
+export async function validateEpisodeMediaSourcesBeforeSave<T>(
+  seasons: EpisodeMediaSourceInput[],
+  save: () => Promise<T>,
+  checkSource: DirectMediaSourceCheck = checkDirectMediaSource,
+): Promise<{ ok: true; value: T } | { ok: false; issues: EpisodeMediaSourceIssue[] }> {
+  const issues = await validateEpisodeMediaSources(seasons, checkSource);
+  if (issues.length) return { ok: false, issues };
+  return { ok: true, value: await save() };
+}
+
 export async function checkManualMediaSource(
   input: { mp4Url?: string | null; hlsUrl?: string | null },
   transport: MediaSourceProbeTransport = defaultMediaSourceProbeTransport,
