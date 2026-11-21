@@ -14,3 +14,17 @@ mtime_ms = 1795229823477
 storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:b1184dc6-7a0b-482e-9291-ea81a1a7ebc0/5590d374-aed1-4d53-acf6-207a672c7df8/36ded18e-0145-4073-835f-edb1debf3bc1"
 storage_version_token = "1795231154970760"
 content_type = "text/plain"
+
+[[outputs]]
+id = "xMcrhwP2uhmj8-xhzr_zR"
+uri = "file://movie-input/familyflix_remaining_source.txt"
+type = "text"
+title = "FamilyFlix remaining source"
+description = "Download the remaining FamilyFlix source text file."
+logical_id = "0ae5d121-a2c4-42bb-9961-dc26d2456062"
+content_hash = "sha256:19929e01abdd644023061abf335a5e79ddc5db3c9fa58b88124166f5aa687f63"
+size = 179317
+mtime_ms = 1795231659729
+storage_uri = "gcs://replit-rams-assets-janeway/rams/assets/repl:b1184dc6-7a0b-482e-9291-ea81a1a7ebc0/0ae5d121-a2c4-42bb-9961-dc26d2456062/ce432eb0-84c8-49df-8ab5-192b21631836"
+storage_version_token = "1795231776522799"
+content_type = "text/plain"
