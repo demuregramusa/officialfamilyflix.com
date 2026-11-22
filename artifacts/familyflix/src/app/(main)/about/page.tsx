@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 };
 
 const facts = [
-  { label: "Founded", value: "2026" },
-  { label: "Headquarters", value: "Los Angeles, CA" },
-  { label: "Price", value: "$0, always" },
-  { label: "Support", value: "24/7" },
+  { label: "Original Founding", value: "2023 (as Movie Source)" },
+  { label: "Rebranded & Partnered", value: "2026 (under DemureGram)" },
+  { label: "Founder & CEO", value: "Prisandra T. Taylor" },
+  { label: "Catalog Size", value: "23,270+ Verified Titles" },
 ];
 
 const offerings = [
@@ -70,22 +70,27 @@ export default function AboutPage() {
       </dl>
 
       <div className="mt-14 grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
-        <section>
-          <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/35">
-            Our mission
-          </h2>
-          <p className="mt-4 text-[14px] leading-relaxed text-white/60">
-            Great entertainment should not come with a monthly bill. FamilyFlix
-            was founded in 2026 with a simple idea: make a broad, high-quality
-            streaming library available to every family for free, supported by
-            advertising instead of subscriptions.
-          </p>
-          <p className="mt-3 text-[14px] leading-relaxed text-white/60">
-            We curate every row with families in mind, keep the experience
-            simple, and invest in the technology that makes free streaming feel
-            premium. From the first trailer to the last credit, our job is to
-            make movie night easy.
-          </p>
+        <section className="space-y-6">
+          <div>
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#b79dff]">
+              Our Heritage &amp; Rebrand
+            </h2>
+            <p className="mt-3 text-[14px] leading-relaxed text-white/70">
+              FamilyFlix was originally founded in <strong>2023</strong> under the name <strong>Movie Source</strong> with a foundational mission to preserve, restore, and freely distribute classic cinema and public-domain cinematic culture.
+            </p>
+            <p className="mt-3 text-[14px] leading-relaxed text-white/70">
+              Following the disability of founding leader <strong>Princeton T. Taylor</strong> in 2026, the entire business, foundation, and creative catalog were formally transferred to <strong>Prisandra T. Taylor</strong>. As <strong>Founder &amp; CEO</strong> over the DemureGram Foundation, Prisandra led the 2026 rebrand to <strong>FamilyFlix</strong>, forging an exclusive strategic partnership with <strong>DemureGram</strong> to deliver an accessible, next-generation streaming and developer ecosystem.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#b79dff]">
+              What Is DemureGram?
+            </h2>
+            <p className="mt-3 text-[14px] leading-relaxed text-white/70">
+              DemureGram is an innovative digital media, entertainment, and technology ecosystem committed to ethical, family-first digital platforms. We are building into the future with high-performance video delivery, developer REST APIs, and an expanding suite of groundbreaking media products to come.
+            </p>
+          </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             {offerings.map((item) => (
@@ -107,7 +112,7 @@ export default function AboutPage() {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3.5 py-2 text-[12px] font-medium text-white/60">
               <ShieldCheck className="size-4 text-emerald-400" aria-hidden />
-              Ad-supported, never paywalled
+              100% Free With Ads
             </span>
             <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3.5 py-2 text-[12px] font-medium text-white/60">
               <Users className="size-4 text-[#b79dff]" aria-hidden />
