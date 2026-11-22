@@ -1,5 +1,3 @@
-"use client";
-
 import { Check, Plus } from "lucide-react";
 
 import { useMyList } from "@/components/familyflix/my-list-provider";
@@ -47,7 +45,7 @@ export function MyListButton({
       onClick={handleClick}
       aria-pressed={saved}
       className={cn(
-        "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.06] px-5 text-sm font-semibold text-white transition hover:border-white/40 hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-6 text-sm font-semibold text-white backdrop-blur transition hover:border-white/45 hover:bg-white/[0.16] hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         className,
       )}
     >

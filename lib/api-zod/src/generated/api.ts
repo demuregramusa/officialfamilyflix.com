@@ -27,7 +27,8 @@ export const listPublicTitlesQueryLimitMax = 100;
 export const ListPublicTitlesQueryParams = zod.object({
   "query": zod.coerce.string().optional(),
   "kind": zod.enum(['movie', 'series', 'live']).optional(),
-  "limit": zod.coerce.number().int().min(1).max(listPublicTitlesQueryLimitMax).default(listPublicTitlesQueryLimitDefault)
+  "limit": zod.coerce.number().int().min(1).max(listPublicTitlesQueryLimitMax).default(listPublicTitlesQueryLimitDefault),
+  "offset": zod.coerce.number().int().min(0).optional()
 })
 
 export const ListPublicTitlesResponseItem = zod.object({

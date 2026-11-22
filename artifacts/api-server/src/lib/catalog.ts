@@ -47,8 +47,10 @@ export async function getCatalogRows(options: {
   query?: string;
   kind?: Movie["kind"];
   limit?: number;
+  offset?: number;
 } = {}): Promise<CatalogRow[]> {
   const conditions = [eq(movies.status, "published")];
+  const offset = Math.max(0, options.offset ?? 0);
   if (options.kind) conditions.push(eq(movies.kind, options.kind));
   if (options.query?.trim()) {
     const query = options.query.trim().replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
@@ -69,20 +71,56 @@ export async function getCatalogRows(options: {
     );
     if (searchCondition) conditions.push(searchCondition);
   }
-  const movieRows = await db
-    .select()
-    .from(movies)
-    .where(and(...conditions))
-    .orderBy(desc(movies.featured), desc(movies.publishedAt), desc(movies.createdAt))
-    .limit(Math.max(1, Math.min(options.limit ?? 40, 100)));
+  if (options.kind) {
+    const movieRows = await db
+      .select()
+      .from(movies)
+      .where(and(...conditions))
+      .orderBy(desc(movies.featured), desc(movies.publishedAt), desc(movies.createdAt))
+      .limit(Math.max(1, Math.min(options.limit ?? 40, 100)))
+      .offset(offset);
 
-  return hydrateCatalogMovies(movieRows);
+    return hydrateCatalogMovies(movieRows);
+  }
+
+  // When no specific kind is requested (e.g. Home page / mixed catalog browse),
+  // guarantee TV series are included alongside movies so both are prominently displayed!
+  const targetTotal = Math.max(1, Math.min(options.limit ?? 100, 100));
+  const seriesLimit = Math.min(30, Math.max(15, Math.floor(targetTotal * 0.35)));
+  const moviesLimit = targetTotal - seriesLimit;
+
+  const [seriesRows, movieRows] = await Promise.all([
+    db
+      .select()
+      .from(movies)
+      .where(and(...conditions, eq(movies.kind, "series")))
+      .orderBy(desc(movies.featured), desc(movies.publishedAt), desc(movies.createdAt))
+      .limit(seriesLimit)
+      .offset(offset ? Math.floor(offset * 0.35) : 0),
+    db
+      .select()
+      .from(movies)
+      .where(and(...conditions, eq(movies.kind, "movie")))
+      .orderBy(desc(movies.featured), desc(movies.publishedAt), desc(movies.createdAt))
+      .limit(moviesLimit)
+      .offset(offset ? Math.floor(offset * 0.65) : 0),
+  ]);
+
+  // Interleave series and movies so both appear across carousels
+  const combined: Movie[] = [];
+  const maxLen = Math.max(seriesRows.length, movieRows.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (i < seriesRows.length) combined.push(seriesRows[i]!);
+    if (i < movieRows.length) combined.push(movieRows[i]!);
+  }
+
+  return hydrateCatalogMovies(combined.length ? combined : movieRows);
 }
 
 async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
   if (!movieRows.length) return [];
   const ids = movieRows.map((movie) => movie.id);
-  const [rightsRows, videoRows, torrentRows, genreRows, episodeRows] = await Promise.all([
+  const [rightsRows, videoRows, torrentRows, genreRows] = await Promise.all([
     db.select().from(mediaRights).where(inArray(mediaRights.movieId, ids)),
     db.select().from(videoAssets).where(inArray(videoAssets.movieId, ids)),
     db.select({
@@ -101,7 +139,6 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
       .from(movieGenres)
       .innerJoin(genres, eq(movieGenres.genreId, genres.id))
       .where(inArray(movieGenres.movieId, ids)),
-    getPublicEpisodeRows(movieRows.filter((movie) => movie.kind === "series").map((movie) => movie.id)),
   ]);
 
   const rightsByMovie = new Map<string, MediaRight[]>();
@@ -125,6 +162,11 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
   for (const genre of genreRows) {
     genresByMovie.set(genre.movieId, [...(genresByMovie.get(genre.movieId) ?? []), genre.genreName]);
   }
+
+  const episodeRows = await getPublicEpisodeRows(
+    movieRows.filter((movie) => movie.kind === "series").map((movie) => movie.id),
+    torrentByMovie,
+  );
 
   return movieRows.flatMap((movie) => {
     const rights = rightsByMovie.get(movie.id) ?? [];
@@ -151,7 +193,10 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
   });
 }
 
-async function getPublicEpisodeRows(seriesIds: string[]): Promise<Map<string, EpisodeCatalogRow[]>> {
+async function getPublicEpisodeRows(
+  seriesIds: string[],
+  torrentByMovie?: Map<string, typeof importedTorrentSources.$inferSelect>,
+): Promise<Map<string, EpisodeCatalogRow[]>> {
   const result = new Map<string, EpisodeCatalogRow[]>();
   if (!seriesIds.length) return result;
   const rows = await db
@@ -182,6 +227,7 @@ async function getPublicEpisodeRows(seriesIds: string[]): Promise<Map<string, Ep
   for (const { episode, seasonNumber, seasonName, movieId } of rows) {
     const rights = rightsByEpisode.get(episode.id) ?? [];
     const video = videoByEpisode.get(episode.id) ?? null;
+    const hasTorrent = Boolean(torrentByMovie?.has(movieId));
     if (!isEpisodePubliclyPlayable({
       parentSeriesId: movieId,
       episodeSeriesId: movieId,
@@ -190,6 +236,7 @@ async function getPublicEpisodeRows(seriesIds: string[]): Promise<Map<string, Ep
       episodeIsPublished: episode.status === "published",
       rights,
       video,
+      hasTorrent,
     })) continue;
     result.set(movieId, [...(result.get(movieId) ?? []), {
       episode,
@@ -360,26 +407,31 @@ export async function getEpisodePlaybackForRow(
   episodeId: string,
 ): Promise<EpisodePlayback | null> {
   const episode = row.episodes.find((candidate) => candidate.episode.id === episodeId);
-  const video = episode?.video;
-  const primaryRight = episode?.rights.find((right) => right.id === video?.mediaRightId);
-  if (!episode || !video || !primaryRight || primaryRight.assetKind !== "main_video") return null;
+  if (!episode) return null;
+  const video = episode.video;
+  const primaryRight = episode.rights.find((right) => (video && right.id === video.mediaRightId) || right.assetKind === "main_video");
+  if (!primaryRight || primaryRight.assetKind !== "main_video") return null;
 
   let url: string | null = null;
   let streamType: EpisodePlayback["streamType"] | null = null;
-  if (video.provider === "cloudflare") {
+  if (video && video.provider === "cloudflare") {
     const base = process.env.CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN?.trim();
     url = video.hlsUrl ?? (base && video.playbackId
       ? `https://${base}.cloudflarestream.com/${encodeURIComponent(video.playbackId)}/manifest/video.m3u8`
       : null);
     streamType = "cloudflare";
-  } else if (video.hlsUrl) {
+  } else if (video && video.hlsUrl) {
     url = video.hlsUrl;
     streamType = "hls";
-  } else if (video.mp4Url) {
+  } else if (video && video.mp4Url) {
     url = video.mp4Url;
     streamType = "mp4";
+  } else if (row.torrent && isTorrentPlaybackEligible(row.torrent, true)) {
+    url = `/api/playback/${encodeURIComponent(row.movie.slug)}/episodes/${encodeURIComponent(episode.episode.id)}/media`;
+    streamType = "mp4";
   }
-  if (!url || !streamType || !url.startsWith("https://") || validatePublicHttpUrl(url)) return null;
+  if (!url || !streamType) return null;
+  if (!url.startsWith("/") && (!url.startsWith("https://") || validatePublicHttpUrl(url))) return null;
   return {
     titleName: `${row.movie.name} · S${episode.seasonNumber} E${episode.episode.episodeNumber}: ${episode.episode.name}`,
     streamType,

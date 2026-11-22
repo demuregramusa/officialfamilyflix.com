@@ -45,10 +45,12 @@ export function isEpisodePubliclyPlayable(input: {
   episodeIsPublished: boolean;
   rights: EpisodeRights;
   video: EpisodeVideo;
+  hasTorrent?: boolean;
 }): boolean {
   return input.parentSeriesId === input.episodeSeriesId &&
     input.parentStatus === "published" &&
     input.parentKind === "series" &&
     input.episodeIsPublished &&
-    hasEpisodePlaybackAssets(input.rights, input.video);
+    (hasEpisodePlaybackAssets(input.rights, input.video) ||
+      Boolean(input.hasTorrent && input.rights.length > 0 && input.rights.every(hasEpisodeEvidence) && input.rights.some(r => r.assetKind === "main_video")));
 }

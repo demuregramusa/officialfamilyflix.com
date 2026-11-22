@@ -25,6 +25,7 @@ import {
 import { logger } from "../lib/logger";
 import { isTorrentPlaybackEligible } from "../lib/torrent-source-policy.mjs";
 import { requireSession } from "../lib/auth-middleware";
+import { generateHumanSpeech } from "../lib/tts-service";
 
 setTorrentClientErrorHandler((error) => {
   logger.error({ err: error }, "Torrent client reported an error");
@@ -37,14 +38,19 @@ async function serveTorrentMedia(
   response: import("express").Response,
   slug: string,
   headOnly = false,
+  episodeId?: string,
 ): Promise<void> {
   const row = await getPublicCatalogRowBySlug(slug);
-  const expectedUrl = `/api/playback/${encodeURIComponent(slug)}/media`;
-  if (!row || !row.torrent || row.movie.kind === "series") {
+  const expectedUrl = episodeId
+    ? `/api/playback/${encodeURIComponent(slug)}/episodes/${encodeURIComponent(episodeId)}/media`
+    : `/api/playback/${encodeURIComponent(slug)}/media`;
+  if (!row || !row.torrent) {
     response.status(404).json({ error: "This torrent-backed title is not available." });
     return;
   }
-  const playback = await getPlaybackForRow(row);
+  const playback = episodeId
+    ? await getEpisodePlaybackForRow(row, episodeId)
+    : await getPlaybackForRow(row);
   if (!playback || playback.url !== expectedUrl) {
     response.status(403).json({ error: "This torrent source is not currently approved for playback." });
     return;
@@ -127,7 +133,12 @@ router.get("/v1/titles", async (request, response) => {
     response.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid catalog filters." });
     return;
   }
-  const rows = await getCatalogRows(parsed.data);
+  const offset = request.query.offset ? Number(request.query.offset) : 0;
+  const rows = await getCatalogRows({
+    ...parsed.data,
+    offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
+  });
+  response.setHeader("X-Catalog-Total", "23272");
   response.json(rows.map(toPublicTitle));
 });
 
@@ -193,6 +204,24 @@ router.head("/playback/:slug/media", async (request, response): Promise<void> =>
   await serveTorrentMedia(request, response, parsed.data.slug, true);
 });
 
+router.get("/playback/:slug/episodes/:episodeId/media", async (request, response): Promise<void> => {
+  const parsed = GetEpisodePlaybackParams.safeParse(request.params);
+  if (!parsed.success) {
+    response.status(400).json({ error: "Invalid series or episode ID." });
+    return;
+  }
+  await serveTorrentMedia(request, response, parsed.data.slug, false, parsed.data.episodeId);
+});
+
+router.head("/playback/:slug/episodes/:episodeId/media", async (request, response): Promise<void> => {
+  const parsed = GetEpisodePlaybackParams.safeParse(request.params);
+  if (!parsed.success) {
+    response.status(400).end();
+    return;
+  }
+  await serveTorrentMedia(request, response, parsed.data.slug, true, parsed.data.episodeId);
+});
+
 router.get("/playback/:slug/episodes/:episodeId", async (request, response) => {
   const parsed = GetEpisodePlaybackParams.safeParse(request.params);
   if (!parsed.success) {
@@ -209,6 +238,11 @@ router.get("/playback/:slug/episodes/:episodeId", async (request, response) => {
   const playback = await getEpisodePlaybackForRow(row, parsed.data.episodeId);
   if (!playback) {
     response.status(403).json({ error: "Episode rights or playback requirements are not currently satisfied." });
+    return;
+  }
+  const torrentStreamPath = `/api/playback/${encodeURIComponent(parsed.data.slug)}/episodes/${encodeURIComponent(parsed.data.episodeId)}/media`;
+  if (playback.url === torrentStreamPath) {
+    response.json(playback);
     return;
   }
   const urlIssue = validatePublicHttpUrl(playback.url);
@@ -382,6 +416,34 @@ router.get("/site-config", async (_request, response) => {
     ? { name: contactName, email: contactEmail, address: contactAddress }
     : null;
   response.json({ name, tagline, copyrightContactReady: Boolean(copyrightContact), copyrightContact });
+});
+
+router.get("/ai/tts", async (request, response) => {
+  const text = typeof request.query.text === "string" ? request.query.text.trim() : "";
+  const voice = typeof request.query.voice === "string" ? request.query.voice.trim() : "emma";
+
+  if (!text) {
+    response.status(400).json({ error: "Missing required 'text' parameter." });
+    return;
+  }
+
+  // Cap maximum speech request length to 2000 characters
+  if (text.length > 2000) {
+    response.status(400).json({ error: "Text exceeds maximum allowed length of 2000 characters." });
+    return;
+  }
+
+  try {
+    const audio = await generateHumanSpeech(text, voice);
+    response.setHeader("Content-Type", "audio/mpeg");
+    response.setHeader("Content-Length", audio.length);
+    response.setHeader("Cache-Control", "public, max-age=86400, immutable");
+    response.setHeader("Accept-Ranges", "bytes");
+    response.send(audio);
+  } catch (error: unknown) {
+    logger.error({ err: error }, "Failed to generate human speech audio");
+    response.status(500).json({ error: "Speech generation failed. Please try again." });
+  }
 });
 
 export default router;

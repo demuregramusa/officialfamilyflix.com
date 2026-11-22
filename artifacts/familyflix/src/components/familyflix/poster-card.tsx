@@ -18,7 +18,7 @@ function metaLine(title: Title) {
       : title.type === "live"
         ? "Live now"
         : title.duration;
-  return [title.year > 0 ? String(title.year) : "", title.genres[0], detail].filter(Boolean).join(" · ");
+  return [title.year > 0 ? String(title.year) : "", title.genres?.[0], detail].filter(Boolean).join(" · ");
 }
 
 export function PosterCard({
@@ -38,6 +38,16 @@ export function PosterCard({
         data-testid={`card-title-${title.slug}`}
       >
         <PosterArt title={title} />
+        {title.type === "series" && (
+          <span className="absolute left-2 top-2 z-10 rounded-md bg-purple-600/90 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm border border-purple-400/30">
+            TV Series
+          </span>
+        )}
+        {title.type === "live" && (
+          <span className="absolute left-2 top-2 z-10 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm animate-pulse">
+            LIVE
+          </span>
+        )}
         <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-t from-black/55 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />
         <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 scale-90 place-items-center rounded-full bg-white/95 text-black opacity-0 shadow-xl transition duration-300 group-hover/card:scale-100 group-hover/card:opacity-100">
           <Play className="ml-0.5 size-5" fill="currentColor" aria-hidden />
@@ -47,7 +57,7 @@ export function PosterCard({
         slug={title.slug}
         name={title.name}
         variant="icon"
-        className="absolute right-2 top-2 size-9 opacity-0 transition-opacity duration-200 group-hover/card:opacity-100 focus-visible:opacity-100"
+        className="absolute right-2 top-2 z-20 size-9 opacity-0 transition-opacity duration-200 group-hover/card:opacity-100 focus-visible:opacity-100"
       />
       {showCaption ? (
         <div className="mt-2.5">

@@ -1178,6 +1178,7 @@ kind?: TitleKind;
  * @maximum 100
  */
 limit?: number;
+offset?: number;
 };
 
 export type ListAdminTitlesParams = {

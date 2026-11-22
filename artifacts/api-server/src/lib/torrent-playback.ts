@@ -1,4 +1,6 @@
 import { mkdir } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import type { Readable } from "node:stream";
 import WebTorrent from "webtorrent";
 import {
@@ -38,10 +40,23 @@ export type TorrentClient = {
 
 type TorrentSource = TorrentRightsState & {
   id: string;
+  sourceUrl?: string | null;
 };
 
-const metadataWaitMs = 25_000;
-const torrentPath = "/tmp/familyflix-torrents";
+const metadataWaitMs = 35_000;
+const torrentPath = path.join(os.tmpdir(), "familyflix-torrents");
+const defaultTrackers = [
+  "udp://tracker.opentrackr.org:1337/announce",
+  "udp://open.stealth.si:80/announce",
+  "udp://tracker.torrent.eu.org:451/announce",
+  "udp://tracker.bittor.pw:1337/announce",
+  "udp://public.tracker.virenkuil.com:6969/announce",
+  "udp://tracker.dler.org:6969/announce",
+  "udp://explodie.org:6969/announce",
+  "http://tracker.opentrackr.org:1337/announce",
+  "wss://tracker.openwebtorrent.com",
+  "wss://tracker.btorrent.xyz",
+];
 let handleTorrentClientError = (_error: Error) => {};
 let defaultTorrentPlayback: ReturnType<typeof createTorrentPlayback> | null = null;
 
@@ -133,9 +148,11 @@ export function createTorrentPlayback(
       timer = setTimeout(() => finish(new Error("Torrent metadata was unavailable.")), waitMs);
 
       try {
-        const magnetUri = `magnet:?xt=urn:btih:${infoHash}`;
+        const trackerQuery = defaultTrackers.map((tr) => `&tr=${encodeURIComponent(tr)}`).join("");
+        const magnetUri = `magnet:?xt=urn:btih:${infoHash}${trackerQuery}`;
         const torrent = client.add(magnetUri, {
           path: torrentPath,
+          announce: defaultTrackers,
           uploads: false,
           strategy: "sequential",
         }, (readyTorrent) => finish(null, readyTorrent));

@@ -1,0 +1,32 @@
+// BIND9 Configuration for FamilyFlix By DemureGram
+// File: /etc/bind/named.conf.local
+
+// Primary Server (Node 1 - Authoritative Master)
+zone "officialfamilyflix.com" {
+    type master;
+    file "/etc/bind/zones/officialfamilyflix.com.zone";
+    allow-transfer { 
+        // Secondary Production Server IP (Node 2)
+        192.168.1.102; 
+        203.0.113.10; // Secondary Public IP
+    };
+    also-notify { 
+        192.168.1.102; 
+        203.0.113.10; 
+    };
+    notify yes;
+};
+
+// ==============================================================================
+// Note for Secondary Server (Node 2 - Slave Configuration):
+// On Node 2, the block in /etc/bind/named.conf.local should be:
+//
+// zone "officialfamilyflix.com" {
+//     type slave;
+//     file "/var/cache/bind/officialfamilyflix.com.zone";
+//     masters { 
+//         192.168.1.101; // Primary Private IP
+//         198.51.100.10; // Primary Public IP
+//     };
+// };
+// ==============================================================================

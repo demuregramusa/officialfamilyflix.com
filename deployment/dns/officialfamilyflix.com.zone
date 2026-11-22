@@ -1,0 +1,43 @@
+$ORIGIN officialfamilyflix.com.
+$TTL 3600 ; 1 hour default TTL for dynamic failover responsiveness
+
+; Authoritative SOA Record
+@       IN      SOA     ns1.officialfamilyflix.com. hostmaster.officialfamilyflix.com. (
+                        2026112201 ; Serial: YYYYMMDDNN
+                        7200       ; Refresh (2 hours)
+                        3600       ; Retry (1 hour)
+                        1209600    ; Expire (2 weeks)
+                        300        ; Negative Cache TTL (5 minutes)
+                        )
+
+; Authoritative Nameservers
+@       IN      NS      ns1.officialfamilyflix.com.
+@       IN      NS      ns2.officialfamilyflix.com.
+
+; Nameserver Glue Records (A records for the nameservers themselves)
+; Replace 198.51.100.10 with Node 1 Static Public IP
+; Replace 203.0.113.10 with Node 2 Static Public IP
+ns1     IN      A       198.51.100.10
+ns2     IN      A       203.0.113.10
+
+; Primary Platform Hostnames
+; Defaulting to Primary Node (198.51.100.10) with failover to Secondary (203.0.113.10)
+@               IN      A       198.51.100.10
+www             IN      A       198.51.100.10
+api             IN      A       198.51.100.10
+admin           IN      A       198.51.100.10
+developers      IN      A       198.51.100.10
+auth            IN      A       198.51.100.10
+cdn             IN      A       198.51.100.10
+images          IN      A       198.51.100.10
+status          IN      A       198.51.100.10
+
+; Secondary / Fallback DNS entries for direct node addressing
+node1           IN      A       198.51.100.10
+node2           IN      A       203.0.113.10
+
+; Security & Email Records
+@               IN      TXT     "v=spf1 -all"
+_dmarc          IN      TXT     "v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s;"
+@               IN      CAA     0 issue "letsencrypt.org"
+@               IN      CAA     0 iodef "mailto:security@officialfamilyflix.com"

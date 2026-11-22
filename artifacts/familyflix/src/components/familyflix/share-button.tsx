@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { Check, Share2 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,7 +31,7 @@ export function ShareButton({ name }: { name: string }) {
       onClick={handleShare}
       aria-label={`Share ${name}`}
       className={cn(
-        "grid size-11 place-items-center rounded-full border border-white/20 bg-white/[0.06] text-white/80 transition hover:border-white/40 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "grid size-10 place-items-center rounded-full border border-white/25 bg-white/10 text-white transition hover:border-white/50 hover:bg-white/20 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400",
       )}
     >
       {copied ? (

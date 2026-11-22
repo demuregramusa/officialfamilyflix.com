@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -76,7 +74,7 @@ export function TitleRow({
           aria-label={`Scroll ${title} left`}
           onClick={() => scroll(-1)}
           disabled={!canScrollLeft}
-          className="absolute left-1 top-[38%] z-20 hidden size-9 -translate-y-1/2 place-items-center rounded-full border border-white/15 bg-black/80 text-white shadow-xl backdrop-blur transition hover:bg-white hover:text-black disabled:pointer-events-none disabled:opacity-0 md:grid lg:size-10"
+          className="absolute left-2 md:left-4 top-[38%] z-30 hidden size-10 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-black/85 text-white shadow-2xl backdrop-blur-md opacity-0 group-hover/row:opacity-100 transition-all hover:scale-110 hover:bg-white hover:text-black disabled:pointer-events-none disabled:opacity-0 md:grid"
         >
           <ChevronLeft className="size-5" aria-hidden />
         </button>
@@ -85,7 +83,7 @@ export function TitleRow({
           aria-label={`Scroll ${title} right`}
           onClick={() => scroll(1)}
           disabled={!canScrollRight}
-          className="absolute right-1 top-[38%] z-20 hidden size-9 -translate-y-1/2 place-items-center rounded-full border border-white/15 bg-black/80 text-white shadow-xl backdrop-blur transition hover:bg-white hover:text-black disabled:pointer-events-none disabled:opacity-0 md:grid lg:size-10"
+          className="absolute right-2 md:right-4 top-[38%] z-30 hidden size-10 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-black/85 text-white shadow-2xl backdrop-blur-md opacity-0 group-hover/row:opacity-100 transition-all hover:scale-110 hover:bg-white hover:text-black disabled:pointer-events-none disabled:opacity-0 md:grid"
         >
           <ChevronRight className="size-5" aria-hidden />
         </button>

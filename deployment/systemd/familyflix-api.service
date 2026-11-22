@@ -1,0 +1,29 @@
+[Unit]
+Description=FamilyFlix By DemureGram - Production API & Application Server
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=familyflix
+Group=familyflix
+WorkingDirectory=/var/www/familyflix
+EnvironmentFile=/etc/familyflix/.env
+ExecStart=/usr/bin/node artifacts/api-server/dist/index.mjs
+Restart=always
+RestartSec=5s
+LimitNOFILE=65536
+
+# Security Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/www/familyflix /var/media/familyflix /var/log/familyflix
+
+# Logging
+StandardOutput=append:/var/log/familyflix/api.log
+StandardError=append:/var/log/familyflix/api-error.log
+
+[Install]
+WantedBy=multi-user.target

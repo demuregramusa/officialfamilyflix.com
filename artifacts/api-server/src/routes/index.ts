@@ -8,10 +8,15 @@ import adminContentRouter from "./admin-content";
 import adminOperationsRouter from "./admin-operations";
 import seriesEpisodesRouter from "./series-episodes";
 import adminMovieArchiveRouter from "./admin-movie-archive";
+import categoriesRouter from "./categories";
+import developerPortalRouter from "./developer-portal";
+import developerV1Router from "./developer-v1";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(categoriesRouter);
+router.use(developerPortalRouter);
 router.use(publicRouter);
 router.use(userRouter);
 router.use(copyrightIntakeRouter);

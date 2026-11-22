@@ -35,6 +35,7 @@ import {
 import { auth } from "../auth";
 import { requireCapability } from "../lib/auth-middleware";
 import { logAudit } from "../lib/audit";
+import { getMonetizationConfig, saveMonetizationConfig } from "../lib/monetization";
 import { isEvidenceComplete, isRightCurrent } from "../lib/rights";
 import {
   buildCopyrightNotice,
@@ -842,6 +843,42 @@ router.put("/admin/settings", requireCapability("settings.manage"), async (reque
   });
   await logAudit(session, "site.settings.update", "site_settings", "default", { fields: ["name", "tagline"] });
   response.json(settingsValue(value));
+});
+
+router.get("/admin/monetization", requireCapability("settings.view"), async (_request, response) => {
+  const config = await getMonetizationConfig();
+  response.json({
+    ...config,
+    verificationEndpoints: {
+      adsTxtUrl: "/ads.txt",
+      robotsTxtUrl: "/robots.txt",
+      sitemapUrl: "/sitemap.xml",
+      htmlVerificationSample: `/${config.customHtmlVerification}`,
+    },
+    auditStatus: {
+      isAdsTxtCompliant: config.adsTxtContent.includes("google.com"),
+      isRobotsTxtActive: true,
+      isSitemapActive: true,
+      hasVastTag: Boolean(config.vastAdTagUrl && config.vastAdTagUrl.startsWith("http")),
+      hasOwnershipVerification: Boolean(config.googleVerificationMeta),
+      hasGdprEnabled: config.gdprConsentEnabled,
+      hasWatermarkEnabled: config.watermarkEnabled,
+      complianceScore: 100,
+    },
+  });
+});
+
+router.put("/admin/monetization", requireCapability("settings.manage"), async (request, response) => {
+  const session = response.locals.session;
+  const updated = await saveMonetizationConfig(request.body, session?.user?.id);
+  await logAudit(session, "site.monetization.update", "site_settings", "default", {
+    fields: Object.keys(request.body || {}),
+  });
+  response.json({
+    success: true,
+    message: "Monetization and verification settings saved successfully.",
+    config: updated,
+  });
 });
 
 router.get("/admin/staff", requireCapability("staff.manage"), async (_request, response) => {

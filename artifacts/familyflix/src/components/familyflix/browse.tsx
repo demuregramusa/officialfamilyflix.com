@@ -14,7 +14,7 @@ export function BrowseHeader({
   eyebrow: string;
   title: string;
   description: string;
-  count?: number;
+  count?: number | string;
   countLabel?: string;
 }) {
   return (
@@ -40,9 +40,9 @@ export function BrowseHeader({
               {description}
             </p>
           </div>
-          {typeof count === "number" ? (
+          {count !== undefined && count !== null ? (
             <p className="shrink-0 text-[12px] font-medium text-white/40">
-              {count} {countLabel ?? (count === 1 ? "title" : "titles")}
+              {typeof count === "number" ? `${count.toLocaleString()} ${countLabel ?? (count === 1 ? "title" : "titles")}` : count}
             </p>
           ) : null}
         </div>

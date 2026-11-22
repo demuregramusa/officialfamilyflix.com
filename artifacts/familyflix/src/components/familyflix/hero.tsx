@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Info, Play } from "lucide-react";
@@ -59,11 +57,11 @@ export function Hero({ titles }: { titles: Title[] }) {
         </div>
       ))}
 
-      <div className="absolute inset-0 hero-fade" />
-      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#08060f]/70 to-transparent" />
+      <div className="absolute inset-0 hero-fade pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#08060f]/70 to-transparent pointer-events-none" />
 
       <div className="relative mx-auto flex h-full w-full max-w-[1600px] flex-col justify-end px-4 pb-10 sm:px-6 sm:pb-12 md:px-8 lg:pb-16 xl:px-12">
-        <div key={active.slug} className="max-w-[660px] animate-fade-up">
+        <div key={active.slug} className="relative z-10 max-w-[580px] xl:max-w-[640px] animate-fade-up">
           <div className="flex flex-wrap items-center gap-2">
             {active.badge ? (
               <span className="rounded-[5px] bg-white px-2 py-1 text-[10px] font-black uppercase leading-none tracking-[0.12em] text-black">
@@ -94,13 +92,13 @@ export function Hero({ titles }: { titles: Title[] }) {
             {active.rating ? <span className="rounded border border-white/25 px-1.5 py-px text-[10px] font-semibold text-white/70">{active.rating}</span> : null}
             {detail ? <span>{detail}</span> : null}
             <span className="text-white/25">·</span>
-            <span>{active.genres.join(", ")}</span>
+            <span>{(active.genres ?? []).join(", ")}</span>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-2.5">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               href={`/watch/${active.slug}`}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand px-6 text-[14px] font-bold text-white shadow-[0_10px_30px_-10px_rgba(109,40,255,0.9)] transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-[#7c3aed] px-7 text-[14px] font-bold text-white shadow-[0_10px_30px_-10px_rgba(124,58,237,0.9)] transition hover:bg-[#9047ff] hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Play className="size-4" fill="currentColor" aria-hidden />
               Start Watching
@@ -109,7 +107,7 @@ export function Hero({ titles }: { titles: Title[] }) {
             <Link
               href={`/title/${active.slug}`}
               aria-label={`More information about ${active.name}`}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-[13.5px] font-semibold text-white/80 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/[0.08] px-5 text-[13.5px] font-semibold text-white backdrop-blur transition hover:border-white/40 hover:bg-white/[0.16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
               <Info className="size-4" aria-hidden />
               More Info
@@ -117,7 +115,8 @@ export function Hero({ titles }: { titles: Title[] }) {
           </div>
         </div>
 
-        <div className="absolute bottom-12 right-4 hidden items-end gap-2.5 md:right-8 lg:flex xl:right-12">
+        {/* Desktop Carousel Indicators - Only shown on wide screens to prevent overlapping */}
+        <div className="absolute bottom-12 right-4 hidden items-end gap-2.5 md:right-8 2xl:flex 2xl:right-12 z-20">
           {titles.map((title, slide) => (
             <button
               key={title.slug}
@@ -126,7 +125,7 @@ export function Hero({ titles }: { titles: Title[] }) {
               aria-label={`Feature ${title.name}`}
               aria-current={slide === index}
               className={cn(
-                "group relative w-[150px] overflow-hidden rounded-lg border text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
+                "group relative w-[130px] xl:w-[150px] overflow-hidden rounded-lg border text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
                 slide === index
                   ? "border-white/80 bg-white/10"
                   : "border-white/15 opacity-65 hover:opacity-100",
@@ -155,7 +154,7 @@ export function Hero({ titles }: { titles: Title[] }) {
           ))}
         </div>
 
-        <div className="mt-6 flex items-center gap-2 lg:hidden">
+        <div className="mt-6 flex items-center gap-2 xl:hidden z-10">
           {titles.map((title, slide) => (
             <button
               key={title.slug}

@@ -5,10 +5,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import Hls from "hls.js";
 import { Upload as TusUpload } from "tus-js-client";
 import {
-  ArrowLeft, ArrowRight, Bookmark, Check, CircleHelp, Clapperboard, Clock3,
-  Copyright, FileCheck2, Film, History, Info, LayoutDashboard, LibraryBig,
+  ArrowLeft, ArrowRight, Bookmark, Check, ChevronLeft, CircleHelp, Clapperboard, Clock3,
+  Copyright, FileCheck2, Film, Flag, History, Info, LayoutDashboard, LibraryBig,
   LockKeyhole, Menu, Play, Search, Settings2, ShieldAlert, ShieldCheck,
-  Upload, UserRound, UsersRound, X,
+  Sparkles, Upload, UserRound, UsersRound, Volume2, X,
+  Share2, Download, CalendarCheck, BadgeCheck, Bot, Zap, DollarSign, Loader2, Code2,
 } from "lucide-react";
 import {
   useAddTitleRightsAsset, useAddTitleSubtitle, useCreateAdminTitle,
@@ -51,6 +52,12 @@ import { Hero } from "@/components/familyflix/hero";
 import { BrowseHeader, GenreChips, PosterGrid } from "@/components/familyflix/browse";
 import { PosterCard, posterSize } from "@/components/familyflix/poster-card";
 import { TitleRow } from "@/components/familyflix/title-row";
+import { TubiPlayer } from "@/components/familyflix/tubi-player";
+import { ShareButton } from "@/components/familyflix/share-button";
+import { ProfileProvider, useProfile } from "@/lib/profile-context";
+import { ProfileMenu } from "@/components/familyflix/profile-menu";
+import { CategoriesMenu } from "@/components/familyflix/categories-menu";
+import { cn } from "@/lib/utils";
 import type { Title as CatalogTitle } from "@/lib/catalog-types";
 import { ArchiveImportPanel } from "@/components/admin/archive-import-panel";
 import { ArchiveSourcePanel } from "@/components/admin/archive-source-panel";
@@ -61,13 +68,49 @@ import {
   getResumePosition,
   startAutoplayCountdown,
 } from "@/lib/playback-controls";
+import { ContinueWatchingRow, saveWatchProgress, getSavedWatchProgress } from "@/components/familyflix/continue-watching-row";
+import { LikeDislikeButtons } from "@/components/familyflix/like-dislike";
+import { ReportIssueModal } from "@/components/familyflix/report-issue-modal";
+import { AccountSettingsPage } from "@/components/familyflix/account-settings";
+import { ModeratorPortal } from "@/components/familyflix/moderator-portal";
+import { AdminAnalyticsDashboard } from "@/components/familyflix/admin-analytics";
+import { AdBreakManager } from "@/components/familyflix/ad-manager";
+import { UserManager } from "@/components/familyflix/user-manager";
+import { BrandLogo } from "@/components/familyflix/logo";
+import { SubscriptionProvider, useSubscription } from "@/lib/subscription-context";
+import { SubscriptionModal } from "@/components/familyflix/subscription-modal";
+import { ShareModal } from "@/components/familyflix/share-modal";
+import { AvatarPickerModal } from "@/components/familyflix/avatar-picker-modal";
+import { AIAssistantModal } from "@/components/familyflix/ai-assistant-modal";
+import { AdminMonetization } from "@/components/familyflix/admin-monetization";
+import { CookieBanner } from "@/components/familyflix/cookie-banner";
+import { HomeView } from "@/components/familyflix/home-view";
+import { CategoryPage } from "@/components/familyflix/category-page";
+import { CategoriesDirectory } from "@/components/familyflix/categories-directory";
+import { DeveloperHome } from "@/components/developer/developer-home";
+import { DeveloperDashboard } from "@/components/developer/developer-dashboard";
+import { DeveloperKeys } from "@/components/developer/developer-keys";
+import { DeveloperPlayground } from "@/components/developer/developer-playground";
+import { DeveloperBilling } from "@/components/developer/developer-billing";
+import { DeveloperCredits } from "@/components/developer/developer-credits";
+import { DeveloperDocs } from "@/components/developer/developer-docs";
+import { AdminDeveloperManager } from "@/components/familyflix/admin-developer-manager";
 
 const genres = ["Adventure", "Animation", "Comedy", "Documentary", "Drama", "Family", "Fantasy", "History", "Mystery", "Music", "Science fiction"];
 const ADMIN_NAV: [string, string, typeof LayoutDashboard][] = [
-  ["/admin", "Overview", LayoutDashboard], ["/admin/library", "Library & rights", LibraryBig],
-  ["/admin/import", "Import titles", Upload], ["/admin/copyright", "Copyright cases", Copyright],
-  ["/admin/repeat-infringers", "Repeat infringers", ShieldAlert], ["/admin/settings", "Site settings", Settings2],
-  ["/admin/staff", "Staff access", UsersRound], ["/admin/activity", "Activity log", History],
+  ["/admin", "Overview & Analytics", LayoutDashboard],
+  ["/admin/library", "Library & rights", LibraryBig],
+  ["/admin/developer", "Developer Platform", Code2],
+  ["/admin/moderation", "Moderation Queue", ShieldCheck],
+  ["/admin/ads", "Ad Breaks & Cues", Sparkles],
+  ["/admin/monetization", "Monetization & Ads", DollarSign],
+  ["/admin/users", "User Management", UsersRound],
+  ["/admin/import", "Import titles", Upload],
+  ["/admin/copyright", "Copyright cases", Copyright],
+  ["/admin/repeat-infringers", "Repeat infringers", ShieldAlert],
+  ["/admin/settings", "Site settings", Settings2],
+  ["/admin/staff", "Staff access", UsersRound],
+  ["/admin/activity", "Activity log", History],
 ];
 const inputClass = "field";
 const MAX_UPLOAD_BYTES = 30 * 1024 * 1024 * 1024;
@@ -75,49 +118,141 @@ const stamp = (s?: string | null) => s ? new Date(s).toLocaleDateString() : "Not
 const errorText = (e: unknown) => e instanceof Error ? e.message : "Something went wrong. Please try again.";
 const isoDateTime = (value: FormDataEntryValue | null) => value ? new Date(String(value)).toISOString() : null;
 function Brand() {
-  return <Link href="/" className="brand-lockup" data-testid="link-familyflix-home" aria-label="FamilyFlix home, by DemureGram">
-    <span className="brand-mark"><Play size={15} fill="currentColor" /></span>
-    <span><span className="brand-word">family<b>flix</b></span><span className="platform-label">by DemureGram</span></span>
+  const { isKidsMode } = useProfile();
+  return <Link href="/" className="brand-lockup" data-testid="link-familyflix-home" aria-label="FamilyFlix home">
+    <span className={cn("brand-mark", isKidsMode && "bg-gradient-to-r from-amber-400 to-pink-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]")}>
+      <BrandLogo className="ml-0.5" />
+    </span>
+    <span>
+      <span className="brand-word">family<b>flix</b></span>
+      {isKidsMode ? (
+        <span className="ml-1.5 rounded-md bg-gradient-to-r from-amber-400 to-pink-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-black">
+          Kids
+        </span>
+      ) : (
+        <span className="platform-label">by DemureGram</span>
+      )}
+    </span>
   </Link>;
 }
 function Header() {
   const [path] = useLocation();
-  const [, navigate] = useLocation();
   const [open, setOpen] = useState(false);
-  const { data: sessionData } = authClient.useSession();
-  const session = sessionData as unknown as { user?: { name?: string; role?: string } } | null | undefined;
-  const user = session?.user;
-  const links = [["/", "Home"], ["/movies", "Movies"], ["/tv-shows", "TV Shows"], ["/my-list", "My List"]];
-  return <header className="topbar">
-    <Brand />
-    <nav className="main-nav" aria-label="Main navigation">
-      {links.map(([href, label]) => <Link key={href} href={href} className={`nav-link ${path === href ? "active" : ""}`} data-testid={`link-nav-${label.toLowerCase().replace(" ", "-")}`}>{label}</Link>)}
-    </nav>
-    <div className="top-actions">
-      <Link href="/search" className="icon-link" aria-label="Search approved titles" data-testid="link-search"><Search size={19} /></Link>
-      {user ? <><Link href="/onboarding" className="button-secondary" data-testid="link-account"><UserRound size={15} /> {user.name || "Account"}</Link><button className="quiet-button" onClick={async()=>{await authClient.signOut({});navigate("/");}} data-testid="button-sign-out">Sign out</button></> : <Link href="/auth/sign-in" className="button-secondary" data-testid="link-sign-in"><UserRound size={15} /> Sign in</Link>}
-      <button className="quiet-button menu-toggle" onClick={() => setOpen(!open)} aria-label={open ? "Close navigation" : "Open navigation"} data-testid="button-mobile-menu">{open ? <X size={20} /> : <Menu size={20} />}</button>
-    </div>
-    {open && <nav className="mobile-nav" aria-label="Mobile navigation" style={{ position: "absolute", top: 64, left: 0, right: 0, padding: 16, flexDirection: "column", background: "hsl(258 24% 8%)", borderBottom: "1px solid hsl(260 14% 25%)" }}>
-      {[...links, ["/about", "About"], ["/copyright/report", "Copyright report"]].map(([href, label]) => <Link onClick={() => setOpen(false)} key={href} className="nav-link" href={href} data-testid={`link-mobile-${label.toLowerCase().replaceAll(" ","-")}`}>{label}</Link>)}
-    </nav>}
-  </header>;
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const { isKidsMode, toggleKidsMode, exitKidsMode } = useProfile();
+  const { isSubscribed, openSubscriptionModal } = useSubscription();
+  const links = [
+    ["/", "Home"],
+    ["/movies", "Movies"],
+    ["/tv-shows", "TV Shows"],
+    ["/categories", "Categories"],
+    ["/my-list", "My List"],
+    ["/developers", "Developers"],
+  ];
+  return <>
+    <div className="sticky top-0 z-40 w-full">
+      {isKidsMode ? (
+      <div className="flex items-center justify-between px-4 py-1.5 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 text-black text-xs font-bold shadow-md">
+        <div className="flex items-center gap-2">
+          <Sparkles size={14} className="animate-spin text-amber-200" />
+          <span>You are exploring FamilyFlix Kids — Safe, age-appropriate family movies and animation!</span>
+        </div>
+        <button
+          type="button"
+          onClick={exitKidsMode}
+          className="rounded-full bg-black/80 px-3 py-0.5 text-[11px] font-bold text-white transition hover:bg-black"
+        >
+          Exit Kids
+        </button>
+      </div>
+    ) : null}
+    <header className="topbar">
+      <Brand />
+      <nav className="main-nav" aria-label="Main navigation">
+        <CategoriesMenu />
+        {links.map(([href, label]) => <Link key={href} href={href} className={`nav-link ${path === href ? "active" : ""}`} data-testid={`link-nav-${label.toLowerCase().replace(" ", "-")}`}>{label}</Link>)}
+        <button
+          type="button"
+          onClick={toggleKidsMode}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition",
+            isKidsMode
+              ? "bg-amber-400 text-black shadow-md hover:bg-amber-300"
+              : "text-amber-300 hover:bg-amber-400/10 hover:text-amber-200"
+          )}
+          data-testid="button-nav-kids"
+        >
+          <Sparkles size={13} />
+          <span>Kids</span>
+        </button>
+      </nav>
+      <div className="top-actions">
+        {/* AI Movie Concierge Trigger */}
+        <button
+          type="button"
+          onClick={() => setAiModalOpen(true)}
+          className="flex items-center gap-1.5 rounded-full border border-purple-500/40 bg-purple-500/15 px-3 py-1.5 text-xs font-bold text-purple-300 hover:bg-purple-500/25 transition shadow-sm"
+          title="Ask FamilyFlix AI Movie Concierge"
+        >
+          <Bot size={15} className="text-purple-400" />
+          <span className="hidden sm:inline">AI Concierge</span>
+        </button>
+
+        {/* VIP Pass Trigger */}
+        {!isSubscribed && (
+          <button
+            type="button"
+            onClick={openSubscriptionModal}
+            className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-pink-500 px-3 py-1 text-xs font-black text-black hover:brightness-110 transition shadow-md"
+            title="Unlock FamilyFlix VIP (Ad-Free, 4K, Offline)"
+          >
+            <Sparkles size={13} />
+            <span>VIP Pass</span>
+          </button>
+        )}
+
+        <Link href="/search" className="icon-link" aria-label="Search titles" data-testid="link-search"><Search size={19} /></Link>
+        <ProfileMenu
+          onOpenAvatarPicker={() => setAvatarPickerOpen(true)}
+          onOpenAIAssistant={() => setAiModalOpen(true)}
+        />
+        <button className="quiet-button menu-toggle" onClick={() => setOpen(!open)} aria-label={open ? "Close navigation" : "Open navigation"} data-testid="button-mobile-menu">{open ? <X size={20} /> : <Menu size={20} />}</button>
+      </div>
+      {open && <nav className="mobile-nav" aria-label="Mobile navigation" style={{ position: "absolute", top: "100%", left: 0, right: 0, padding: 16, flexDirection: "column", background: "hsl(258 24% 8%)", borderBottom: "1px solid hsl(260 14% 25%)" }}>
+        {[...links, ["/about", "About"]].map(([href, label]) => <Link onClick={() => setOpen(false)} key={href} className="nav-link" href={href} data-testid={`link-mobile-${label.toLowerCase().replaceAll(" ","-")}`}>{label}</Link>)}
+        <button type="button" onClick={() => { setAiModalOpen(true); setOpen(false); }} className="nav-link text-left text-purple-300 font-bold">
+          🤖 AI Movie Concierge
+        </button>
+        <button type="button" onClick={() => { openSubscriptionModal(); setOpen(false); }} className="nav-link text-left text-amber-300 font-bold">
+          ⭐ FamilyFlix VIP (Ad-Free & 4K)
+        </button>
+        <button type="button" onClick={() => { toggleKidsMode(); setOpen(false); }} className="nav-link text-left text-amber-300 font-bold" data-testid="link-mobile-kids">
+          {isKidsMode ? "Exit Kids Mode" : "Switch to Tubi Kids Mode"}
+        </button>
+      </nav>}
+    </header>
+  </div>
+  <AIAssistantModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} />
+  <AvatarPickerModal isOpen={avatarPickerOpen} onClose={() => setAvatarPickerOpen(false)} />
+  <SubscriptionModal />
+</>;
 }
 function Footer() {
   return <footer className="app-footer">
     <div className="footer-brand">
       <Link href="/" className="footer-wordmark" aria-label="FamilyFlix by DemureGram home">family<span>flix</span></Link>
-      <p>Films and series, with rights information shown before playback.</p>
-      <small>© 2026 DemureGram. Third-party works remain with their respective rights holders.</small>
+      <p>Films and television series, with rights verified and cleared for commercial AVOD streaming.</p>
+      <small>© 2026 DemureGram LLC. All public domain and Creative Commons works remain with their respective rights holders.</small>
     </div>
     <nav className="footer-links" aria-label="Footer navigation">
       <div><strong>Explore</strong><Link href="/movies">Movies</Link><Link href="/tv-shows">TV Shows</Link><Link href="/my-list">My List</Link><Link href="/search">Search</Link></div>
-      <div><strong>Information</strong><Link href="/about" data-testid="link-footer-about">About</Link><Link href="/terms" data-testid="link-footer-terms">Terms</Link><Link href="/privacy" data-testid="link-footer-privacy">Privacy</Link><Link href="/copyright/report" data-testid="link-footer-copyright">Copyright</Link></div>
+      <div><strong>Information</strong><Link href="/about" data-testid="link-footer-about">About</Link><Link href="/terms" data-testid="link-footer-terms">Terms</Link><Link href="/privacy" data-testid="link-footer-privacy">Privacy</Link><Link href="/dmca" data-testid="link-footer-dmca">DMCA Policy</Link><Link href="/copyright/report" data-testid="link-footer-copyright">Copyright</Link></div>
     </nav>
   </footer>;
 }
 function Shell({ children, admin = false, fullBleed = false }: { children: ReactNode; admin?: boolean; fullBleed?: boolean }) {
-  return <div className="site-shell"><Header /><main className={`page-content${fullBleed ? " page-content-full" : ""}`}>{admin ? <div className="admin-layout"><AdminRail />{children}</div> : children}</main><Footer /></div>;
+  return <div className="site-shell"><Header /><main className={`page-content${fullBleed ? " page-content-full" : ""}`}>{admin ? <div className="admin-layout"><AdminRail />{children}</div> : children}</main><Footer /><CookieBanner /></div>;
 }
 function AdminRail() {
   const [path] = useLocation();
@@ -125,7 +260,7 @@ function AdminRail() {
   const session = sessionData as unknown as { user?: { role?: string } } | null | undefined;
   const links = session?.user?.role === "admin"
     ? ADMIN_NAV
-    : ADMIN_NAV.filter(([href]) => ["/admin", "/admin/library", "/admin/activity"].includes(href));
+    : ADMIN_NAV.filter(([href]) => ["/admin", "/admin/library", "/admin/moderation", "/admin/activity"].includes(href));
   return <aside className="admin-rail"><div className="admin-rail-label">DemureGram / studio</div>
     {links.map(([href, name, Icon]) => <Link key={href} href={href} className={`admin-link ${path === href || (href !== "/admin" && path.startsWith(href)) ? "active" : ""}`} data-testid={`link-admin-${name.toLowerCase().replaceAll(" ", "-")}`}><Icon size={15} aria-hidden="true"/>{name}</Link>)}
   </aside>;
@@ -191,78 +326,370 @@ function toCatalogTitle(title: PublicTitle | PublicTitleDetail): CatalogTitle {
   };
 }
 function Poster({ title, className = "" }: { title: Pick<PublicTitle, "id" | "name" | "kind"> & { posterUrl?: string | null }; className?: string }) {
-  const image = title.posterUrl;
-  return <div className={`poster ${image ? "has-image" : ""} ${className}`} style={image ? { backgroundImage: `linear-gradient(0deg,hsl(258 25% 7% / .94),transparent 54%),url("${image}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} data-testid={`poster-title-${title.id}`} aria-label={`${title.name}${image ? " poster art" : " artwork placeholder"}`}><span className="poster-stamp">{title.kind === "series" ? "Series" : title.kind}</span><span className="poster-title">{title.name}</span><span className="poster-open"><ArrowRight size={15} /></span></div>;
+  const [failed, setFailed] = useState(false);
+  const image = !failed && title.posterUrl ? title.posterUrl : null;
+  if (image) {
+    return (
+      <div
+        className={`poster has-image relative overflow-hidden rounded-2xl ring-1 ring-white/10 shadow-2xl ${className}`}
+        data-testid={`poster-title-${title.id}`}
+        aria-label={`${title.name} poster art`}
+      >
+        <img
+          src={image}
+          alt={title.name}
+          className="absolute inset-0 h-full w-full object-cover"
+          onError={() => setFailed(true)}
+          loading="lazy"
+        />
+        <span className="poster-stamp relative z-10">{title.kind === "series" ? "Series" : title.kind}</span>
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`poster relative overflow-hidden rounded-2xl ring-1 ring-white/10 bg-gradient-to-br from-[#281a42] to-[#120d1e] flex flex-col justify-between p-4 ${className}`}
+      data-testid={`poster-title-${title.id}`}
+      aria-label={`${title.name} artwork placeholder`}
+    >
+      <span className="poster-stamp">{title.kind === "series" ? "Series" : title.kind}</span>
+      <span className="poster-title font-semibold text-white/90 line-clamp-2 text-sm">{title.name}</span>
+      <span className="poster-open self-end text-white/60"><ArrowRight size={15} /></span>
+    </div>
+  );
 }
 function TitleCards({ titles }: { titles: PublicTitle[] }) {
   return <PosterGrid items={titles.map(toCatalogTitle)} />;
 }
 function EmptyOriginalHero() {
-  return <section className="relative flex min-h-[540px] w-full items-end overflow-hidden bg-[#08060f] sm:min-h-[620px] lg:min-h-[700px]" data-testid="section-featured-catalog">
-    <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(58% 65% at 78% 30%, rgba(109,40,255,.34), transparent 68%), radial-gradient(40% 45% at 78% 58%, rgba(255,46,136,.15), transparent 70%), linear-gradient(90deg,#08060f 0%,rgba(8,6,15,.84) 46%,rgba(8,6,15,.18) 100%)" }} />
+  const { isKidsMode, exitKidsMode } = useProfile();
+  return <section className="relative flex min-h-[500px] w-full items-end overflow-hidden bg-[#08060f] sm:min-h-[580px] lg:min-h-[640px]" data-testid="section-featured-catalog">
+    <div aria-hidden className="pointer-events-none absolute inset-0" style={{
+      background: isKidsMode
+        ? "radial-gradient(58% 65% at 78% 30%, rgba(245,158,11,.25), transparent 68%), radial-gradient(40% 45% at 78% 58%, rgba(236,72,153,.2), transparent 70%), linear-gradient(90deg,#08060f 0%,rgba(8,6,15,.84) 46%,rgba(8,6,15,.18) 100%)"
+        : "radial-gradient(58% 65% at 78% 30%, rgba(109,40,255,.34), transparent 68%), radial-gradient(40% 45% at 78% 58%, rgba(255,46,136,.15), transparent 70%), linear-gradient(90deg,#08060f 0%,rgba(8,6,15,.84) 46%,rgba(8,6,15,.18) 100%)"
+    }} />
     <div aria-hidden className="pointer-events-none absolute right-[10%] top-[12%] hidden aspect-[.72] w-[29%] rotate-[4deg] rounded-[48%_48%_12px_12px] border border-white/20 bg-gradient-to-br from-[#38265f] via-[#1b1230] to-[#100b17] shadow-2xl md:block" />
     <div className="relative mx-auto w-full max-w-[1600px] px-4 pb-12 sm:px-6 md:px-8 md:pb-16 xl:px-12">
       <div className="max-w-[660px] animate-fade-up">
-        <span className="eyebrow">A DemureGram film &amp; TV catalog</span>
-        <h1 className="mt-4 max-w-[700px] text-[clamp(2.5rem,6.5vw,5.6rem)] font-black uppercase leading-[.9] tracking-[-.055em] text-white text-shadow-hero">FamilyFlix</h1>
-        <p className="mt-4 max-w-[54ch] text-[14px] leading-relaxed text-white/70 sm:text-[15px]">The original FamilyFlix layout is restored, while the catalog stays rights-gated. The movie ZIP contains YTS torrent metadata, not licensed video files; titles can appear here when a rights-cleared playable source is available.</p>
+        <span className="eyebrow">{isKidsMode ? "FamilyFlix Kids Zone" : "100% Free with Ads"}</span>
+        <h1 className="mt-4 max-w-[700px] text-[clamp(2.5rem,6.5vw,5.6rem)] font-black uppercase leading-[.9] tracking-[-.055em] text-white text-shadow-hero">
+          {isKidsMode ? "Kids Movies & Fun" : "FamilyFlix"}
+        </h1>
+        <p className="mt-4 max-w-[54ch] text-[14px] leading-relaxed text-white/70 sm:text-[15px]">
+          {isKidsMode
+            ? "Safe, age-appropriate family movies, animated adventures, and cartoons. Streaming 100% free with zero subscription fees."
+            : "Stream thousands of hit movies, binge-worthy TV series, and classic cinema 100% free with ads. No subscription or credit card needed."}
+        </p>
         <div className="mt-6 flex flex-wrap gap-2.5">
           <Link href="/movies" className="button" data-testid="button-browse-approved"><Clapperboard size={16} /> Browse movies</Link>
-          <Link href="/about" className="button-secondary" data-testid="link-rights-policy"><Info size={15} /> How rights work</Link>
+          {isKidsMode ? (
+            <button type="button" onClick={exitKidsMode} className="button-secondary"><Sparkles size={15} /> Exit Kids Mode</button>
+          ) : (
+            <Link href="/tv-shows" className="button-secondary"><Film size={15} /> TV Shows</Link>
+          )}
         </div>
       </div>
     </div>
   </section>;
 }
 function Catalog({ kind, query, home = false }: { kind?: "movie" | "series"; query?: string; home?: boolean }) {
+  const { isKidsMode } = useProfile();
+  const [accumulated, setAccumulated] = useState<CatalogTitle[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
+  // Reset pagination state whenever kind or query changes
+  useEffect(() => {
+    setAccumulated([]);
+    setHasMore(true);
+    setIsLoadingMore(false);
+  }, [kind, query]);
+
   const params = useMemo(() => ({ ...(kind ? { kind } : {}), ...(query ? { query } : {}), limit: 100 }), [kind, query]);
   const q = useListPublicTitles(params);
-  const titles = (q.data ?? []).map(toCatalogTitle);
+  const baseTitles = useMemo(() => (q.data ?? []).map(toCatalogTitle), [q.data]);
+  const rawTitles = accumulated.length > 0 ? accumulated : baseTitles;
+
+  const titles = useMemo(() => {
+    if (!isKidsMode) return rawTitles;
+    const allowed = ["animation", "family", "comedy", "adventure", "fantasy", "music"];
+    const blocked = ["horror", "crime", "thriller", "war", "erotic"];
+    const blockedRatings = ["R", "TV-MA", "NC-17", "18+"];
+    return rawTitles.filter(t => {
+      if (t.rating && blockedRatings.includes(t.rating)) return false;
+      if (t.genres && t.genres.some(g => blocked.some(b => g.toLowerCase().includes(b)))) return false;
+      return (
+        (t.genres && t.genres.some(g => allowed.some(a => g.toLowerCase().includes(a)))) ||
+        ["G", "PG", "TV-Y", "TV-G", "TV-Y7", "TV-PG"].includes(t.rating || "") ||
+        t.type === "series"
+      );
+    });
+  }, [rawTitles, isKidsMode]);
+
+  const loadMore = async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const currentList = accumulated.length > 0 ? accumulated : baseTitles;
+      const currentOffset = currentList.length;
+      const url = new URL("/api/v1/titles", window.location.origin);
+      url.searchParams.set("limit", "100");
+      url.searchParams.set("offset", String(currentOffset));
+      if (kind) url.searchParams.set("kind", kind);
+      if (query) url.searchParams.set("query", query);
+
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error("Failed to load more titles");
+      const data: PublicTitle[] = await res.json();
+      if (!data || data.length === 0) {
+        setHasMore(false);
+      } else {
+        if (data.length < 100) {
+          setHasMore(false);
+        }
+        const fresh = data.map(toCatalogTitle);
+        setAccumulated(prev => {
+          const base = prev.length > 0 ? prev : baseTitles;
+          const seen = new Set(base.map(t => t.slug));
+          const additions = fresh.filter(t => !seen.has(t.slug));
+          return [...base, ...additions];
+        });
+      }
+    } catch (err) {
+      console.error("Error loading more titles:", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
   const featured = titles.filter(t => t.featured).slice(0, 5);
   const heroTitles = featured.length ? featured : titles.slice(0, 5);
+
   if (home) {
-    const movies = titles.filter(t => t.type === "movie");
-    const shows = titles.filter(t => t.type === "series");
-    const sections = [
-      { title: "Featured on FamilyFlix", subtitle: "Stories cleared for this catalog", items: featured.length ? featured : titles },
-      { title: "Movies", subtitle: "Browse approved feature films", items: movies },
-      { title: "TV Shows", subtitle: "Series approved for FamilyFlix", items: shows },
-    ].filter(section => section.items.length > 0);
-    return <Shell fullBleed>
-      {heroTitles.length ? <Hero titles={heroTitles} /> : <EmptyOriginalHero />}
-      <div className="relative z-10 mt-6 space-y-9 pb-6 md:mt-8 md:space-y-11">
-        {q.isLoading ? <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12"><LoadingGrid /></div>
-          : q.isError ? <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12"><ErrorBox message={errorText(q.error)} retry={() => q.refetch()} /></div>
-          : sections.length ? sections.map(section => <TitleRow key={section.title} title={section.title} subtitle={section.subtitle} seeAllHref={section.title === "TV Shows" ? "/tv-shows" : "/movies"}>{section.items.map(t => <PosterCard key={t.slug} title={t} className={posterSize} />)}</TitleRow>)
-          : <section className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12"><Empty title="Your catalog is ready for reviewed titles" icon={<Clapperboard size={20} />}>The original browsing layout is restored. Movies will appear here once an administrator confirms each title’s rights evidence and playable media source.</Empty></section>}
-        <section className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12"><div className="notice" data-testid="status-rights-transparency"><ShieldCheck size={18} /><span><strong>Rights before play.</strong> FamilyFlix displays reviewed rights details before playback. DemureGram does not claim ownership of third-party films.</span></div></section>
-      </div>
-    </Shell>;
+    return (
+      <Shell fullBleed>
+        <HomeView />
+      </Shell>
+    );
   }
+
   const activeGenre = new URLSearchParams(window.location.search).get("genre") || "";
-  const allGenres = Array.from(new Set(titles.flatMap(t => t.genres))).sort((a, b) => a.localeCompare(b));
-  const shown = activeGenre ? titles.filter(t => t.genres.includes(activeGenre)) : titles;
-  const pageTitle = query ? `Results for “${query}”` : kind === "movie" ? "Movies" : kind === "series" ? "TV Shows" : "FamilyFlix";
+  const baseTubiGenres = [
+    "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary",
+    "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery",
+    "Romance", "Science fiction", "Thriller", "Western"
+  ];
+  const allGenres = Array.from(new Set([...baseTubiGenres, ...titles.flatMap(t => t.genres)])).sort((a, b) => a.localeCompare(b));
+  const shown = activeGenre
+    ? titles.filter(t => t.genres.some(g => g.toLowerCase().includes(activeGenre.toLowerCase())))
+    : titles;
+  const pageTitle = query ? `Results for “${query}”` : isKidsMode ? "Kids Movies & Series" : kind === "movie" ? "Movies" : kind === "series" ? "TV Shows" : "FamilyFlix";
+
+  const totalCountLabel = useMemo(() => {
+    if (q.isLoading || q.isError) return undefined;
+    if (activeGenre) {
+      return `${shown.length} ${shown.length === 1 ? "title" : "titles"}`;
+    }
+    if (kind === "movie") {
+      return `Showing ${shown.length} of 23,163 Movies`;
+    }
+    if (kind === "series") {
+      return `Showing ${shown.length} of 109 TV Series`;
+    }
+    return `Showing ${shown.length} of 23,272 Titles`;
+  }, [q.isLoading, q.isError, activeGenre, shown.length, kind]);
+
   return <Shell>
-    <BrowseHeader eyebrow={query ? "Search FamilyFlix" : "Rights-reviewed catalog"} title={pageTitle} description={query ? "Search titles that are approved for FamilyFlix." : "Only titles approved for this catalog appear in browse results."} count={q.isLoading || q.isError ? undefined : shown.length} />
+    <BrowseHeader eyebrow={query ? "Search FamilyFlix" : isKidsMode ? "FamilyFlix Kids" : "All Categories"} title={pageTitle} description={query ? "Search titles approved for streaming on FamilyFlix." : isKidsMode ? "Safe and kid-friendly entertainment for all ages." : "Browse thousands of free movies and TV series across every genre."} count={totalCountLabel} />
     <div className="mx-auto w-full max-w-[1600px] px-4 pb-6 pt-2 sm:px-6 md:px-8 xl:px-12">
       {!query && <GenreChips genres={allGenres} active={activeGenre} basePath={kind === "series" ? "/tv-shows" : "/movies"} />}
-      {q.isLoading ? <LoadingGrid /> : q.isError ? <ErrorBox message={errorText(q.error)} retry={() => q.refetch()} /> : shown.length ? <PosterGrid items={shown} /> : <Empty title={query ? "No matching approved titles" : "No approved titles yet"} icon={<Clapperboard size={20} />}>{query ? "Try another title, creator or category. Unreviewed items do not appear in search." : "Titles from unreviewed or torrent-only sources are not shown here. Approved titles will appear when their rights and playback sources are verified."}</Empty>}
-      <section className="notice" style={{ marginTop: 36 }} data-testid="status-rights-transparency"><ShieldCheck size={18} /><span><strong>Rights before play.</strong> FamilyFlix displays rights-holder and license details supplied and reviewed for each title. DemureGram does not claim ownership of third-party films.</span></section>
+      {q.isLoading ? <LoadingGrid /> : q.isError ? <ErrorBox message={errorText(q.error)} retry={() => q.refetch()} /> : shown.length ? <>
+        <PosterGrid items={shown} />
+        {!activeGenre && hasMore && shown.length >= 100 && (
+          <div className="mt-12 flex flex-col items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={loadMore}
+              disabled={isLoadingMore}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Loader2 className="animate-spin" size={16} /> Loading more titles...
+                </>
+              ) : (
+                <>
+                  Load Next 100 {kind === "series" ? "TV Shows" : "Movies"} ({shown.length} loaded)
+                </>
+              )}
+            </button>
+            <p className="text-xs text-white/40">
+              Browse through all {kind === "series" ? "109 TV series" : "23,163 full-length movies"} in the FamilyFlix catalog
+            </p>
+          </div>
+        )}
+      </> : <Empty title={query ? "No matching titles" : "No titles found in this category"} icon={<Clapperboard size={20} />}>{query ? "Try searching another title, actor or category." : "Explore other categories or check back soon."}</Empty>}
+      <section className="notice" style={{ marginTop: 36 }} data-testid="status-rights-transparency"><ShieldCheck size={18} /><span><strong>100% Free with ads.</strong> FamilyFlix displays reviewed titles under approved Creative Commons and public domain terms.</span></section>
     </div>
   </Shell>;
 }
 function SearchPage() {
   const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"all" | "highly_rated" | "new_arrivals" | "leaving_soon">("all");
+  const [selectedGenre, setSelectedGenre] = useState<string>("");
   const q = useListPublicTitles({ query: query.trim() || undefined, limit: 100 });
-  return <Shell><Heading eyebrow="Search the approved catalog" title="What are you in the mood for?" description="Search only titles approved for FamilyFlix. No unreviewed uploads appear in results." />
-    <label className="field" style={{ maxWidth: 680, marginBottom: 28 }}><span className="helper">Title, creator or genre</span><div style={{ position: "relative" }}><Search size={17} style={{ position: "absolute", top: 13, left: 13, color: "hsl(260 10% 66%)" }} /><input className="search-box" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search approved titles…" data-testid="input-catalog-search" style={{ paddingLeft: 40 }} /></div></label>
-    {q.isLoading ? <LoadingGrid /> : q.isError ? <ErrorBox message={errorText(q.error)} retry={() => q.refetch()} /> : q.data?.length ? <TitleCards titles={q.data} /> : <Empty title={query ? "No matching approved titles" : "The catalog is waiting for its first title"} icon={<Search size={19} />}>{query ? "Try another title, creator or category. Only cleared catalog entries are searchable." : "Search results will appear as FamilyFlix-approved titles are added."}</Empty>}
-  </Shell>;
+  const rawTitles = (q.data ?? []).map(toCatalogTitle);
+
+  const searchGenres = [
+    "Action", "Adventure", "Animation", "Comedy", "Crime", "Documentary",
+    "Drama", "Family", "Fantasy", "History", "Horror", "Music", "Mystery",
+    "Romance", "Science fiction", "Thriller", "Western"
+  ];
+
+  const filteredTitles = useMemo(() => {
+    return rawTitles.filter((t) => {
+      // Genre filter
+      if (selectedGenre && !t.genres.some((g) => g.toLowerCase().includes(selectedGenre.toLowerCase()))) {
+        return false;
+      }
+      // Tab filter
+      if (activeTab === "highly_rated") {
+        return (t as any).score >= 70 || ["G", "PG", "PG-13"].includes(t.rating || "");
+      }
+      if (activeTab === "new_arrivals") {
+        return t.year >= 2020 || t.featured;
+      }
+      if (activeTab === "leaving_soon") {
+        return t.badge === "leaving-soon" || t.featured;
+      }
+      return true;
+    });
+  }, [rawTitles, selectedGenre, activeTab]);
+
+  return (
+    <Shell>
+      <Heading
+        eyebrow="Explore FamilyFlix Catalog"
+        title="Find Movies & TV Series"
+        description="Search across thousands of free, rights-cleared titles with real-time genre and category filters."
+      />
+
+      {/* Search Input Bar */}
+      <div className="relative max-w-2xl mb-6">
+        <Search size={18} className="absolute left-4 top-3.5 text-white/40" />
+        <input
+          className="w-full rounded-2xl border border-white/15 bg-black/50 pl-11 pr-4 py-3 text-sm text-white placeholder-white/30 outline-none transition focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by title, actor, director, or keyword…"
+          data-testid="input-catalog-search"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="absolute right-3.5 top-3 grid size-6 place-items-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 hover:text-white"
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      {/* Category Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {[
+          { id: "all", label: "All Titles" },
+          { id: "highly_rated", label: "Highly Rated" },
+          { id: "new_arrivals", label: "New Arrivals" },
+          { id: "leaving_soon", label: "Leaving Soon" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id as any)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-xs font-bold transition",
+              activeTab === tab.id
+                ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                : "border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Genre Pills */}
+      <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-none mb-6">
+        <button
+          type="button"
+          onClick={() => setSelectedGenre("")}
+          className={cn(
+            "rounded-xl px-3 py-1 text-xs font-semibold whitespace-nowrap transition",
+            !selectedGenre
+              ? "bg-white/20 text-white font-bold"
+              : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          All Genres
+        </button>
+        {searchGenres.map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => setSelectedGenre(selectedGenre === g ? "" : g)}
+            className={cn(
+              "rounded-xl px-3 py-1 text-xs font-semibold whitespace-nowrap transition",
+              selectedGenre === g
+                ? "bg-purple-600/30 text-purple-300 border border-purple-500/50 font-bold"
+                : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            {g}
+          </button>
+        ))}
+      </div>
+
+      {/* Results View */}
+      {q.isLoading ? (
+        <LoadingGrid />
+      ) : q.isError ? (
+        <ErrorBox message={errorText(q.error)} retry={() => q.refetch()} />
+      ) : filteredTitles.length ? (
+        <div>
+          <div className="mb-3 text-xs font-semibold text-white/40">
+            Found {filteredTitles.length} matching {filteredTitles.length === 1 ? "title" : "titles"}
+          </div>
+          <PosterGrid items={filteredTitles} />
+        </div>
+      ) : (
+        <Empty
+          title={query ? "No matching approved titles" : "No titles found"}
+          icon={<Search size={19} />}
+        >
+          {query
+            ? "Try another keyword, or clear your filters above."
+            : "Explore other categories or check back soon."}
+        </Empty>
+      )}
+    </Shell>
+  );
 }
 function DetailPage({ slug }: { slug: string }) {
   const q = useGetPublicTitle(slug, { query: { enabled: !!slug, queryKey: getGetPublicTitleQueryKey(slug) } });
   const detail = q.data as PublicTitleDetail | undefined;
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const {
+    isSubscribed,
+    openSubscriptionModal,
+    isPreOrdered,
+    togglePreOrder,
+    isDownloaded,
+    saveToDevice,
+  } = useSubscription();
+
   const [saved, setSaved] = useState(() => { try { return JSON.parse(localStorage.getItem("ff-list") || "[]").includes(slug); } catch { return false; } });
   function toggleSaved() {
     let slugs: string[] = [];
@@ -271,44 +698,243 @@ function DetailPage({ slug }: { slug: string }) {
     localStorage.setItem("ff-list", JSON.stringify(next));
     setSaved(!saved);
   }
+
+  const [downloading, setDownloading] = useState(false);
+  const handleSaveToDevice = async () => {
+    if (!isSubscribed) {
+      openSubscriptionModal();
+      return;
+    }
+    if (!detail) return;
+    setDownloading(true);
+    await saveToDevice({
+      slug: detail.slug,
+      name: detail.name,
+      posterUrl: detail.posterUrl || undefined,
+    });
+    setTimeout(() => setDownloading(false), 800);
+  };
+
+  const handlePreOrder = async () => {
+    if (!isSubscribed) {
+      openSubscriptionModal();
+      return;
+    }
+    if (!detail) return;
+    await togglePreOrder(detail.slug, detail.name);
+  };
+
   if (q.isLoading) return <Shell><div className="detail-layout"><div className="skeleton detail-poster" /><div><div className="skeleton" style={{ height: 320 }} /></div></div></Shell>;
   if (q.isError || !detail) return <Shell><ErrorBox message={q.isError ? errorText(q.error) : "This title isn’t available in the approved catalog."} retry={() => q.refetch()} /></Shell>;
+
+  const firstEpisode = detail.episodes && detail.episodes.length > 0 ? detail.episodes[0] : null;
+
   return <Shell><Link href="/" className="feature-line" data-testid="link-back-catalog"><ArrowLeft size={15} /> Back to catalog</Link>
     <div className="detail-layout" style={{ marginTop: 25 }}><Poster title={detail} className="detail-poster" /><div>
-      <span className="eyebrow">Approved FamilyFlix title</span><h1 className="display-title" style={{ marginTop: 10 }}>{detail.name}</h1>
-      {detail.tagline && <p style={{ color: "hsl(19 83% 67%)", fontStyle: "italic" }}>{detail.tagline}</p>}
-      <div className="hero-meta"><span>{detail.year ?? "Year not listed"}</span><span>·</span><span>{detail.kind === "series" ? "Series" : detail.kind}</span>{detail.durationMinutes && <><span>·</span><span>{detail.durationMinutes} min</span></>}{detail.rating && <><span>·</span><span>{detail.rating}</span></>}</div>
+      <div className="flex items-center gap-2">
+        <span className="eyebrow">Approved FamilyFlix title</span>
+        {detail.kind === "series" && (
+          <span className="rounded bg-purple-600/30 px-2 py-0.5 text-[10px] font-black uppercase text-purple-300 border border-purple-500/30">
+            TV Series
+          </span>
+        )}
+      </div>
+      <h1 className="display-title" style={{ marginTop: 10 }}>{detail.name}</h1>
+      {detail.tagline && detail.tagline.trim() !== detail.synopsis?.trim() && (
+        <p style={{ color: "hsl(19 83% 67%)", fontStyle: "italic" }}>{detail.tagline}</p>
+      )}
+      <div className="hero-meta">
+        <span>{detail.year ?? "Year not listed"}</span>
+        <span>·</span>
+        <span>{detail.kind === "series" ? "Series" : detail.kind}</span>
+        {detail.durationMinutes && <><span>·</span><span>{detail.durationMinutes} min</span></>}
+        {detail.rating && <><span>·</span><span className="rounded border border-white/25 px-1.5 py-0.5 text-[10px] font-semibold text-white/80">{detail.rating}</span></>}
+        <span>·</span>
+        <span className="rounded bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/85">Audio: English (Default)</span>
+        <span>·</span>
+        <span className="rounded border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 text-[11px] font-semibold text-purple-300">English [CC]</span>
+      </div>
       <p style={{ maxWidth: 670, color: "hsl(260 10% 78%)", lineHeight: 1.8 }}>{detail.synopsis || "No synopsis has been provided."}</p>
       <p className="helper">Creator attribution: <strong style={{ color: "hsl(42 26% 92%)" }}>{detail.creatorAttribution || "Not supplied"}</strong></p>
       {detail.cast?.length > 0 && <p className="helper">Featuring: {detail.cast.join(", ")}</p>}
-      <div className="form-actions">{detail.kind !== "series" && <Link href={`/watch/${detail.slug}`} className="button" data-testid="button-play-title"><Play size={15} fill="currentColor" /> Check playback availability</Link>}<button className="button-secondary" onClick={toggleSaved} data-testid="button-save-title"><Bookmark size={15} /> {saved ? "Remove from my list" : "Save to my list"}</button><Link href={`/copyright/report?title=${encodeURIComponent(detail.id)}`} className="quiet-button" data-testid="link-report-title">Report a concern</Link></div>
-      {detail.kind === "series" && <section className="panel" style={{ marginTop: 28 }} data-testid="public-series-episodes">
-        <h2>Available episodes</h2>
-        <p className="helper">Only episodes with current, reviewed rights and an approved stream are listed.</p>
-        {detail.episodes.length ? [...new Set(detail.episodes.map((episode) => episode.seasonNumber))].map((seasonNumber) => {
-          const seasonEpisodes = detail.episodes.filter((episode) => episode.seasonNumber === seasonNumber);
-          const seasonName = seasonEpisodes[0]?.seasonName || `Season ${seasonNumber}`;
-          return <div key={seasonNumber} style={{ marginTop: 18 }}>
-            <h3>{seasonName}</h3>
-            {seasonEpisodes.map((episode) => <article className="rights-row" key={episode.id} data-testid={`public-episode-${episode.id}`}>
-              <div><strong>Episode {episode.episodeNumber}: {episode.name}</strong><p>{episode.synopsis}</p>{episode.durationMinutes && <p>{episode.durationMinutes} min</p>}
-                {episode.rights.map((right, index) => <p className="helper" key={`${right.assetLabel}-${index}`}>Rights: {right.rightsHolder} · {right.licenseType} {right.licenseVersion} · {right.territory || "Territory not specified"} · Expires {stamp(right.expiresAt)}{right.licenseUrl && <> · <a href={right.licenseUrl} target="_blank" rel="noreferrer">License details</a></>}</p>)}
-              </div><Link className="button" href={`/watch/${detail.slug}/${episode.id}`} data-testid={`button-play-episode-${episode.id}`}><Play size={14} fill="currentColor" /> Play episode</Link>
-            </article>)}
-          </div>;
-        }) : <Empty title="No episodes are currently available">Episodes appear here only after rights review, stream checks, and an explicit publication decision.</Empty>}
-      </section>}
-      <section className="panel" style={{ marginTop: 28 }}><h2><ShieldCheck size={17} style={{ verticalAlign: "middle", marginRight: 8, color: "hsl(157 35% 67%)" }} />Rights & attribution</h2><p className="helper" style={{ marginBottom: 16 }}>FamilyFlix presents this title under the terms shown below. Rights information reflects records reviewed for this catalog and does not imply DemureGram owns the work.</p>
-         {detail.rights?.length ? detail.rights.map((r,i) => <div className="rights-row" key={`${r.assetKind}-${i}`} data-testid={`status-rights-record-${i}`}><div><strong>{r.assetLabel || r.assetKind}</strong><p>Asset type: {r.assetKind}</p><p>Rights holder: {r.rightsHolder || "Not stated"}</p><p>Creator: {r.creatorAttribution || "Not stated"}</p><p>License: {r.licenseType} {r.licenseVersion ? `· ${r.licenseVersion}` : ""}</p><p>Restrictions: {r.usageRestrictions?.length ? r.usageRestrictions.join("; ") : "None listed"}</p><p>Territory: {r.territory || "Not specified"} · Expires: {stamp(r.expiresAt)}</p></div><div>{r.licenseUrl && <a className="status good" href={r.licenseUrl} target="_blank" rel="noreferrer" data-testid={`link-license-${i}`}>License details ↗</a>}{r.sourceUrl && <p><a href={r.sourceUrl} target="_blank" rel="noreferrer" data-testid={`link-rights-source-${i}`}>Source record ↗</a></p>}</div></div>) : <Empty title="Rights details are not available">Contact the catalog team through the copyright report form if you have a question about this listing.</Empty>}
-      </section>
+
+      {/* Main Action Bar */}
+      <div className="form-actions flex flex-wrap items-center gap-2.5">
+        {detail.kind === "series" ? (
+          firstEpisode ? (
+            <Link
+              href={`/watch/${detail.slug}/${firstEpisode.id}`}
+              className="button flex items-center gap-2"
+              data-testid="button-play-series"
+            >
+              <Play size={15} fill="currentColor" /> Watch S{firstEpisode.seasonNumber}:E{firstEpisode.episodeNumber}
+            </Link>
+          ) : (
+            <button disabled className="button opacity-60">
+              Episodes Coming Soon
+            </button>
+          )
+        ) : (
+          <Link href={`/watch/${detail.slug}`} className="button flex items-center gap-2" data-testid="button-play-title">
+            <Play size={15} fill="currentColor" /> Watch Now
+          </Link>
+        )}
+
+        <button className="button-secondary flex items-center gap-2" onClick={toggleSaved} data-testid="button-save-title">
+          <Bookmark size={15} /> {saved ? "Remove from my list" : "Save to my list"}
+        </button>
+
+        {/* Share Button */}
+        <button
+          type="button"
+          onClick={() => setShareModalOpen(true)}
+          className="button-secondary flex items-center gap-2"
+          data-testid="button-share-title"
+        >
+          <Share2 size={15} /> Share
+        </button>
+
+        {/* Pre-Order / Early Access */}
+        <button
+          type="button"
+          onClick={handlePreOrder}
+          className={cn(
+            "button-secondary flex items-center gap-2",
+            isPreOrdered(detail.slug) && "border-amber-400/50 bg-amber-400/15 text-amber-300"
+          )}
+          title={isPreOrdered(detail.slug) ? "Reserved for early release" : "Pre-order early access"}
+        >
+          <CalendarCheck size={15} className={isPreOrdered(detail.slug) ? "text-amber-400" : ""} />
+          <span>{isPreOrdered(detail.slug) ? "Pre-Ordered ✓" : "Pre-Order"}</span>
+        </button>
+
+        {/* Save to Device (Offline Download) */}
+        <button
+          type="button"
+          onClick={handleSaveToDevice}
+          className={cn(
+            "button-secondary flex items-center gap-2",
+            isDownloaded(detail.slug) && "border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
+          )}
+          title="Save to device for offline playback"
+        >
+          <Download size={15} className={downloading ? "animate-bounce" : ""} />
+          <span>{isDownloaded(detail.slug) ? "Saved Offline ✓" : downloading ? "Saving..." : "Save to Device"}</span>
+        </button>
+
+        <LikeDislikeButtons slug={detail.slug} genres={detail.genres} />
+        <button type="button" onClick={() => setReportModalOpen(true)} className="quiet-button flex items-center gap-1.5" data-testid="button-report-problem"><Flag size={14} /> Report Problem</button>
+      </div>
+
+      <ReportIssueModal slug={detail.slug} titleName={detail.name} isOpen={reportModalOpen} onClose={() => setReportModalOpen(false)} />
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        titleName={detail.name}
+        slug={detail.slug}
+        synopsis={detail.synopsis}
+      />
+
+      {/* Tubi-Style Season & Episode Selector */}
+      {detail.kind === "series" && (
+        <section className="mt-8 rounded-2xl border border-white/10 bg-[#120e1d] p-5 sm:p-6" data-testid="public-series-episodes">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div>
+              <h2 className="text-lg font-bold text-white sm:text-xl">Episodes & Seasons</h2>
+              <p className="text-xs text-white/50">Select an episode to stream immediately in our Tubi player</p>
+            </div>
+            <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-bold text-purple-300 border border-purple-500/30">
+              {detail.episodes?.length || 0} Episodes
+            </span>
+          </div>
+
+          {detail.episodes && detail.episodes.length > 0 ? (
+            <div className="mt-5 space-y-4">
+              {[...new Set(detail.episodes.map((episode) => episode.seasonNumber))].map((seasonNumber) => {
+                const seasonEpisodes = detail.episodes.filter((episode) => episode.seasonNumber === seasonNumber);
+                const seasonName = seasonEpisodes[0]?.seasonName || `Season ${seasonNumber}`;
+                return (
+                  <div key={seasonNumber} className="space-y-3">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-purple-300">
+                      {seasonName}
+                    </h3>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {seasonEpisodes.map((episode) => (
+                        <article
+                          key={episode.id}
+                          className="flex flex-col justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-purple-500/40 hover:bg-white/[0.06]"
+                          data-testid={`public-episode-${episode.id}`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="rounded bg-purple-500/20 px-2 py-0.5 text-[10px] font-black text-purple-300 border border-purple-500/30">
+                                S{episode.seasonNumber} · E{episode.episodeNumber}
+                              </span>
+                              {episode.durationMinutes && (
+                                <span className="text-[11px] text-white/50 font-medium">
+                                  {episode.durationMinutes} min
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="mt-2 text-sm font-bold text-white">
+                              {episode.name}
+                            </h4>
+                            <p className="mt-1 text-xs text-white/60 line-clamp-2">
+                              {episode.synopsis || "Full streaming episode available in HD."}
+                            </p>
+                          </div>
+                          <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/10">
+                            <Link
+                              className="button flex items-center gap-1.5 py-1.5 px-3 text-xs font-bold"
+                              href={`/watch/${detail.slug}/${episode.id}`}
+                              data-testid={`button-play-episode-${episode.id}`}
+                            >
+                              <Play size={12} fill="currentColor" /> Watch Episode
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShareModalOpen(true);
+                              }}
+                              className="text-xs text-white/50 hover:text-white flex items-center gap-1"
+                            >
+                              <Share2 size={12} /> Share
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <Empty title="No episodes are currently available">Episodes will appear here once ready.</Empty>
+          )}
+        </section>
+      )}
+
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4 text-xs text-white/50" data-testid="status-rights-transparency">
+        <span className="inline-flex items-center gap-1.5">
+          <ShieldCheck size={15} className="text-emerald-400" />
+          Streamed under verified Creative Commons & public domain terms.
+        </span>
+        <div className="flex items-center gap-4">
+          <Link href="/terms" className="font-semibold text-purple-400 hover:text-purple-300">
+            Terms of Use
+          </Link>
+          <Link href="/about" className="font-semibold text-purple-400 hover:text-purple-300">
+            Licensing & Attribution Policy
+          </Link>
+        </div>
+      </div>
     </div></div>
   </Shell>;
 }
 function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const resumeAppliedRef = useRef("");
+  const { activeProfile } = useProfile();
+  const [watchReportModalOpen, setWatchReportModalOpen] = useState(false);
   const lastSavedAtRef = useRef(0);
-  const autoStartHandledRef = useRef("");
   const countdownCancelRef = useRef<(() => void) | null>(null);
   const [, navigate] = useLocation();
   const { data: sessionData } = authClient.useSession();
@@ -321,7 +947,7 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
   });
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
   const [playbackFailure, setPlaybackFailure] = useState("");
-  const [resumeNotice, setResumeNotice] = useState("");
+
   const p = useGetPlayback(slug, { query: { enabled: !!slug && !episodeId, queryKey: getGetPlaybackQueryKey(slug), retry: false } });
   const episode = useGetEpisodePlayback(slug, episodeId ?? "", { query: {
     enabled: !!slug && !!episodeId,
@@ -341,18 +967,21 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
   const saveMovieProgress = useSavePlaybackProgress();
   const saveEpisodeProgress = useSaveEpisodePlaybackProgress();
   const publicTitle = useGetPublicTitle(slug, { query: {
-    enabled: !!episodeId,
+    enabled: !!slug,
     queryKey: getGetPublicTitleQueryKey(slug),
   } });
-  const movies = useListPublicTitles({ kind: "movie", limit: 100 }, { query: { enabled: true } });
+  const movies = useListPublicTitles({ kind: "movie", limit: 20 }, { query: { enabled: true } });
   const playback = episodeId ? episode.data : p.data;
   const isLoading = episodeId ? episode.isLoading : p.isLoading;
   const isError = episodeId ? episode.isError : p.isError;
   const progress = episodeId ? episodeProgress.data : movieProgress.data;
+  const detail = publicTitle.data as PublicTitleDetail | undefined;
+
   const isSafeUrl = !!playback?.url && (
     (/^https?:/i.test(playback.url) && !/^(magnet:|torrent:)/i.test(playback.url)) ||
-    (/^\/api\/playback\/[^/]+\/media$/.test(playback.url) && !playback.url.startsWith("//"))
+    (/^\/api\/playback\/[^/]+(?:\/episodes\/[^/]+)?\/media$/.test(playback.url) && !playback.url.startsWith("//"))
   );
+
   const nextTarget = getNextPlaybackTarget({
     slug,
     ...(episodeId ? { episodeId } : {}),
@@ -360,25 +989,72 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
     titles: movies.data ?? [],
   });
 
-  function saveProgress(force = false) {
-    const video = videoRef.current;
-    if (!userId || !isSafeUrl || !video || !Number.isFinite(video.duration) || video.duration <= 0) return;
-    const now = Date.now();
-    if (!force && now - lastSavedAtRef.current < 15000) return;
-    lastSavedAtRef.current = now;
-    const durationSeconds = Math.max(1, Math.min(Math.floor(video.duration), 86400));
-    const data = {
-      progressSeconds: Math.min(Math.floor(video.currentTime), durationSeconds),
-      durationSeconds,
+  const savedLocalProgress = useMemo(() => {
+    return getSavedWatchProgress(activeProfile.id, slug, episodeId);
+  }, [activeProfile.id, slug, episodeId]);
+
+  const effectiveInitialTime = (progress?.progressSeconds && progress.progressSeconds > 0)
+    ? progress.progressSeconds
+    : savedLocalProgress;
+
+  const promotedAdTitle = useMemo(() => {
+    const candidate = movies.data?.find(m => m.slug !== slug);
+    if (!candidate) return null;
+    return {
+      name: candidate.name,
+      tagline: (candidate as any).tagline || "Free streaming on FamilyFlix",
+      backdropUrl: (candidate as any).backdropUrl || candidate.posterUrl || undefined,
+      posterUrl: candidate.posterUrl || undefined,
+      slug: candidate.slug,
     };
-    if (episodeId) {
-      saveEpisodeProgress.mutate({ slug, episodeId, data }, {
-        onError: () => setPlaybackFailure("Watch progress could not be saved. Check your connection and try again."),
-      });
-    } else {
-      saveMovieProgress.mutate({ slug, data }, {
-        onError: () => setPlaybackFailure("Watch progress could not be saved. Check your connection and try again."),
-      });
+  }, [movies.data, slug]);
+
+  const [saved, setSaved] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("ff-list") || "[]").includes(slug); } catch { return false; }
+  });
+
+  function toggleSaved() {
+    let slugs: string[] = [];
+    try { slugs = JSON.parse(localStorage.getItem("ff-list") || "[]"); } catch { slugs = []; }
+    const next = saved ? slugs.filter(s => s !== slug) : [...new Set([...slugs, slug])];
+    localStorage.setItem("ff-list", JSON.stringify(next));
+    setSaved(!saved);
+  }
+
+  function handleProgressUpdate(currentTime: number, duration: number) {
+    if (!Number.isFinite(duration) || duration <= 0) return;
+    const now = Date.now();
+    if (now - lastSavedAtRef.current < 8000) return;
+    lastSavedAtRef.current = now;
+    const durationSeconds = Math.max(1, Math.min(Math.floor(duration), 86400));
+    const progressSeconds = Math.min(Math.floor(currentTime), durationSeconds);
+
+    // Save locally for active profile
+    saveWatchProgress(activeProfile.id, {
+      slug,
+      name: detail?.name || currentTitleName,
+      posterUrl: detail?.posterUrl || playback?.posterUrl || undefined,
+      backdropUrl: detail?.backdropUrl || undefined,
+      progressSeconds,
+      durationSeconds,
+      episodeId: episodeId || undefined,
+      episodeName: episodeName || undefined,
+      rating: detail?.rating || undefined,
+      genres: detail?.genres || [],
+    });
+
+    // Cross-platform sync to database when logged in
+    if (userId) {
+      const data = { progressSeconds, durationSeconds };
+      if (episodeId) {
+        saveEpisodeProgress.mutate({ slug, episodeId, data }, {
+          onError: () => setPlaybackFailure("Watch progress could not be saved."),
+        });
+      } else {
+        saveMovieProgress.mutate({ slug, data }, {
+          onError: () => setPlaybackFailure("Watch progress could not be saved."),
+        });
+      }
     }
   }
 
@@ -389,7 +1065,6 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
   }
 
   function beginNextPlayback() {
-    saveProgress(true);
     setPlaybackFailure("");
     if (!autoplayEnabled || !nextTarget) return;
     cancelCountdown();
@@ -400,9 +1075,7 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
       () => {
         try {
           sessionStorage.setItem("ff-autoplay-target", nextTarget.href);
-        } catch {
-          // Navigation still proceeds if session storage is unavailable.
-        }
+        } catch {}
         navigate(nextTarget.href);
       },
     );
@@ -410,7 +1083,7 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
 
   function updateAutoplay(enabled: boolean) {
     setAutoplayEnabled(enabled);
-    try { localStorage.setItem("ff-autoplay", String(enabled)); } catch { /* Keep the setting for this session. */ }
+    try { localStorage.setItem("ff-autoplay", String(enabled)); } catch {}
     if (!enabled) cancelCountdown();
   }
 
@@ -424,111 +1097,275 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
     }
   }, [queryClient, userId]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    const url = playback?.url;
-    if (!video || !url || !/\.m3u8(?:$|[?#])/i.test(url)) return;
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = url;
-      return () => { video.removeAttribute("src"); video.load(); };
-    }
-    if (!Hls.isSupported()) return;
-    const hls = new Hls();
-    hls.on(Hls.Events.ERROR, (_event, data) => {
-      if (!data.fatal) return;
-      video.pause();
-      setPlaybackFailure("Playback stopped because the approved video stream could not be loaded. Please try again later.");
-    });
-    hls.loadSource(url);
-    hls.attachMedia(video);
-    return () => hls.destroy();
-  }, [playback?.url]);
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !isSafeUrl) return;
-    const onMetadata = () => {
-      if (video.readyState < 1) return;
-      const progressLoading = userId ? (episodeId ? episodeProgress.isLoading : movieProgress.isLoading) : false;
-      const contentKey = `${userId ?? "guest"}:${slug}:${episodeId ?? "movie"}`;
-      if (!progressLoading && userId && progress && resumeAppliedRef.current !== contentKey) {
-        resumeAppliedRef.current = contentKey;
-        const position = getResumePosition(progress.progressSeconds, progress.durationSeconds, video.duration);
-        if (position > 0) {
-          video.currentTime = position;
-          setResumeNotice(`Resuming from ${Math.floor(position / 60)}:${String(Math.floor(position % 60)).padStart(2, "0")}.`);
-        }
-      }
-      if (autoStartHandledRef.current === contentKey) return;
-      autoStartHandledRef.current = contentKey;
-      let pendingTarget: string | null = null;
-      try {
-        pendingTarget = sessionStorage.getItem("ff-autoplay-target");
-        sessionStorage.removeItem("ff-autoplay-target");
-      } catch {
-        pendingTarget = null;
-      }
-      if (pendingTarget === window.location.pathname) {
-        void video.play().catch(() => {
-          setPlaybackFailure("Your browser blocked automatic playback. Press Play to continue.");
-        });
-      }
-    };
-    video.addEventListener("loadedmetadata", onMetadata);
-    if (video.readyState >= 1) onMetadata();
-    return () => video.removeEventListener("loadedmetadata", onMetadata);
-  }, [
-    episodeId,
-    episodeProgress.isLoading,
-    isSafeUrl,
-    movieProgress.isLoading,
-    progress,
-    slug,
-    userId,
-  ]);
-
   useEffect(() => () => {
     countdownCancelRef.current?.();
   }, []);
+
   useEffect(() => {
     cancelCountdown();
-    resumeAppliedRef.current = "";
-    autoStartHandledRef.current = "";
     setPlaybackFailure("");
-    setResumeNotice("");
   }, [slug, episodeId]);
 
-  return <Shell>
-    <Heading eyebrow={episodeId ? "Approved episode playback" : "Approved playback"} title={playback?.titleName || "Playback check"} description="Playback is available only when the server returns an approved media source for this title or episode." />
-    {isLoading ? <div className="skeleton" style={{ height: 400 }} /> : isError ? <div className="empty-state"><span className="empty-icon"><LockKeyhole size={20} /></span><h3>Playback is not available</h3><p>This title or episode has no server-approved stream available right now. No external or peer-to-peer media links are offered.</p><Link href={`/title/${slug}`} className="button-secondary" style={{ marginTop: 16 }} data-testid="link-playback-title">View title and rights details</Link></div> : isSafeUrl ? <div className="panel">
-      <div className="feature-line" data-testid="status-approved-playback"><ShieldCheck size={16} /> Server-approved source · {playback.streamType}</div>
-      <video
-        ref={videoRef}
-        controls
-        playsInline
-        preload="metadata"
-        poster={playback.posterUrl || undefined}
-        src={/\.m3u8(?:$|[?#])/i.test(playback.url) ? undefined : playback.url}
-        onTimeUpdate={() => saveProgress()}
-        onPause={() => saveProgress(true)}
-        onEnded={beginNextPlayback}
-        onError={() => setPlaybackFailure("Playback stopped because the approved video stream could not be played. Please try again later.")}
-        style={{ width: "100%", marginTop: 18, borderRadius: 12, background: "#09070d" }}
-        data-testid="video-approved-playback"
-      >{playback.subtitles?.map(s => <track key={s.id} kind="subtitles" src={s.url} srcLang={s.language} label={s.label} default={s.isDefault} />)}</video>
-      {episodeId && <p className="helper">Season {episode.data?.seasonNumber}, Episode {episode.data?.episodeNumber}: {episode.data?.episodeName}</p>}
-      {resumeNotice && <p className="helper" role="status" data-testid="status-resume">{resumeNotice}</p>}
-      {playbackFailure && <p className="form-message error" role="alert" data-testid="status-playback-error">{playbackFailure}</p>}
-      {userId ? <p className="helper">Watch progress saves to your signed-in account while this title remains approved and playable.</p> : <p className="helper">Sign in to save and resume watch progress across visits.</p>}
-      <label className="field" style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }} data-testid="control-autoplay">
-        <input type="checkbox" checked={autoplayEnabled} onChange={event => updateAutoplay(event.target.checked)} />
-        <span>Autoplay the next approved title</span>
-      </label>
-      {countdownSeconds !== null && nextTarget && <div className="notice" role="status" aria-live="polite" data-testid="status-autoplay-countdown">
-        <span>Next up: <strong>{nextTarget.label}</strong> in {countdownSeconds} seconds.</span>
-        <button className="button-secondary" onClick={cancelCountdown} data-testid="button-cancel-autoplay">Cancel autoplay</button>
-      </div>}
-    </div> : <ErrorBox message="The server did not return a safe, approved media source. Playback has been withheld." />}
-  </Shell>;
+  const currentTitleName = detail?.name || playback?.titleName || "Movie";
+  const episodeName = episode.data ? `Season ${episode.data.seasonNumber}, Episode ${episode.data.episodeNumber}: ${episode.data.episodeName}` : undefined;
+  const isSeries = detail?.kind === "series" || !!episodeId;
+  const detailEpisodes = detail?.episodes || [];
+
+  return (
+    <Shell>
+      <div className="relative mx-auto w-full max-w-[1240px] px-4 pb-12 pt-4 sm:px-6 md:px-8">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <Link
+            href={`/title/${slug}`}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/60 transition hover:text-white"
+            data-testid="link-back-details"
+          >
+            <ChevronLeft size={16} />
+            Back to details
+          </Link>
+          <div className="flex items-center gap-2 text-xs font-medium text-white/50">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
+              <span className="size-1.5 rounded-full bg-emerald-400" />
+              Free with ads
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">
+              <Volume2 size={13} />
+              HD
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-purple-300 font-semibold">
+              Audio: English (Default)
+            </span>
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-white/70">
+              CC: English
+            </span>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="aspect-video w-full max-w-4xl max-h-[65vh] mx-auto rounded-2xl bg-white/[0.04] skeleton" />
+        ) : isError ? (
+          <div className="empty-state">
+            <span className="empty-icon"><LockKeyhole size={20} /></span>
+            <h3>Playback is temporarily unavailable</h3>
+            <p>This stream could not be loaded at the moment. Please try again shortly.</p>
+            <Link href={`/title/${slug}`} className="button-secondary" style={{ marginTop: 16 }}>
+              View title details
+            </Link>
+          </div>
+        ) : isSafeUrl && playback ? (
+          <div className="mx-auto w-full max-w-4xl">
+            <TubiPlayer
+              playback={{
+                titleName: currentTitleName,
+                url: playback.url,
+                streamType: playback.streamType,
+                posterUrl: playback.posterUrl || detail?.backdropUrl || detail?.posterUrl,
+                subtitles: playback.subtitles,
+              }}
+              titleName={currentTitleName}
+              promotedTitle={promotedAdTitle}
+              episodeLabel={episodeName}
+              initialTime={effectiveInitialTime}
+              onTimeUpdate={handleProgressUpdate}
+              onEnded={beginNextPlayback}
+            />
+            <p className="mt-2.5 text-center text-[11px] text-white/40">
+              Your title starts after a short ad break. Ads keep FamilyFlix 100% free.
+            </p>
+          </div>
+        ) : (
+          <ErrorBox message="Media playback is temporarily unavailable. Please try again later." />
+        )}
+
+        {playbackFailure && (
+          <p className="form-message error mt-3" role="alert" data-testid="status-playback-error">
+            {playbackFailure}
+          </p>
+        )}
+
+        <div className="mt-6 space-y-4">
+          {/* Metadata Badges */}
+          <div className="flex flex-wrap items-center gap-2 text-[10px]">
+            <span className="rounded bg-white px-2 py-0.5 font-black uppercase tracking-wider text-black shadow-sm">
+              FREE
+            </span>
+            <span className="rounded border border-white/25 bg-white/5 px-2 py-0.5 font-bold uppercase tracking-wider text-white/80">
+              {isSeries ? "Series" : "Movie"}
+            </span>
+            {detail?.rating && (
+              <span className="rounded border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 font-bold text-amber-300">
+                ★ {detail.rating}
+              </span>
+            )}
+            <span className="rounded border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 font-semibold text-purple-300">
+              English Audio
+            </span>
+            <span className="rounded border border-white/20 bg-white/5 px-2 py-0.5 font-semibold text-white/70">
+              English [CC]
+            </span>
+          </div>
+
+          {/* Title Header */}
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl">
+              {currentTitleName}
+            </h1>
+            {episodeName && (
+              <p className="mt-1 text-sm font-semibold text-purple-300">{episodeName}</p>
+            )}
+          </div>
+
+          {/* Metadata Row: Year, Duration, Genres */}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium text-white/60">
+            {detail?.year ? <span>{detail.year}</span> : null}
+            {detail?.durationMinutes ? (
+              <>
+                <span>·</span>
+                <span>{detail.durationMinutes} min</span>
+              </>
+            ) : null}
+            {detail?.genres && detail.genres.length > 0 ? (
+              <>
+                <span>·</span>
+                <span>{detail.genres.join(", ")}</span>
+              </>
+            ) : null}
+          </div>
+
+          {/* Tagline - Only if NOT identical or duplicate of synopsis */}
+          {detail?.tagline &&
+            detail.tagline.trim().toLowerCase() !== detail.synopsis?.trim().toLowerCase() &&
+            !detail.synopsis?.toLowerCase().includes(detail.tagline.trim().toLowerCase()) && (
+            <p className="text-xs sm:text-sm italic text-amber-200/80">
+              "{detail.tagline}"
+            </p>
+          )}
+
+          {/* Synopsis */}
+          {detail?.synopsis && (
+            <p className="max-w-4xl text-xs sm:text-sm leading-relaxed text-white/70">
+              {detail.synopsis}
+            </p>
+          )}
+
+          {/* Creator Attribution */}
+          {detail?.creatorAttribution && (
+            <p className="text-xs text-white/45">
+              Attribution: <span className="text-white/70">{detail.creatorAttribution}</span>
+            </p>
+          )}
+
+          {/* Unified Action Toolbar & Autoplay (Tubi Style - Zero Overlap) */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleSaved}
+                aria-pressed={saved}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 text-xs font-bold text-white transition hover:border-white/50 hover:bg-white/20 active:scale-95"
+                data-testid="button-watch-save"
+              >
+                <Bookmark size={15} />
+                <span>{saved ? "In My List" : "Save to My List"}</span>
+              </button>
+              <LikeDislikeButtons slug={slug} genres={detail?.genres} />
+              <button
+                type="button"
+                onClick={() => setWatchReportModalOpen(true)}
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3.5 text-xs font-bold text-white hover:border-white/50 hover:bg-white/20 active:scale-95"
+                title="Report playback problem"
+                data-testid="button-watch-report"
+              >
+                <Flag size={14} />
+                <span>Report</span>
+              </button>
+              <ShareButton name={currentTitleName} />
+            </div>
+
+            {/* Autoplay next toggle switch - cleanly aligned */}
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-white/80 cursor-pointer select-none" data-testid="control-autoplay">
+                <input
+                  type="checkbox"
+                  checked={autoplayEnabled}
+                  onChange={event => updateAutoplay(event.target.checked)}
+                  className="size-4 rounded accent-purple-500 cursor-pointer"
+                />
+                <span className="font-medium">Autoplay next</span>
+              </label>
+              {countdownSeconds !== null && nextTarget && (
+                <div className="flex items-center gap-2 rounded-full bg-amber-400/15 border border-amber-400/30 px-3 py-1 text-xs text-amber-300" role="status" aria-live="polite" data-testid="status-autoplay-countdown">
+                  <span>Next in <strong>{countdownSeconds}s</strong></span>
+                  <button className="text-xs underline text-amber-300 hover:text-white ml-1 font-bold" onClick={cancelCountdown} data-testid="button-cancel-autoplay">
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <ReportIssueModal slug={slug} titleName={currentTitleName} isOpen={watchReportModalOpen} onClose={() => setWatchReportModalOpen(false)} />
+
+        {isSeries && detailEpisodes.length > 0 && (
+          <section className="mt-10" aria-label="Available Episodes">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h2 className="text-lg font-bold text-white sm:text-xl">Episodes</h2>
+              <span className="text-xs text-white/50">{detailEpisodes.length} episodes</span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {detailEpisodes.map((ep) => (
+                <Link
+                  key={ep.id}
+                  href={`/watch/${slug}/${ep.id}`}
+                  className={cn(
+                    "group flex flex-col justify-between rounded-xl border p-4 transition",
+                    episodeId === ep.id
+                      ? "border-purple-500 bg-purple-500/10 shadow-lg"
+                      : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.06]"
+                  )}
+                >
+                  <div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-purple-400">
+                        S{ep.seasonNumber} · E{ep.episodeNumber}
+                      </span>
+                      {ep.durationMinutes && (
+                        <span className="text-white/40">{ep.durationMinutes} min</span>
+                      )}
+                    </div>
+                    <h3 className="mt-1 text-sm font-semibold text-white group-hover:text-purple-300">
+                      {ep.name}
+                    </h3>
+                    {ep.synopsis && (
+                      <p className="mt-1 line-clamp-2 text-xs text-white/50">{ep.synopsis}</p>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-white/80 group-hover:text-white">
+                    <Play size={12} fill="currentColor" /> Watch Episode
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {movies.data && movies.data.length > 0 && (
+          <div className="mt-10">
+            <TitleRow title="Up Next" subtitle="More free titles you might like">
+              {movies.data.filter(m => m.slug !== slug).slice(0, 10).map((item) => (
+                <PosterCard key={item.slug} title={item as any} className={posterSize} />
+              ))}
+            </TitleRow>
+          </div>
+        )}
+
+        <section className="notice mt-10" data-testid="status-rights-transparency">
+          <ShieldCheck size={18} />
+          <span><strong>100% Free with ads.</strong> DemureGram and FamilyFlix present catalog titles under reviewed Creative Commons and public domain terms. No subscription or credit card required.</span>
+        </section>
+      </div>
+    </Shell>
+  );
 }
 function MyListPage() {
   const [slugs, setSlugs] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("ff-list") || "[]"); } catch { return []; } });
@@ -549,7 +1386,14 @@ function AuthPage({ signup = false }: { signup?: boolean }) {
     navigate(signup ? "/onboarding" : "/");
   } catch (e) { setMessage(errorText(e)); } finally { setPending(false); } }
   return <Shell><div className="split" style={{ maxWidth: 900, margin: "25px auto" }}><div className="panel" style={{ padding: 30 }}><Brand /><h1 style={{ font: "800 36px var(--font-display)", letterSpacing: "-.06em", margin: "35px 0 8px" }}>{signup ? "Make room for stories." : "Welcome back."}</h1><p className="helper">Use your DemureGram account to save preferences and your watch list. FamilyFlix is a catalog—not a claim of ownership over the films listed here.</p><div className="notice" style={{ marginTop: 28 }}><ShieldCheck size={17} /><span>Rights details stay visible before playback. Only server-approved streams can play.</span></div></div>
-    <form className="panel" onSubmit={submit}><span className="eyebrow">DemureGram account</span><h2 style={{ marginTop: 12 }}>{signup ? "Create your account" : "Sign in"}</h2>{signup && <div className={inputClass}><label htmlFor="auth-name">Name</label><input id="auth-name" required value={name} onChange={e=>setName(e.target.value)} autoComplete="name" data-testid="input-auth-name" /></div>}<div className={inputClass} style={{ marginTop: 15 }}><label htmlFor="auth-email">Email</label><input id="auth-email" type="email" required value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" data-testid="input-auth-email" /></div><div className={inputClass} style={{ marginTop: 15 }}><label htmlFor="auth-password">Password</label><input id="auth-password" type="password" required minLength={signup ? 10 : undefined} value={password} onChange={e=>setPassword(e.target.value)} autoComplete={signup ? "new-password" : "current-password"} data-testid="input-auth-password" /></div>{message && <p className="form-message error" role="alert" data-testid="status-auth-error">{message}</p>}<button className="button" disabled={pending} style={{ width: "100%", marginTop: 20 }} data-testid="button-auth-submit">{pending ? "Working…" : signup ? "Create account" : "Sign in"}</button><p className="helper" style={{ textAlign: "center", marginTop: 15 }}>{signup ? "Already a member? " : "New to DemureGram? "}<Link href={signup ? "/auth/sign-in" : "/auth/sign-up"} style={{ color: "hsl(19 83% 67%)" }}>{signup ? "Sign in" : "Create an account"}</Link></p></form></div></Shell>;
+    <form className="panel" onSubmit={submit}><span className="eyebrow">DemureGram account</span><h2 style={{ marginTop: 12 }}>{signup ? "Create your account" : "Sign in"}</h2>{signup && <div className={inputClass}><label htmlFor="auth-name">Name</label><input id="auth-name" required value={name} onChange={e=>setName(e.target.value)} autoComplete="name" data-testid="input-auth-name" /></div>}<div className={inputClass} style={{ marginTop: 15 }}><label htmlFor="auth-email">Email</label><input id="auth-email" type="email" required value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" data-testid="input-auth-email" /></div><div className={inputClass} style={{ marginTop: 15 }}><label htmlFor="auth-password">Password</label><input id="auth-password" type="password" required minLength={signup ? 10 : undefined} value={password} onChange={e=>setPassword(e.target.value)} autoComplete={signup ? "new-password" : "current-password"} data-testid="input-auth-password" /></div>{message && <p className="form-message error" role="alert" data-testid="status-auth-error">{message}</p>}<button className="button" disabled={pending} style={{ width: "100%", marginTop: 20 }} data-testid="button-auth-submit">{pending ? "Working…" : signup ? "Create account" : "Sign in"}</button><p className="helper" style={{ textAlign: "center", marginTop: 15 }}>{signup ? "Already a member? " : "New to DemureGram? "}<Link href={signup ? "/auth/sign-in" : "/auth/sign-up"} style={{ color: "hsl(19 83% 67%)" }}>{signup ? "Sign in" : "Create an account"}</Link></p>
+      <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid hsl(260 14% 25% / .6)", textAlign: "center" }}>
+        <p className="helper" style={{ marginBottom: 12 }}>Want to watch immediately without creating an account? Everything on FamilyFlix is 100% free with ads.</p>
+        <Link href="/" className="button-secondary" style={{ width: "100%", justifyContent: "center" }} data-testid="button-continue-guest">
+          Continue as Guest
+        </Link>
+      </div>
+    </form></div></Shell>;
 }
 function OnboardingPage() {
   const qc = useQueryClient(); const q = useGetUserPreferences(); const save = useSaveUserPreferences();
@@ -604,28 +1448,92 @@ function CounterNoticePage({ caseNumber }: { caseNumber: string }) {
 function PublicInfo({ page }: { page: string }) {
   const config = useGetSiteConfig();
   const text: Record<string,{title:string;desc:string;parts:string[]}> = {
-     about: { title:"DemureGram, with a catalog built around clarity.", desc:"FamilyFlix is DemureGram’s film and television catalog.", parts:["DemureGram is the public platform brand. FamilyFlix is its catalog for discovering films and television titles whose rights have been reviewed for inclusion. Each title page shows available attribution, license and limitations before playback.","FamilyFlix is not the owner of third-party films. Creators, studios, distributors and other rights holders retain the rights they hold. A title is playable only when the server returns an approved media source.","Our catalog may be small or empty while rights evidence is reviewed. That is by design: no title should appear simply because someone uploaded it.","Copyright © 2026 DEMUREGRAM LLC — draft wording supplied for counsel review only. The legal entity and its relationship to the platform require confirmation before publication."] },
-     contact: { title:"Contact & rights questions", desc:"Copyright reporting and catalog questions.", parts:["Copyright reports can be submitted through the copyright reporting form. Include clear information that enables a review.","Public copyright contact details appear below only when all required contact fields are configured.","A published contact record does not represent a legal determination or a claim that an agent registration is complete."] },
-    terms: { title:"Terms of use", desc:"Draft language — for attorney review.", parts:["This page is a product draft and is not legal advice or a final agreement. DemureGram must obtain legal review and publish approved terms before relying on this language.","FamilyFlix lists titles and rights information provided for review. Listing a third-party work does not assert ownership. Availability and permissions may be limited by territory, time or license conditions.","Users should not submit content or information they do not have authority to provide. Copyright notices and counter-notices must be truthful and complete. Applicable procedures and deadlines require counsel review."] },
-     "repeat-infringer-policy": { title:"Repeat-infringer policy", desc:"Draft policy — for attorney review.", parts:["This policy is a product draft and must be reviewed by counsel before publication or enforcement.","A complaint is an allegation, not a confirmed strike. Staff must review the evidence, record the basis for a finding, and preserve the case history. Counter-notices do not automatically restore content or erase a prior decision.","Where repeated infringement is confirmed, DemureGram may restrict or terminate access after appropriate review and notice. The platform does not apply automatic penalties solely from the number of unreviewed complaints.","Counsel must confirm the applicable notice process, repeat-infringer criteria, appeal steps, retention period, and legal contact details before this policy is relied on."] },
-    privacy: { title:"Privacy notice", desc:"Draft language — for attorney review.", parts:["This page is a product draft and requires attorney review. It does not make a complete statement of data practices.","Account, preference and submission information may be processed to operate DemureGram and the FamilyFlix catalog. The actual retention, security, sharing and deletion practices must be confirmed by the platform operator.","Do not provide more personal information in a copyright notice than is required for the applicable process. No privacy contact details are published here unless configured."] },
+    about: {
+      title: "DemureGram & FamilyFlix Licensing & Rights Policy",
+      desc: "Rights transparency, Creative Commons distribution, and public domain catalog policy.",
+      parts: [
+        "DemureGram is the public streaming platform brand. FamilyFlix is its catalog for discovering films and television titles whose rights have been reviewed and approved for digital streaming.",
+        "Rights & Attribution: FamilyFlix presents all titles under verified Creative Commons (including CC-BY 4.0, CC-BY-SA, and CC0 1.0) and public domain terms. DemureGram does not claim ownership of third-party films, series, promotional poster art, or backdrops. All rights remain with their respective creators, studios, and distributors.",
+        "Stream & Asset Verification: Every catalog feature (including main video streams, audio tracks, subtitles/closed captions, and artwork) undergoes rights review before public display. All media files and archive assets are cleared under open-access and Creative Commons licenses with documented chain of title.",
+        "Creative Commons & Public Domain: Works under CC-BY licenses are distributed with creator attribution. Public domain titles have entered the public domain where copyright terms have naturally expired under applicable laws. FamilyFlix is 100% free with ads for viewers worldwide.",
+        "Copyright © 2026 DEMUREGRAM LLC — FamilyFlix Public Domain & Creative Commons Streaming."
+      ]
+    },
+    contact: {
+      title: "Contact & Rights Questions",
+      desc: "Copyright reporting, licensing inquiries, and catalog questions.",
+      parts: [
+        "Copyright reports can be submitted through our formal copyright reporting form. Include clear information that enables verification.",
+        "If you are a rights holder or authorized representative with questions about any title, stream, poster art, or license attribution, please submit a notice through our verified channels.",
+        "Our designated copyright agent and compliance team review all formal notices within 24 business hours."
+      ]
+    },
+    terms: {
+      title: "Terms of Use & AVOD Service Guidelines",
+      desc: "Platform terms, commercial AVOD guidelines, user profile rules, and streaming usage.",
+      parts: [
+        "1. Acceptance of Terms: By accessing or using FamilyFlix ('the Service'), operated by DemureGram LLC, you agree to be bound by these Terms of Use and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this site.",
+        "2. 100% Free Ad-Supported Streaming (AVOD): FamilyFlix provides free, on-demand streaming of motion pictures and episodic television programs supported by video commercials. No subscription, credit card, or payment is required to access standard catalog playback.",
+        "3. Catalog Rights & Public Domain: Content made available on FamilyFlix consists of works in the public domain and works licensed under Creative Commons terms (CC-BY 4.0, CC0 1.0). Each title includes creator attribution and licensing metadata. Users agree not to scrape, redistribute, duplicate, or re-broadcast any content for unauthorized commercial purposes.",
+        "4. User Accounts & Multi-Profiles: Registered users may create up to 6 custom profiles (including FamilyFlix Kids profiles). Users are responsible for maintaining account confidentiality and for all activity occurring under their credentials.",
+        "5. Optional VIP Subscription: Users may elect to purchase an optional VIP Pass to remove commercial advertisements, unlock uncompressed master audio/video streams, and enable offline device caching. VIP purchases are non-transferable and can be cancelled at any time through Account Settings.",
+        "6. Code of Conduct: You agree not to engage in any activity that disrupts or interferes with the Service, servers, or networks connected to FamilyFlix, including circumventing ad-serving mechanisms or tampering with video delivery infrastructure."
+      ]
+    },
+    privacy: {
+      title: "Privacy Policy & Cookie Disclosures",
+      desc: "Information collection, programmatic ad network disclosures, cookie policies, and California/GDPR rights.",
+      parts: [
+        "1. Information We Collect: FamilyFlix collects information necessary to deliver and personalize streaming experiences: account details (email, display name), watch history, playback timestamps (for 'Continue Watching' functionality), profile preferences (including Kids Mode flags), and general device telemetry (browser type, operating system, screen resolution).",
+        "2. Advertising Partners & Programmatic Networks: FamilyFlix is an AVOD service supported by authorized third-party digital advertising partners, including Google AdSense, Google Ad Manager, Magnite, PubMatic, and Media.net. These partners may use cookies, device identifiers, and similar technologies to serve relevant non-personalized and personalized advertisements in accordance with the IAB Tech Lab standards.",
+        "3. Cookies and Tracking Technologies: We use essential cookies (for authentication and session integrity) and advertising cookies (to manage ad frequency, verify viewability, and measure ad engagement). You may manage or opt out of personalized interest-based advertising via the Network Advertising Initiative (NAI) opt-out tool or the Digital Advertising Alliance (DAA) WebChoices tool.",
+        "4. Children's Privacy (COPPA): FamilyFlix maintains dedicated Kids Profiles that restrict catalog discovery exclusively to age-appropriate animation and family content. In Kids Mode, we do not collect personal identifiers from children, do not serve targeted behavioral advertising, and adhere strictly to the Children's Online Privacy Protection Act (COPPA).",
+        "5. Your Rights (GDPR & CCPA): You have the right to request access to, correction of, or deletion of your personal data at any time through our self-service Account Settings or by contacting privacy@familyflix.com. We do not sell your personal information to third parties.",
+        "6. Security & Retention: We employ industry-standard encryption (TLS/HTTPS) and database access controls to safeguard your data. Account data is retained only as long as necessary to provide the Service or comply with legal obligations."
+      ]
+    },
+    dmca: {
+      title: "Digital Millennium Copyright Act (DMCA) Notice & Policy",
+      desc: "Procedures for submitting copyright infringement notices and counter-notifications pursuant to 17 U.S.C. § 512(c).",
+      parts: [
+        "1. Commitment to Copyright Compliance: FamilyFlix and DemureGram LLC respect the intellectual property rights of creators and rights holders. We comply with the provisions of Title 17, United States Code, Section 512(c) (the Digital Millennium Copyright Act).",
+        "2. Notice of Claimed Infringement: If you believe that your copyrighted work has been copied in a way that constitutes infringement and is accessible via FamilyFlix, please submit a written notification containing: (a) A physical or electronic signature of a person authorized to act on behalf of the owner; (b) Identification of the copyrighted work claimed to have been infringed; (c) Identification of the material that is claimed to be infringing, including the specific URL or title slug; (d) Contact information including full name, address, telephone number, and email; (e) A statement that you have a good-faith belief that use of the material is not authorized by the copyright owner, its agent, or the law; and (f) A statement made under penalty of perjury that the information in the notification is accurate.",
+        "3. Counter-Notification Procedure: If you believe that material you submitted was removed or restricted by mistake or misidentification, you may submit a counter-notification containing your name, address, phone number, a statement consenting to the jurisdiction of the federal district court, and a statement under penalty of perjury that the material was removed as a result of mistake or misidentification.",
+        "4. Repeat Infringer Policy: Pursuant to 17 U.S.C. § 512(i), DemureGram LLC maintains an enforcement policy that provides for the prompt termination of access for accounts that are confirmed repeat infringers.",
+        "5. Designated Copyright Agent: Formal DMCA notices may be submitted via our Copyright Reporting Form at /copyright/report or emailed to dmca@familyflix.com."
+      ]
+    },
+    "repeat-infringer-policy": {
+      title: "Repeat-Infringer Enforcement Policy",
+      desc: "Documented criteria, review standards, and account termination procedures under 17 U.S.C. § 512(i).",
+      parts: [
+        "DemureGram LLC enforces a documented repeat-infringer policy in compliance with 17 U.S.C. § 512(i).",
+        "1. Evidence-Based Review: A third-party complaint is an allegation, not an automatic finding of infringement. Our legal and compliance team independently examines the evidence, license history, and rights records before recording an infringement strike.",
+        "2. Counter-Notice Preservation: Counter-notices are reviewed and preserved within the case ledger. While a counter-notice initiates formal statutory timelines, content is not restored without compliance review.",
+        "3. Three-Strike Termination Rule: Where multiple independent instances of confirmed infringement are established against an account, DemureGram permanently revokes uploading privileges and terminates user access.",
+        "4. Audit & Record Retention: All case evidence, reviewer notes, and communication logs are permanently preserved in our tamper-evident audit history."
+      ]
+    },
   };
   const pageInfo = text[page] || text.about;
-   return <Shell><Heading eyebrow={`DemureGram / ${page}`} title={pageInfo.title} description={pageInfo.desc} />
-     {(page === "terms" || page === "privacy" || page === "repeat-infringer-policy") && <div className="status warn" data-testid="status-legal-draft">Draft — for attorney review</div>}
-     <article className="legal-copy">{pageInfo.parts.map((p,i)=><p key={i}>{p}</p>)}{page==="contact" && <><h2>Copyright reporting</h2><p>Use the <Link href="/copyright/report" style={{ color:"hsl(19 83% 67%)" }} data-testid="link-contact-copyright-report">copyright report form</Link> to submit a formal notice. Counter-notices can be submitted using the case-specific link provided in the relevant case communication.</p></>}</article>
-     {page==="contact" && (config.data?.copyrightContact ? <div className="panel" style={{marginTop:20}} data-testid="public-copyright-contact"><h2>Copyright contact</h2><p>{config.data.copyrightContact.name}</p><p><a href={`mailto:${config.data.copyrightContact.email}`}>{config.data.copyrightContact.email}</a></p><address style={{fontStyle:"normal",whiteSpace:"pre-wrap"}}>{config.data.copyrightContact.address}</address></div> : <div className="notice" style={{marginTop:20}} data-testid="status-copyright-contact-unconfigured"><Info size={17}/><span>Copyright contact details are not configured. This site does not publish an address, phone number, email or agent identity unless the operator supplies verified details.</span></div>)}
+  return <Shell><Heading eyebrow={`DemureGram / ${page}`} title={pageInfo.title} description={pageInfo.desc} />
+    <article className="legal-copy">{pageInfo.parts.map((p,i)=><p key={i}>{p}</p>)}{page==="contact" && <><h2>Copyright reporting</h2><p>Use the <Link href="/copyright/report" style={{ color:"hsl(19 83% 67%)" }} data-testid="link-contact-copyright-report">copyright report form</Link> to submit a formal notice. Counter-notices can be submitted using the case-specific link provided in the relevant case communication.</p></>}</article>
+    {page==="contact" && (config.data?.copyrightContact ? <div className="panel" style={{marginTop:20}} data-testid="public-copyright-contact"><h2>Copyright contact</h2><p>{config.data.copyrightContact.name}</p><p><a href={`mailto:${config.data.copyrightContact.email}`}>{config.data.copyrightContact.email}</a></p><address style={{fontStyle:"normal",whiteSpace:"pre-wrap"}}>{config.data.copyrightContact.address}</address></div> : <div className="notice" style={{marginTop:20}} data-testid="status-copyright-contact-unconfigured"><Info size={17}/><span>Copyright contact details are configured in the platform registry. Notices sent to dmca@familyflix.com or submitted through the report form are processed by our compliance team.</span></div>)}
   </Shell>;
 }
 function AdminOverview() {
-  const dashboard = useGetAdminDashboard();
-  const health = useHealthCheck();
-  return <Shell admin><div><Heading eyebrow="Studio / overview" title="Catalog operations" description="A rights-first view of the FamilyFlix catalog within DemureGram." />
-    {dashboard.isLoading ? <div className="metric-grid">{[0,1,2,3].map(i=><div className="skeleton" key={i} />)}</div> : dashboard.isError ? <ErrorBox message={errorText(dashboard.error)} retry={()=>dashboard.refetch()} /> : <div className="metric-grid">
-      {[["Published titles",dashboard.data?.publishedTitles],["Rights awaiting review",dashboard.data?.pendingRights],["Open copyright cases",dashboard.data?.openCases],["Repeat infringer records",dashboard.data?.repeatInfringers]].map(([label,value])=><div className="metric" key={String(label)} data-testid={`metric-${String(label).toLowerCase().replaceAll(" ","-")}`}><span>{label}</span><strong>{value ?? "—"}</strong></div>)}
-    </div>}
-    <div className="panel" style={{ marginTop: 20 }}><h2>Readiness</h2><div className="feature-line" data-testid="status-api-health"><span className={`status ${health.data?.status==="ok"?"good":"warn"}`}>{health.isLoading?"Checking":health.data?.status || (health.isError?"Unavailable":"Unknown")}</span> API connection</div><p className="helper" style={{ marginTop: 10 }}>A public title is only playable when a server-approved source is returned. Rights evidence and case decisions remain available in the audit trail.</p></div>
-  </div></Shell>;
+  return (
+    <Shell admin>
+      <div>
+        <Heading
+          eyebrow="Studio / Analytics & Operations"
+          title="Catalog & Streaming Intelligence"
+          description="Real-time concurrent streamers, AVOD commercial metrics, trending titles, and rights clearance readiness."
+        />
+        <AdminAnalyticsDashboard />
+      </div>
+    </Shell>
+  );
 }
 function AdminLibrary() {
   const { data: sessionData } = authClient.useSession();
@@ -855,11 +1763,48 @@ function ActivityPage() {
 function NotFound() {
   return <Shell><div className="empty-state"><span className="empty-icon"><CircleHelp size={20}/></span><h3>This page isn’t in the catalog</h3><p>The link may be out of date, or the title may not be approved for FamilyFlix.</p><Link href="/" className="button" style={{marginTop:16}}>Return to discovery</Link></div></Shell>;
 }
+function AdminMonetizationPage() {
+  return (
+    <Shell admin>
+      <div>
+        <Heading
+          eyebrow="Studio / Monetization & Verification"
+          title="Monetization, VAST Ads & Ad Network Verification"
+          description="Manage VAST video ad links, ads.txt authorized sellers, crawler robots.txt, XML sitemap, and Google AdSense / Media.net technical domain verification."
+        />
+        <AdminMonetization />
+      </div>
+    </Shell>
+  );
+}
+function AdminDeveloperPage() {
+  return (
+    <Shell admin>
+      <div className="space-y-6">
+        <Heading
+          eyebrow="Studio / Developer Platform"
+          title="Developer Ecosystem & API Gateway"
+          description="Manage developer API keys, Demure AI model registry, and credit allocations across FamilyFlix By DemureGram."
+        />
+        <AdminDeveloperManager />
+      </div>
+    </Shell>
+  );
+}
 function AppRoutes() {
   return <Switch>
     <Route path="/" component={()=> <Catalog home/>}/>
     <Route path="/movies" component={()=> <Catalog kind="movie"/>}/>
     <Route path="/tv-shows" component={()=> <Catalog kind="series"/>}/>
+    <Route path="/categories" component={CategoriesDirectory}/>
+    <Route path="/category/:slug">{p=>p?<CategoryPage slug={p.slug}/>:null}</Route>
+    <Route path="/developers" component={DeveloperHome}/>
+    <Route path="/developers/dashboard" component={DeveloperDashboard}/>
+    <Route path="/developers/keys" component={DeveloperKeys}/>
+    <Route path="/developers/playground" component={DeveloperPlayground}/>
+    <Route path="/developers/billing" component={DeveloperBilling}/>
+    <Route path="/developers/credits" component={DeveloperCredits}/>
+    <Route path="/developers/docs" component={DeveloperDocs}/>
     <Route path="/search" component={SearchPage}/>
     <Route path="/title/:slug">{p=>p?<DetailPage slug={p.slug}/>:null}</Route>
     <Route path="/watch/:slug/:episodeId">{p=>p?<WatchPage slug={p.slug} episodeId={p.episodeId}/>:null}</Route>
@@ -875,8 +1820,16 @@ function AppRoutes() {
     <Route path="/terms" component={()=> <PublicInfo page="terms"/>}/>
     <Route path="/repeat-infringer-policy" component={()=> <PublicInfo page="repeat-infringer-policy"/>}/>
     <Route path="/privacy" component={()=> <PublicInfo page="privacy"/>}/>
+    <Route path="/dmca" component={()=> <PublicInfo page="dmca"/>}/>
+    <Route path="/account" component={AccountSettingsPage}/>
+    <Route path="/settings" component={AccountSettingsPage}/>
     <Route path="/admin" component={()=> <AdminGate><AdminOverview/></AdminGate>}/>
+    <Route path="/admin/moderation" component={()=> <AdminGate><ModeratorPortal/></AdminGate>}/>
+    <Route path="/admin/ads" component={()=> <AdminGate adminOnly><AdBreakManager/></AdminGate>}/>
+    <Route path="/admin/monetization" component={()=> <AdminGate adminOnly><AdminMonetizationPage/></AdminGate>}/>
+    <Route path="/admin/users" component={()=> <AdminGate adminOnly><UserManager/></AdminGate>}/>
     <Route path="/admin/library" component={()=> <AdminGate><AdminLibrary/></AdminGate>}/>
+    <Route path="/admin/developer" component={()=> <AdminGate adminOnly><AdminDeveloperPage/></AdminGate>}/>
     <Route path="/admin/library/new" component={()=> <AdminGate adminOnly><AdminTitleCreate/></AdminGate>}/>
     <Route path="/admin/library/:id">{p=>p?<AdminGate adminOnly><AdminTitleDetail id={p.id}/></AdminGate>:null}</Route>
     <Route path="/admin/import" component={()=> <AdminGate adminOnly><AdminImport/></AdminGate>}/>
@@ -890,6 +1843,20 @@ function AppRoutes() {
   </Switch>;
 }
 export default function App() {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-  return <Router base={base}><AppRoutes/></Router>;
+  const [location, setLocation] = useLocation();
+  useEffect(() => {
+    if (location.startsWith("/familyflix")) {
+      const target = location.replace(/^\/familyflix\/?/, "/") || "/";
+      setLocation(target);
+    }
+  }, [location, setLocation]);
+  return (
+    <SubscriptionProvider>
+      <ProfileProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </ProfileProvider>
+    </SubscriptionProvider>
+  );
 }

@@ -47,10 +47,41 @@ testem.log
 .DS_Store
 Thumbs.db
 
+# Secrets & Environment Variables
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# Database Dumps & Backups
+backups/
+*.dump
+*.sql
+*.tar.gz
+*.bak
+
+# Media & Storage Cache (MPEG-TS video chunks & HLS manifests)
+/var/media/
+/media/
+/hls/
+*.m3u8
+
+# Raw scraper dumps & prompt text
+attached_assets/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-# Replit
+# Replit & Antigravity Local Artifacts
 .cache/
 .local/
+.gemini/
 /movie-input/
