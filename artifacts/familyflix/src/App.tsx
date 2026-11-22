@@ -188,6 +188,15 @@ function Header() {
         </button>
       </nav>
       <div className="top-actions">
+        {/* Live Network Online Indicator */}
+        <div
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)] select-none"
+          title="FamilyFlix Cloud Network Status: Online 24/7"
+        >
+          <span className="size-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+          <span>Online</span>
+        </div>
+
         {/* AI Movie Concierge Trigger */}
         <button
           type="button"
@@ -242,6 +251,10 @@ function Footer() {
   return <footer className="app-footer">
     <div className="footer-brand">
       <Link href="/" className="footer-wordmark" aria-label="FamilyFlix by DemureGram home">family<span>flix</span></Link>
+      <div className="my-2 inline-flex items-center gap-2 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+        <span className="size-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+        <span>DemureGram Network Status: All Systems Online 24/7</span>
+      </div>
       <p>Films and television series, with rights verified and cleared for commercial AVOD streaming.</p>
       <small>© 2026 DemureGram LLC. All public domain and Creative Commons works remain with their respective rights holders.</small>
     </div>
@@ -732,6 +745,10 @@ function DetailPage({ slug }: { slug: string }) {
   return <Shell><Link href="/" className="feature-line" data-testid="link-back-catalog"><ArrowLeft size={15} /> Back to catalog</Link>
     <div className="detail-layout" style={{ marginTop: 25 }}><Poster title={detail} className="detail-poster" /><div>
       <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.35)]">
+          <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          Online · Free Stream
+        </span>
         <span className="eyebrow">Approved FamilyFlix title</span>
         {detail.kind === "series" && (
           <span className="rounded bg-purple-600/30 px-2 py-0.5 text-[10px] font-black uppercase text-purple-300 border border-purple-500/30">
@@ -764,10 +781,10 @@ function DetailPage({ slug }: { slug: string }) {
           firstEpisode ? (
             <Link
               href={`/watch/${detail.slug}/${firstEpisode.id}`}
-              className="button flex items-center gap-2"
+              className="button button-watch-now flex items-center gap-2"
               data-testid="button-play-series"
             >
-              <Play size={15} fill="currentColor" /> Watch S{firstEpisode.seasonNumber}:E{firstEpisode.episodeNumber}
+              <Play size={15} fill="currentColor" /> Watch S{firstEpisode.seasonNumber}:E{firstEpisode.episodeNumber} Free
             </Link>
           ) : (
             <button disabled className="button opacity-60">
@@ -775,8 +792,8 @@ function DetailPage({ slug }: { slug: string }) {
             </button>
           )
         ) : (
-          <Link href={`/watch/${detail.slug}`} className="button flex items-center gap-2" data-testid="button-play-title">
-            <Play size={15} fill="currentColor" /> Watch Now
+          <Link href={`/watch/${detail.slug}`} className="button button-watch-now flex items-center gap-2" data-testid="button-play-title">
+            <Play size={15} fill="currentColor" /> Watch Now Free
           </Link>
         )}
 
@@ -1124,9 +1141,9 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
             Back to details
           </Link>
           <div className="flex items-center gap-2 text-xs font-medium text-white/50">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
-              Free with ads
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 font-bold text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+              <span className="size-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
+              Stream Online · Free with ads
             </span>
             <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">
               <Volume2 size={13} />
@@ -1186,8 +1203,12 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
         <div className="mt-6 space-y-4">
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-2 text-[10px]">
-            <span className="rounded bg-white px-2 py-0.5 font-black uppercase tracking-wider text-black shadow-sm">
-              FREE
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2.5 py-0.5 font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.35)]">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Online
+            </span>
+            <span className="rounded bg-gradient-to-r from-amber-400 to-orange-500 px-2.5 py-0.5 font-black uppercase tracking-wider text-black shadow-sm">
+              FREE STREAM
             </span>
             <span className="rounded border border-white/25 bg-white/5 px-2 py-0.5 font-bold uppercase tracking-wider text-white/80">
               {isSeries ? "Series" : "Movie"}
@@ -1458,7 +1479,7 @@ function PublicInfo({ page }: { page: string }) {
         "WHAT FAMILYFLIX OFFERS VIEWERS: FamilyFlix provides over 23,270 titles curated across 44 specialized genres and 20 subgenres. Every film and series is verified for legal, commercial public-domain or Creative Commons streaming. We deliver broadcast-quality video streaming, intelligent subtitle delivery, Tubi-style resume timestamps, and dedicated Kids Modes for family safety.",
         "HOW TO SIGN UP & JOIN: Watching FamilyFlix is 100% Free with zero credit card required. Anyone can instantly stream from any web browser, tablet, or smart TV. By creating a free account, viewers can create personalized adult and kid profiles with over 20 custom 3D avatars, sync 'Continue Watching' across all their devices, curate saved Watchlists, and rate titles. For viewers seeking an ad-free experience, an optional VIP Supporter Pass ($4.99/mo) is available to remove video commercials and unlock 4K HDR streams.",
         "DEVELOPER API PLATFORM & SUBSCRIPTIONS: For third-party software developers, entertainment platforms, and cinema researchers, the FamilyFlix Developer Platform By DemureGram offers high-performance REST APIs (/v1/titles, /v1/categories, /v1/streaming, /v1/tts) powered by an isolated API Gateway. We offer three developer tiers: (1) Free Starter Tier — 1,000 monthly API calls with standard metadata access; (2) Developer Pro Tier ($29/mo) — 100,000 monthly API calls, webhook delivery, priority SLA, and media streaming endpoints; and (3) Enterprise Tier ($199/mo) — Unlimited API requests, dedicated endpoints, customized rate limits, custom HLS transcoding, and 24/7 engineering support.",
-        "COMPLIANCE & LEGAL NOTICE: All third-party motion pictures, promotional artwork, and trademarks remain the property of their respective creators and rights holders. DemureGram Foundation operates under strict adherence to Title 17, United States Code, and international copyright conventions. Contact our team anytime at support@officialfamilyflix.com or developers@officialfamilyflix.com."
+        "COMPLIANCE & LEGAL NOTICE: All third-party motion pictures, promotional artwork, and trademarks remain the property of their respective creators and rights holders. DemureGram Foundation operates under strict adherence to Title 17, United States Code, and international copyright conventions. Contact our team anytime at support@familyflix.demuregram.com or developers@familyflix.demuregram.com."
       ]
     },
     contact: {
@@ -1490,7 +1511,7 @@ function PublicInfo({ page }: { page: string }) {
         "2. Advertising Partners & Programmatic Networks: FamilyFlix is an AVOD service supported by authorized third-party digital advertising partners, including Google AdSense, Google Ad Manager, Magnite, PubMatic, and Media.net. These partners may use cookies, device identifiers, and similar technologies to serve relevant non-personalized and personalized advertisements in accordance with the IAB Tech Lab standards.",
         "3. Cookies and Tracking Technologies: We use essential cookies (for authentication and session integrity) and advertising cookies (to manage ad frequency, verify viewability, and measure ad engagement). You may manage or opt out of personalized interest-based advertising via the Network Advertising Initiative (NAI) opt-out tool or the Digital Advertising Alliance (DAA) WebChoices tool.",
         "4. Children's Privacy (COPPA): FamilyFlix maintains dedicated Kids Profiles that restrict catalog discovery exclusively to age-appropriate animation and family content. In Kids Mode, we do not collect personal identifiers from children, do not serve targeted behavioral advertising, and adhere strictly to the Children's Online Privacy Protection Act (COPPA).",
-        "5. Your Rights (GDPR & CCPA): You have the right to request access to, correction of, or deletion of your personal data at any time through our self-service Account Settings or by contacting privacy@familyflix.com. We do not sell your personal information to third parties.",
+        "5. Your Rights (GDPR & CCPA): You have the right to request access to, correction of, or deletion of your personal data at any time through our self-service Account Settings or by contacting privacy@familyflix.demuregram.com. We do not sell your personal information to third parties.",
         "6. Security & Retention: We employ industry-standard encryption (TLS/HTTPS) and database access controls to safeguard your data. Account data is retained only as long as necessary to provide the Service or comply with legal obligations."
       ]
     },
@@ -1502,7 +1523,7 @@ function PublicInfo({ page }: { page: string }) {
         "2. Notice of Claimed Infringement: If you believe that your copyrighted work has been copied in a way that constitutes infringement and is accessible via FamilyFlix, please submit a written notification containing: (a) A physical or electronic signature of a person authorized to act on behalf of the owner; (b) Identification of the copyrighted work claimed to have been infringed; (c) Identification of the material that is claimed to be infringing, including the specific URL or title slug; (d) Contact information including full name, address, telephone number, and email; (e) A statement that you have a good-faith belief that use of the material is not authorized by the copyright owner, its agent, or the law; and (f) A statement made under penalty of perjury that the information in the notification is accurate.",
         "3. Counter-Notification Procedure: If you believe that material you submitted was removed or restricted by mistake or misidentification, you may submit a counter-notification containing your name, address, phone number, a statement consenting to the jurisdiction of the federal district court, and a statement under penalty of perjury that the material was removed as a result of mistake or misidentification.",
         "4. Repeat Infringer Policy: Pursuant to 17 U.S.C. § 512(i), DemureGram LLC maintains an enforcement policy that provides for the prompt termination of access for accounts that are confirmed repeat infringers.",
-        "5. Designated Copyright Agent: Formal DMCA notices may be submitted via our Copyright Reporting Form at /copyright/report or emailed to dmca@familyflix.com."
+        "5. Designated Copyright Agent: Formal DMCA notices may be submitted via our Copyright Reporting Form at /copyright/report or emailed to dmca@familyflix.demuregram.com."
       ]
     },
     "repeat-infringer-policy": {
@@ -1520,7 +1541,7 @@ function PublicInfo({ page }: { page: string }) {
   const pageInfo = text[page] || text.about;
   return <Shell><Heading eyebrow={`DemureGram / ${page}`} title={pageInfo.title} description={pageInfo.desc} />
     <article className="legal-copy">{pageInfo.parts.map((p,i)=><p key={i}>{p}</p>)}{page==="contact" && <><h2>Copyright reporting</h2><p>Use the <Link href="/copyright/report" style={{ color:"hsl(19 83% 67%)" }} data-testid="link-contact-copyright-report">copyright report form</Link> to submit a formal notice. Counter-notices can be submitted using the case-specific link provided in the relevant case communication.</p></>}</article>
-    {page==="contact" && (config.data?.copyrightContact ? <div className="panel" style={{marginTop:20}} data-testid="public-copyright-contact"><h2>Copyright contact</h2><p>{config.data.copyrightContact.name}</p><p><a href={`mailto:${config.data.copyrightContact.email}`}>{config.data.copyrightContact.email}</a></p><address style={{fontStyle:"normal",whiteSpace:"pre-wrap"}}>{config.data.copyrightContact.address}</address></div> : <div className="notice" style={{marginTop:20}} data-testid="status-copyright-contact-unconfigured"><Info size={17}/><span>Copyright contact details are configured in the platform registry. Notices sent to dmca@familyflix.com or submitted through the report form are processed by our compliance team.</span></div>)}
+    {page==="contact" && (config.data?.copyrightContact ? <div className="panel" style={{marginTop:20}} data-testid="public-copyright-contact"><h2>Copyright contact</h2><p>{config.data.copyrightContact.name}</p><p><a href={`mailto:${config.data.copyrightContact.email}`}>{config.data.copyrightContact.email}</a></p><address style={{fontStyle:"normal",whiteSpace:"pre-wrap"}}>{config.data.copyrightContact.address}</address></div> : <div className="notice" style={{marginTop:20}} data-testid="status-copyright-contact-unconfigured"><Info size={17}/><span>Copyright contact details are configured in the platform registry. Notices sent to dmca@familyflix.demuregram.com or submitted through the report form are processed by our compliance team.</span></div>)}
   </Shell>;
 }
 function AdminOverview() {

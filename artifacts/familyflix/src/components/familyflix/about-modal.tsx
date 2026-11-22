@@ -191,7 +191,7 @@ export function AboutModal({ isOpen, onClose, onOpenSubscribe }: AboutModalProps
             <span>•</span>
             <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
             <span>•</span>
-            <a href="mailto:support@officialfamilyflix.com" className="hover:text-white transition-colors">Contact Support</a>
+            <a href="mailto:support@familyflix.demuregram.com" className="hover:text-white transition-colors">Contact Support</a>
           </div>
         </div>
       </div>

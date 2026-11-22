@@ -142,7 +142,7 @@ export default function AboutPage() {
               <dt className="text-[11px] uppercase tracking-[0.12em] text-white/30">
                 Website
               </dt>
-              <dd className="mt-0.5 text-white/60">www.familyflix.com</dd>
+              <dd className="mt-0.5 text-white/60">familyflix.demuregram.com</dd>
             </div>
             <div>
               <dt className="text-[11px] uppercase tracking-[0.12em] text-white/30">

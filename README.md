@@ -1,10 +1,10 @@
 # FamilyFlix By DemureGram 🎬✨
 ### The Autonomous Free Family Streaming Platform & Developer API Ecosystem
 
-[![FamilyFlix Production](https://img.shields.io/badge/Production-Live%2024%2F7-brightgreen?style=for-the-badge&logo=railway)](https://familyflix-production.up.railway.app)
-[![Catalog Size](https://img.shields.io/badge/Catalog-23%2C272%20Titles-blueviolet?style=for-the-badge)](https://officialfamilyflix.com/movies)
-[![Main Categories](https://img.shields.io/badge/Categories-44%20Main%20%2B%2020%20Subgenres-purple?style=for-the-badge)](https://officialfamilyflix.com/categories)
-[![License](https://img.shields.io/badge/Content-Public%20Domain%20%26%20Creative%20Commons-blue?style=for-the-badge)](https://officialfamilyflix.com/about)
+[![FamilyFlix Production](https://img.shields.io/badge/Production-Live%2024%2F7-brightgreen?style=for-the-badge&logo=railway)](https://familyflix.demuregram.com)
+[![Catalog Size](https://img.shields.io/badge/Catalog-23%2C272%20Titles-blueviolet?style=for-the-badge)](https://familyflix.demuregram.com/movies)
+[![Main Categories](https://img.shields.io/badge/Categories-44%20Main%20%2B%2020%20Subgenres-purple?style=for-the-badge)](https://familyflix.demuregram.com/categories)
+[![License](https://img.shields.io/badge/Content-Public%20Domain%20%26%20Creative%20Commons-blue?style=for-the-badge)](https://familyflix.demuregram.com/about)
 
 ---
 
@@ -12,10 +12,10 @@
 
 **FamilyFlix By DemureGram** is a state-of-the-art, high-performance streaming service and developer platform dedicated to making timeless cinematic heritage and family-friendly entertainment freely accessible worldwide without subscriptions, paywalls, or hidden fees.
 
-- **Official Production Domain:** [https://officialfamilyflix.com](https://officialfamilyflix.com)
+- **Official Production Domain:** [https://familyflix.demuregram.com](https://familyflix.demuregram.com)
 - **Live Cloud Deployment:** [https://familyflix-production.up.railway.app](https://familyflix-production.up.railway.app)
-- **Developer API Portal:** [https://officialfamilyflix.com/developers](https://officialfamilyflix.com/developers)
-- **API Documentation & Playground:** [https://officialfamilyflix.com/developers/docs](https://officialfamilyflix.com/developers/docs)
+- **Developer API Portal:** [https://familyflix.demuregram.com/developers](https://familyflix.demuregram.com/developers)
+- **API Documentation & Playground:** [https://familyflix.demuregram.com/developers/docs](https://familyflix.demuregram.com/developers/docs)
 
 ---
 
@@ -93,7 +93,7 @@ All developer requests are secured through the **FamilyFlix API Gateway** (`/v1`
 | **Developer Pro** | **$29 / mo** | 100,000 calls | 20 req / sec | Video streaming endpoints, webhook alerts, priority SLA, 99.9% uptime |
 | **Enterprise** | **$199 / mo** | Unlimited | Custom | Dedicated gateway endpoints, custom HLS transcoding, 24/7 engineering support |
 
-Developers can manage API keys, monitor real-time credit consumption, test endpoints in the interactive playground, and subscribe directly at [https://officialfamilyflix.com/developers](https://officialfamilyflix.com/developers).
+Developers can manage API keys, monitor real-time credit consumption, test endpoints in the interactive playground, and subscribe directly at [https://familyflix.demuregram.com/developers](https://familyflix.demuregram.com/developers).
 
 ---
 
@@ -165,9 +165,9 @@ FamilyFlix hosts **23,272 motion pictures** and **109 episodic television series
 - **Verified Chain-of-Title:** Every catalog feature is cross-referenced against public records, copyright renewal registries, and Creative Commons licensing archives.
 - **Attribution Policy:** Works distributed under Creative Commons licenses (CC-BY 4.0, CC-BY-SA, CC0 1.0) feature documented creator and distributor attribution.
 - **DMCA Compliance:** We operate under Title 17, United States Code, Section 512(c). Rights holders can submit inquiries or formal notices through our designated agent channels:
-  - **Support & Licensing:** `support@officialfamilyflix.com`
-  - **Legal & DMCA:** `legal@officialfamilyflix.com`
-  - **Developer API:** `developers@officialfamilyflix.com`
+  - **Support & Licensing:** `support@familyflix.demuregram.com`
+  - **Legal & DMCA:** `legal@familyflix.demuregram.com`
+  - **Developer API:** `developers@familyflix.demuregram.com`
 
 ---
 

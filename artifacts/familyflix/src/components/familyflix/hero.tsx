@@ -63,6 +63,10 @@ export function Hero({ titles }: { titles: Title[] }) {
       <div className="relative mx-auto flex h-full w-full max-w-[1600px] flex-col justify-end px-4 pb-10 sm:px-6 sm:pb-12 md:px-8 lg:pb-16 xl:px-12">
         <div key={active.slug} className="relative z-10 max-w-[580px] xl:max-w-[640px] animate-fade-up">
           <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.35)]">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Online
+            </span>
             {active.badge ? (
               <span className="rounded-[5px] bg-white px-2 py-1 text-[10px] font-black uppercase leading-none tracking-[0.12em] text-black">
                 {active.badge}
@@ -98,10 +102,10 @@ export function Hero({ titles }: { titles: Title[] }) {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               href={`/watch/${active.slug}`}
-              className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-[#7c3aed] px-7 text-[14px] font-bold text-white shadow-[0_10px_30px_-10px_rgba(124,58,237,0.9)] transition hover:bg-[#9047ff] hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 px-7 text-[14px] font-black text-black border border-amber-300/60 shadow-xl shadow-amber-500/35 transition hover:from-amber-300 hover:via-amber-400 hover:to-orange-400 hover:shadow-amber-500/60 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              <Play className="size-4" fill="currentColor" aria-hidden />
-              Start Watching
+              <Play className="size-4 fill-current text-black" aria-hidden />
+              Start Watching Free
             </Link>
             <MyListButton slug={active.slug} name={active.name} />
             <Link

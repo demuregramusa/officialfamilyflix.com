@@ -207,7 +207,7 @@ export function DeveloperPlayground() {
 
   // Generate code snippet
   const fullUrl = (() => {
-    const u = new URL(selectedEndpoint.path, "https://api.familyflix.com");
+    const u = new URL(selectedEndpoint.path, "https://familyflix.demuregram.com/api");
     if (selectedEndpoint.method === "GET") {
       Object.entries(queryParams).forEach(([k, v]) => {
         if (v) u.searchParams.set(k, v);

@@ -82,7 +82,7 @@ export default function OpengraphImage() {
             color: "rgba(255,255,255,0.5)",
           }}
         >
-          <span>www.familyflix.com</span>
+          <span>familyflix.demuregram.com</span>
           <span>© 2026 FamilyFlix Media, Inc.</span>
         </div>
       </div>

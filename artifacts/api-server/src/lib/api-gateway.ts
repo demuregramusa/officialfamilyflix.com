@@ -46,7 +46,7 @@ export async function apiGatewayMiddleware(
       error: {
         code: "unauthorized",
         message: "Missing API key. Provide your API key using 'Authorization: Bearer <key>' or 'x-api-key: <key>'.",
-        docs_url: "https://developers.familyflix.com/docs/authentication",
+        docs_url: "https://familyflix.demuregram.com/developers/docs",
       },
     });
     return;

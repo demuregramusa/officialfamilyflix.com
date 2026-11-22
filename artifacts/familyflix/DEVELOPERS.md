@@ -2,7 +2,7 @@
 
 Last updated: 18 November 2026
 Owner: FamilyFlix Media, Inc.
-Production site: https://www.familyflix.com
+Production site: https://familyflix.demuregram.com
 Public developer docs: `/developers`
 
 This is the handoff document for the next engineer. It explains how the app is
@@ -297,7 +297,7 @@ tables during an incident; the old code ignores them.
 ### Movie player
 
 ```
-https://www.familyflix.com/embed/{slug}
+https://familyflix.demuregram.com/embed/{slug}
 ```
 
 - Full-viewport ad-supported player.
@@ -312,7 +312,7 @@ put it behind an auth wall or the embed will break.
 ### Trailer
 
 ```
-https://www.familyflix.com/embed/{slug}/trailer
+https://familyflix.demuregram.com/embed/{slug}/trailer
 ```
 
 - Movies only; series and live return 404.
@@ -327,7 +327,7 @@ The trailer lookup never exposes the TMDb key to the browser.
 
 ```html
 <iframe
-  src="https://www.familyflix.com/embed/his-girl-friday"
+  src="https://familyflix.demuregram.com/embed/his-girl-friday"
   title="His Girl Friday on FamilyFlix"
   style="border:0;width:100%;aspect-ratio:16/9"
   allow="autoplay; fullscreen; picture-in-picture"

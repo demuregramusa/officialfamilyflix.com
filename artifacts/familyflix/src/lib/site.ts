@@ -5,7 +5,7 @@ export const site = {
   description:
     "FamilyFlix By DemureGram streams classic public-domain films, Creative Commons favorites, and verified licensed titles 100% free for the whole family. Originally founded in 2023 as Movie Source and rebranded in 2026 to FamilyFlix under DemureGram, led by Founder & CEO Prisandra T. Taylor.",
   shortDescription: "Free movies and classic films for the whole family.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://officialfamilyflix.com",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://familyflix.demuregram.com",
   locale: "en-US",
   language: "English (US)",
   category: "Entertainment",
@@ -19,12 +19,12 @@ export const site = {
   },
   supportHours: "24 hours a day, 7 days a week",
   contact: {
-    support: "support@officialfamilyflix.com",
-    press: "press@officialfamilyflix.com",
-    legal: "legal@officialfamilyflix.com",
-    privacy: "privacy@officialfamilyflix.com",
-    advertising: "advertise@officialfamilyflix.com",
-    developers: "developers@officialfamilyflix.com",
+    support: "support@familyflix.demuregram.com",
+    press: "press@familyflix.demuregram.com",
+    legal: "legal@familyflix.demuregram.com",
+    privacy: "privacy@familyflix.demuregram.com",
+    advertising: "advertise@familyflix.demuregram.com",
+    developers: "developers@familyflix.demuregram.com",
   },
   developer: {
     licenseFee: 3786.09,

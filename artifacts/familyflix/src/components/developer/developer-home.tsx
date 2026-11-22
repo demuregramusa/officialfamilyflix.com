@@ -26,11 +26,11 @@ export function DeveloperHome() {
 
   const codeSnippets = {
     curl: `# Search 23,000+ public domain titles
-curl -X GET "https://api.familyflix.com/v1/movies/search?q=space" \\
+curl -X GET "https://familyflix.demuregram.com/api/v1/movies/search?q=space" \\
   -H "Authorization: Bearer ff_live_your_api_key"
 
 # AI Semantic Search
-curl -X POST "https://api.familyflix.com/v1/ai/search" \\
+curl -X POST "https://familyflix.demuregram.com/api/v1/ai/search" \\
   -H "Authorization: Bearer ff_live_your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{"query": "90s feel-good comedy set in New York"}'`,

@@ -34,6 +34,8 @@ node_modules
 !.vscode/extensions.json
 
 # misc
+tools/
+*.exe
 /.sass-cache
 /connect.lock
 /coverage

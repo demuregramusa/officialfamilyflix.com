@@ -49,7 +49,7 @@ export function PosterCard({
           </span>
         )}
         <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-t from-black/55 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />
-        <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 scale-90 place-items-center rounded-full bg-white/95 text-black opacity-0 shadow-xl transition duration-300 group-hover/card:scale-100 group-hover/card:opacity-100">
+        <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 scale-90 place-items-center rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-black border border-amber-200/70 opacity-0 shadow-xl shadow-amber-500/50 transition duration-300 group-hover/card:scale-100 group-hover/card:opacity-100">
           <Play className="ml-0.5 size-5" fill="currentColor" aria-hidden />
         </span>
       </Link>

@@ -21,7 +21,7 @@ const sections: InfoSection[] = [
     id: "acceptance",
     heading: "1. Acceptance of these Terms",
     paragraphs: [
-      `These Terms of Service ("Terms") are a legal agreement between you and ${site.legalName} ("FamilyFlix", "we", "us"). By accessing or using www.familyflix.com, our apps, players, embeds or any related services (the "Service"), you agree to these Terms and to our Privacy Policy.`,
+      `These Terms of Service ("Terms") are a legal agreement between you and ${site.legalName} ("FamilyFlix", "we", "us"). By accessing or using familyflix.demuregram.com, our apps, players, embeds or any related services (the "Service"), you agree to these Terms and to our Privacy Policy.`,
       "If you do not agree, do not use the Service.",
     ],
   },

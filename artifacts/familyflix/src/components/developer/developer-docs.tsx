@@ -201,14 +201,14 @@ export function DeveloperDocs() {
                   <span className="font-mono text-xs text-white/60">Base Gateway URL</span>
                   <button
                     type="button"
-                    onClick={() => handleCopy("base-url", "https://api.familyflix.com")}
+                    onClick={() => handleCopy("base-url", "https://familyflix.demuregram.com/api/v1")}
                     className="flex items-center gap-1 text-[11px] text-purple-400 hover:text-purple-300"
                   >
                     {copiedSnippet === "base-url" ? <Check size={12} /> : <Copy size={12} />}
                     <span>{copiedSnippet === "base-url" ? "Copied" : "Copy"}</span>
                   </button>
                 </div>
-                <code className="mt-2 block font-mono text-xs text-purple-300">https://api.familyflix.com/v1</code>
+                <code className="mt-2 block font-mono text-xs text-purple-300">https://familyflix.demuregram.com/api/v1</code>
               </div>
 
               <div className="mt-4">
@@ -280,7 +280,7 @@ export function DeveloperDocs() {
                     onClick={() =>
                       handleCopy(
                         "curl-movies",
-                        `curl -X GET "https://api.familyflix.com/v1/movies/search?q=space&genre=Sci-Fi&limit=10" \\\n  -H "Authorization: Bearer ff_live_..."`
+                        `curl -X GET "https://familyflix.demuregram.com/api/v1/movies/search?q=space&genre=Sci-Fi&limit=10" \\\n  -H "Authorization: Bearer ff_live_..."`
                       )
                     }
                     className="flex items-center gap-1 text-[11px] text-purple-400"
@@ -290,7 +290,7 @@ export function DeveloperDocs() {
                   </button>
                 </div>
                 <pre className="mt-2 font-mono text-xs text-white/90 overflow-x-auto">
-                  {`curl -X GET "https://api.familyflix.com/v1/movies/search?q=space&genre=Sci-Fi&limit=10" \\
+                  {`curl -X GET "https://familyflix.demuregram.com/api/v1/movies/search?q=space&genre=Sci-Fi&limit=10" \\
   -H "Authorization: Bearer ff_live_..."`}
                 </pre>
               </div>
@@ -312,7 +312,7 @@ export function DeveloperDocs() {
 
               <div className="mt-4 rounded-xl border border-white/10 bg-black/60 p-4">
                 <pre className="font-mono text-xs text-pink-200 overflow-x-auto">
-{`curl -X POST "https://api.familyflix.com/v1/ai/search" \\
+{`curl -X POST "https://familyflix.demuregram.com/api/v1/ai/search" \\
   -H "Authorization: Bearer ff_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -339,7 +339,7 @@ export function DeveloperDocs() {
 
               <div className="mt-4 rounded-xl border border-white/10 bg-black/60 p-4">
                 <pre className="font-mono text-xs text-pink-200 overflow-x-auto">
-{`curl -X POST "https://api.familyflix.com/v1/ai/recommendations" \\
+{`curl -X POST "https://familyflix.demuregram.com/api/v1/ai/recommendations" \\
   -H "Authorization: Bearer ff_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{

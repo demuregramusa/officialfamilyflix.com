@@ -110,6 +110,10 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
         <div key={current.slug} className="max-w-[620px] xl:max-w-[700px] animate-fade-up">
           {/* Badges */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.35)]">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Online
+            </span>
             <span className="rounded-[5px] bg-white px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-black">
               Featured Pick
             </span>
@@ -164,9 +168,9 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               href={current.type === "live" ? `/watch/${current.slug}` : `/watch/${current.slug}`}
-              className="group/play inline-flex items-center gap-2.5 rounded-xl bg-white px-6 py-3 text-sm font-extrabold text-black shadow-xl shadow-white/10 transition-all hover:bg-white/90 hover:scale-105 active:scale-95"
+              className="group/play button-watch-now inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 px-7 py-3 text-sm font-black text-black shadow-xl shadow-amber-500/35 border border-amber-300/60 transition-all hover:from-amber-300 hover:via-amber-400 hover:to-orange-400 hover:shadow-amber-500/60 hover:scale-105 active:scale-95"
             >
-              <Play className="size-4 fill-current ml-0.5 transition-transform group-hover/play:scale-110" />
+              <Play className="size-4 fill-current ml-0.5 transition-transform group-hover/play:scale-110 text-black" />
               <span>Watch Now Free</span>
             </Link>
 

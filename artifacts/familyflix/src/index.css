@@ -166,22 +166,72 @@ button { cursor: pointer; }
 .nav-link:hover,.nav-link.active { color:hsl(var(--text)); }
 .nav-link.active { box-shadow: inset 0 -2px hsl(var(--brand)); }
 .top-actions { display:flex;align-items:center;gap:clamp(6px, 1vw, 12px);margin-left:auto;flex-shrink:0; }
-.icon-link,.quiet-button,.button,.button-secondary,.button-danger,.button-amber,.button-paypal,.button-whop,.button-skip-countdown,.button-skip-ready {
+.icon-link,.quiet-button,.button,.button-watch-now,.button-secondary,.button-danger,.button-amber,.button-paypal,.button-whop,.button-skip-countdown,.button-skip-ready {
   display:inline-flex;align-items:center;justify-content:center;gap:9px;border:0;cursor:pointer;transition:transform .2s,background .2s,border-color .2s,color .2s,box-shadow .2s;text-decoration:none;-webkit-appearance:none;appearance:none;
 }
 .icon-link { width:40px;height:40px;border-radius:50%;color:#ffffff;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);flex-shrink:0; }
 .icon-link:hover { background:rgba(255,255,255,0.16);color:#ffffff;border-color:rgba(255,255,255,0.3); }
 
-.button,.button-secondary,.button-danger,.button-amber { min-height:42px;padding:0 20px;border-radius:999px;font-weight:700;font-size:13.5px;white-space:nowrap; }
+.button,.button-watch-now,.button-secondary,.button-danger,.button-amber { min-height:42px;padding:0 22px;border-radius:999px;font-weight:800;font-size:13.5px;white-space:nowrap;letter-spacing:-0.01em; }
 
-.button { background:#7c3aed !important;color:#ffffff !important;border:1px solid rgba(255,255,255,0.15);box-shadow:0 4px 18px rgba(124,58,237,0.45); }
-.button:hover { background:#9047ff !important;color:#ffffff !important;transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,58,237,0.65); }
-.button:active { transform:translateY(0);background:#6d28ff !important; }
-.button:disabled { opacity:0.5;pointer-events:none;box-shadow:none;transform:none; }
+/* Tubi-style High Energy Amber-Orange Streaming Button */
+.button, .button-watch-now {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%) !important;
+  color: #000000 !important;
+  border: 1px solid rgba(251, 191, 36, 0.7) !important;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.45), 0 2px 4px rgba(0, 0, 0, 0.25) !important;
+  font-weight: 800 !important;
+}
+.button:hover, .button-watch-now:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%) !important;
+  color: #000000 !important;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.7), 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+}
+.button:active, .button-watch-now:active {
+  transform: translateY(0) scale(0.98);
+  background: linear-gradient(135deg, #d97706 0%, #c2410c 100%) !important;
+}
+.button:disabled, .button-watch-now:disabled { opacity:0.5;pointer-events:none;box-shadow:none;transform:none; }
 
-.button-secondary { border:1.5px solid rgba(255,255,255,0.25) !important;background:rgba(255,255,255,0.1) !important;color:#ffffff !important;backdrop-filter:blur(8px); }
-.button-secondary:hover { border-color:rgba(255,255,255,0.55) !important;background:rgba(255,255,255,0.2) !important;color:#ffffff !important;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.4); }
+.button-secondary {
+  border: 1.5px solid rgba(255,255,255,0.28) !important;
+  background: rgba(255,255,255,0.12) !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(8px);
+}
+.button-secondary:hover {
+  border-color: rgba(255,255,255,0.6) !important;
+  background: rgba(255,255,255,0.22) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
 .button-secondary:active { transform:translateY(0); }
+
+.badge-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #34d399;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+}
+.badge-online-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
 
 .button-danger { background:#dc2626 !important;color:#ffffff !important;border:1px solid rgba(255,255,255,0.15);box-shadow:0 4px 14px rgba(220,38,38,0.4); }
 .button-danger:hover { background:#ef4444 !important;color:#ffffff !important;transform:translateY(-1px); }

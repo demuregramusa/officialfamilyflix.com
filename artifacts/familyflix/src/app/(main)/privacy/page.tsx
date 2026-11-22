@@ -15,7 +15,7 @@ const sections: InfoSection[] = [
     id: "overview",
     heading: "1. Overview",
     paragraphs: [
-      `This Privacy Policy explains how ${site.legalName} ("FamilyFlix", "we", "us") collects, uses and shares information when you visit www.familyflix.com, use our apps, or watch movies and TV shows through the service (together, the "Service").`,
+      `This Privacy Policy explains how ${site.legalName} ("FamilyFlix", "we", "us") collects, uses and shares information when you visit familyflix.demuregram.com, use our apps, or watch movies and TV shows through the service (together, the "Service").`,
       "FamilyFlix is free and supported by advertising. We do not require a subscription or payment details to watch. We collect only the information we need to run the Service, personalise your experience, measure performance and show relevant ads.",
     ],
   },
