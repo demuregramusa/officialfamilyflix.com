@@ -129,6 +129,10 @@ app.post("/api/v1/payments/verify", async (req, res) => {
   });
 });
 
+app.get(["/1dfb67786257b52ff8a2.txt", "/1dfb67786257b52ff8a2d3408fc53d3161faad0c.txt"], (_req, res) => {
+  res.type("text/plain").send("1dfb67786257b52ff8a2d3408fc53d3161faad0c");
+});
+
 const staticDir = path.resolve(process.cwd(), "artifacts/familyflix/dist/public");
 if (fs.existsSync(staticDir)) {
   app.use(express.static(staticDir));
