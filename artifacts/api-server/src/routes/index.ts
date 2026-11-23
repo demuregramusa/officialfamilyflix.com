@@ -11,12 +11,14 @@ import adminMovieArchiveRouter from "./admin-movie-archive";
 import categoriesRouter from "./categories";
 import developerPortalRouter from "./developer-portal";
 import developerV1Router from "./developer-v1";
+import adServerRouter from "./ad-server";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(categoriesRouter);
 router.use(developerPortalRouter);
+router.use(adServerRouter);
 router.use(publicRouter);
 router.use(userRouter);
 router.use(copyrightIntakeRouter);

@@ -36,17 +36,17 @@ freewheel.tv, 10294, DIRECT, a1b2c3d4e5f6
 `;
 
 export const DEFAULT_MONETIZATION: MonetizationConfig = {
-  vastAdTagUrl: "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&impl=s&gdfp_req=1&env=vp&output=vast&unviewed_position_start=1&cust_params=deployment%3Ddevsite%26sample_ct%3Dlinear&correlator=",
+  vastAdTagUrl: "https://crookedagreement.com/d.mwFNzOdIGPN/vhZyGAUT/UeCmO9YubZkU/lJkPPdTmcx2/NTTcEMwnNpjJURtjNCzjYF1_MmT/A/2hOAQv",
   vastAdTiming: "pre-roll",
   vastAdFormat: "vast_4_0",
   adsTxtContent: DEFAULT_ADS_TXT,
-  googleVerificationMeta: "google-site-verification=familyflix-production-domain-verification-2026",
+  googleVerificationMeta: "1dfb67786257b52ff8a2d3408fc53d3161faad0c",
   mediaNetVerification: "medianet-site-verify-familyflix-982749",
   customHtmlVerification: "google4920492849204928.html",
   gdprConsentEnabled: true,
   watermarkEnabled: true,
   watermarkText: "FamilyFlix",
-  dnsTxtRecord: "v=spf1 include:_spf.google.com ~all; google-site-verification=familyflix-verify-2026",
+  dnsTxtRecord: "v=spf1 include:_spf.google.com ~all; 1dfb67786257b52ff8a2d3408fc53d3161faad0c",
   paypalEnabled: true,
   paypalClientId: "BAA_FAMILYFLIX_PAYPAL_CLIENT_ID",
   paypalPlanId: "P-5ML4271244454362WXNWU5NQ",

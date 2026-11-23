@@ -19,6 +19,7 @@ import {
   Settings,
   Zap,
   Clock,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSubscription } from "@/lib/subscription-context";
@@ -95,6 +96,21 @@ export function TubiPlayer({
   const [watermarkBrand, setWatermarkBrand] = useState("FamilyFlix");
   const [watermarkEnabled, setWatermarkEnabled] = useState(true);
 
+  // VAST & Ad network configuration
+  const [vastTagUrl, setVastTagUrl] = useState<string | null>(null);
+  const [vastMediaUrl, setVastMediaUrl] = useState<string | null>(null);
+  const [vastClickThrough, setVastClickThrough] = useState<string | null>(null);
+  const [vastImpressions, setVastImpressions] = useState<string[]>([]);
+  const [hasFiredImpression, setHasFiredImpression] = useState(false);
+  const [adIsMuted, setAdIsMuted] = useState(false);
+  const adVideoRef = useRef<HTMLVideoElement>(null);
+
+  // Mid-roll commercial break cue points (Tubi AVOD)
+  const [cuePoints, setCuePoints] = useState<Array<{ timestampSeconds: number; label: string }>>([]);
+  const [approachingCue, setApproachingCue] = useState<number | null>(null);
+  const [cueCountdown, setCueCountdown] = useState<number>(0);
+  const triggeredCuesRef = useRef<Set<number>>(new Set());
+
   useEffect(() => {
     fetch("/api/v1/monetization/config")
       .then((r) => (r.ok ? r.json() : null))
@@ -102,9 +118,66 @@ export function TubiPlayer({
         if (!data) return;
         if (data.watermarkText) setWatermarkBrand(data.watermarkText);
         if (typeof data.watermarkEnabled === "boolean") setWatermarkEnabled(data.watermarkEnabled);
+        if (data.vastAdTagUrl) setVastTagUrl(data.vastAdTagUrl);
       })
       .catch(() => {});
   }, []);
+
+  // Fetch approved television-style commercial cue points for title
+  useEffect(() => {
+    if (hasAdFree) return;
+    const slug = promotedTitle?.slug || "sample-title";
+    fetch(`/api/v1/ads/cue-points/${encodeURIComponent(slug)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.cuePoints) {
+          setCuePoints(data.cuePoints);
+        }
+      })
+      .catch(() => {});
+  }, [hasAdFree, promotedTitle?.slug]);
+
+  // Parse VAST 3.0 / 4.0 XML Feed when showing pre-roll commercial
+  useEffect(() => {
+    if (!showingAd || !vastTagUrl || vastMediaUrl) return;
+    const currentTagUrl = vastTagUrl;
+
+    let isMounted = true;
+    async function loadVast() {
+      try {
+        const res = await fetch(currentTagUrl);
+        if (!res.ok) return;
+        const text = await res.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "application/xml");
+
+        // Extract MediaFile (prefer mp4)
+        const mediaNodes = Array.from(xml.querySelectorAll("MediaFile"));
+        const mp4Node = mediaNodes.find((m) => m.getAttribute("type")?.includes("mp4")) || mediaNodes[0];
+        const mediaUrl = mp4Node?.textContent?.trim() || null;
+
+        // Extract Impression beacons
+        const impNodes = Array.from(xml.querySelectorAll("Impression"));
+        const impressions = impNodes.map((n) => n.textContent?.trim()).filter(Boolean) as string[];
+
+        // Extract ClickThrough
+        const clickNode = xml.querySelector("ClickThrough");
+        const clickThrough = clickNode?.textContent?.trim() || null;
+
+        if (isMounted && mediaUrl) {
+          setVastMediaUrl(mediaUrl);
+          setVastClickThrough(clickThrough);
+          setVastImpressions(impressions);
+        }
+      } catch {
+        // Fallback gracefully to default showcase
+      }
+    }
+    loadVast();
+    return () => {
+      isMounted = false;
+    };
+  }, [showingAd, vastTagUrl, vastMediaUrl]);
 
   // Playback state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -325,6 +398,32 @@ export function TubiPlayer({
 
   const handleSkipAd = useCallback(() => {
     setShowingAd(false);
+    if (adVideoRef.current) {
+      adVideoRef.current.pause();
+    }
+    const video = videoRef.current;
+    if (video && video.paused) {
+      video.play().then(() => setIsPlaying(true)).catch(() => {});
+    }
+  }, []);
+
+  const handleAdPlay = useCallback(() => {
+    if (!hasFiredImpression && vastImpressions.length > 0) {
+      setHasFiredImpression(true);
+      vastImpressions.forEach((impUrl) => {
+        try {
+          fetch(impUrl, { mode: "no-cors", credentials: "omit" }).catch(() => {});
+        } catch {}
+      });
+    }
+  }, [hasFiredImpression, vastImpressions]);
+
+  const handleAdEnded = useCallback(() => {
+    setShowingAd(false);
+    const video = videoRef.current;
+    if (video && video.paused) {
+      video.play().then(() => setIsPlaying(true)).catch(() => {});
+    }
   }, []);
 
   const triggerPulse = useCallback((type: "play" | "pause") => {
@@ -472,12 +571,51 @@ export function TubiPlayer({
     if (!video) return;
 
     const onTime = () => {
-      setCurrentTime(video.currentTime);
-      if (onTimeUpdate) onTimeUpdate(video.currentTime, video.duration || 0);
+      const cur = video.currentTime;
+      setCurrentTime(cur);
+      if (onTimeUpdate) onTimeUpdate(cur, video.duration || 0);
 
       if (video.buffered.length > 0 && video.duration > 0) {
         const bufferedEnd = video.buffered.end(video.buffered.length - 1);
         setBufferedPercent(Math.min(100, (bufferedEnd / video.duration) * 100));
+      }
+
+      // Mid-roll commercial break detection (Tubi AVOD)
+      if (!hasAdFree && !showingAd && cuePoints.length > 0) {
+        const upcoming = cuePoints.find(
+          (cp) => cp.timestampSeconds > cur && cp.timestampSeconds - cur <= 10 && !triggeredCuesRef.current.has(cp.timestampSeconds)
+        );
+        if (upcoming) {
+          setApproachingCue(upcoming.timestampSeconds);
+          setCueCountdown(Math.max(1, Math.ceil(upcoming.timestampSeconds - cur)));
+        } else {
+          setApproachingCue(null);
+        }
+
+        // Trigger commercial pod at cue timestamp
+        const hit = cuePoints.find(
+          (cp) => cur >= cp.timestampSeconds && cur <= cp.timestampSeconds + 2.5 && !triggeredCuesRef.current.has(cp.timestampSeconds)
+        );
+        if (hit) {
+          triggeredCuesRef.current.add(hit.timestampSeconds);
+          setApproachingCue(null);
+          video.pause();
+          setIsPlaying(false);
+          setShowingAd(true);
+          setAdRemaining(15);
+          setAdCanSkip(false);
+
+          // Request mid-roll ad decision from ad server
+          fetch(`/api/v1/ads/decision?placement=midroll&currentTime=${hit.timestampSeconds}&titleSlug=${encodeURIComponent(promotedTitle?.slug || "")}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+              const ad = d?.data?.ads?.[0];
+              if (ad?.vastTagUrl) setVastTagUrl(ad.vastTagUrl);
+              if (ad?.mediaUrl) setVastMediaUrl(ad.mediaUrl);
+              if (ad?.clickThroughUrl) setVastClickThrough(ad.clickThroughUrl);
+            })
+            .catch(() => {});
+        }
       }
     };
 
@@ -640,24 +778,74 @@ export function TubiPlayer({
       {/* -------------------- PRE-ROLL AD SCREEN (NO OVERLAPPING, ZERO MOVIE POSTER) -------------------- */}
       {showingAd ? (
         <div className="absolute inset-0 z-30 overflow-hidden bg-[#0a0714] animate-fade-in select-none">
-          {/* Professional FAST Ad Commercial Slate */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0e0820] via-[#150d2c] to-[#07040d]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,_rgba(124,58,237,0.28)_0%,_transparent_65%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,_rgba(245,158,11,0.15)_0%,_transparent_55%)]" />
-          <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
-
-          {/* Center Commercial Stage Indicator */}
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-            <div className="grid size-16 place-items-center rounded-2xl bg-white/[0.06] border border-white/10 shadow-2xl backdrop-blur-md">
-              <Sparkles className="size-8 text-amber-300 animate-pulse" />
+          {vastMediaUrl ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
+              <video
+                ref={adVideoRef}
+                src={vastMediaUrl}
+                autoPlay
+                playsInline
+                muted={adIsMuted}
+                onPlay={handleAdPlay}
+                onEnded={handleAdEnded}
+                onClick={() => {
+                  if (vastClickThrough) {
+                    window.open(vastClickThrough, "_blank", "noopener,noreferrer");
+                  }
+                }}
+                className="h-full w-full object-contain cursor-pointer"
+              />
+              <div className="absolute bottom-16 left-4 sm:left-6 z-20 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAdIsMuted((prev) => {
+                      if (adVideoRef.current) adVideoRef.current.muted = !prev;
+                      return !prev;
+                    });
+                  }}
+                  className="flex items-center gap-1.5 rounded-full bg-black/75 border border-white/20 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md hover:bg-black/90 transition shadow-lg"
+                >
+                  {adIsMuted ? <VolumeX size={14} className="text-amber-400" /> : <Volume2 size={14} className="text-emerald-400" />}
+                  <span>{adIsMuted ? "Unmute Ad" : "Mute"}</span>
+                </button>
+                {vastClickThrough && (
+                  <a
+                    href={vastClickThrough}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-1.5 rounded-full bg-amber-500 hover:bg-amber-400 text-black px-3.5 py-1.5 text-xs font-black backdrop-blur-md transition shadow-lg"
+                  >
+                    <span>Visit Sponsor</span>
+                    <ExternalLink size={12} strokeWidth={2.5} />
+                  </a>
+                )}
+              </div>
             </div>
-            <span className="mt-3.5 text-[11px] sm:text-xs font-bold uppercase tracking-[0.24em] text-purple-300">
-              FamilyFlix Free Streaming Sponsor
-            </span>
-            <p className="mt-1 text-xs sm:text-sm text-white/50 max-w-sm">
-              Your free presentation begins in moments.
-            </p>
-          </div>
+          ) : (
+            <>
+              {/* Professional FAST Ad Commercial Slate */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#0e0820] via-[#150d2c] to-[#07040d]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,_rgba(124,58,237,0.28)_0%,_transparent_65%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,_rgba(245,158,11,0.15)_0%,_transparent_55%)]" />
+              <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
+
+              {/* Center Commercial Stage Indicator */}
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                <div className="grid size-16 place-items-center rounded-2xl bg-white/[0.06] border border-white/10 shadow-2xl backdrop-blur-md">
+                  <Sparkles className="size-8 text-amber-300 animate-pulse" />
+                </div>
+                <span className="mt-3.5 text-[11px] sm:text-xs font-bold uppercase tracking-[0.24em] text-purple-300">
+                  FamilyFlix Free Streaming Sponsor
+                </span>
+                <p className="mt-1 text-xs sm:text-sm text-white/50 max-w-sm">
+                  Your free presentation begins in moments.
+                </p>
+              </div>
+            </>
+          )}
 
           {/* Top Bar - pinned to top */}
           <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between p-3 sm:p-5">
@@ -758,6 +946,90 @@ export function TubiPlayer({
           <track key={s.id} kind="subtitles" src={s.url} srcLang={s.language} label={s.label} default={s.isDefault} />
         ))}
       </video>
+
+      {/* -------------------- UPCOMING COMMERCIAL BREAK COUNTDOWN (TUBI AVOD) -------------------- */}
+      {approachingCue !== null && cueCountdown > 0 && !showingAd && (
+        <div className="absolute top-5 right-5 z-25 flex items-center gap-2 rounded-full border border-amber-400/60 bg-black/90 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xl backdrop-blur-md animate-pulse">
+          <Clock size={14} className="text-amber-400" />
+          <span>Commercial break in <span className="text-amber-300 font-black">{cueCountdown}s</span></span>
+        </div>
+      )}
+
+      {/* -------------------- PAUSE-SCREEN ADVERTISEMENT (TUBI AVOD) -------------------- */}
+      {!isPlaying && !showingAd && !isBuffering && currentTime > 3 && (
+        <div
+          onClick={togglePlay}
+          className="absolute inset-0 z-20 flex flex-col justify-between p-6 sm:p-10 bg-black/75 backdrop-blur-sm cursor-pointer animate-fade-in select-none"
+        >
+          {/* Top Bar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-bold text-white">
+              <span className="size-2 rounded-full bg-amber-400 animate-ping" />
+              <span>STREAM PAUSED</span>
+            </div>
+            <div className="text-xs text-white/60 font-medium">
+              Click anywhere or press Space to resume
+            </div>
+          </div>
+
+          {/* Center Card - Pause Ad & QR Code */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="self-center w-full max-w-md rounded-3xl border border-white/15 bg-gradient-to-br from-[#1c122e]/95 via-[#120e1d]/95 to-[#08060f]/95 p-6 shadow-2xl text-white backdrop-blur-xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <span className="inline-block rounded-md bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300 tracking-wider">
+                  Featured Sponsor
+                </span>
+                <h3 className="mt-2 text-lg font-black tracking-tight text-white sm:text-xl">
+                  {promotedTitle?.name || "FamilyFlix Free Streaming Sponsor"}
+                </h3>
+                <p className="mt-1 text-xs text-white/70 line-clamp-2">
+                  {promotedTitle?.tagline || "Free, unlimited public-domain streaming powered by DemureGram."}
+                </p>
+                <div className="mt-4 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={togglePlay}
+                    className="button-watch-now text-xs py-2 px-4 shadow-md font-bold"
+                  >
+                    Resume Playback
+                  </button>
+                  {vastClickThrough && (
+                    <a
+                      href={vastClickThrough}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 underline font-semibold"
+                    >
+                      <span>Learn More</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* QR Code */}
+              <div className="hidden sm:flex flex-col items-center shrink-0 rounded-2xl bg-white p-2 text-center shadow-lg">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(vastClickThrough || "https://familyflix.demuregram.com")}`}
+                  alt="Sponsor QR Code"
+                  className="size-20 rounded-lg"
+                />
+                <span className="mt-1 text-[9px] font-bold text-black uppercase tracking-wider">
+                  Scan on Phone
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="text-center text-xs text-white/40">
+            FamilyFlix AVOD — Free high-bitrate streaming sponsored by DemureGram
+          </div>
+        </div>
+      )}
 
       {/* -------------------- OVERLAY TOP HEADER & WATERMARK (ZERO OVERLAP) -------------------- */}
       {!showingAd && (

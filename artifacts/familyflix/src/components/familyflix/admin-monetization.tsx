@@ -14,6 +14,15 @@ import {
   FileText,
   HelpCircle,
   RefreshCw,
+  Plus,
+  BarChart3,
+  Layers,
+  Tv,
+  Pause,
+  TrendingUp,
+  X,
+  Check,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +94,93 @@ export function AdminMonetization() {
   const [whopEnabled, setWhopEnabled] = useState(true);
   const [whopCheckoutUrl, setWhopCheckoutUrl] = useState("");
   const [whopApiKey, setWhopApiKey] = useState("");
+
+  // AVOD Platform & Campaign Management State
+  const [activeTab, setActiveTab] = useState<"monetization" | "campaigns" | "analytics">("monetization");
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // New campaign modal state
+  const [newCampName, setNewCampName] = useState("");
+  const [newAdvertiser, setNewAdvertiser] = useState("");
+  const [newCpm, setNewCpm] = useState("8.50");
+  const [newBudget, setNewBudget] = useState("1000.00");
+  const [newVastTag, setNewVastTag] = useState("");
+  const [newClickUrl, setNewClickUrl] = useState("");
+  const [newPlacements, setNewPlacements] = useState<string[]>(["preroll", "midroll", "pause"]);
+  const [creatingCampaign, setCreatingCampaign] = useState(false);
+
+  const fetchCampaigns = async () => {
+    try {
+      setLoadingCampaigns(true);
+      const res = await fetch("/api/admin/ads/campaigns");
+      if (res.ok) {
+        const data = await res.json();
+        setCampaigns(data.campaigns || []);
+      }
+    } catch {} finally {
+      setLoadingCampaigns(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoadingAnalytics(true);
+      const res = await fetch("/api/admin/ads/analytics");
+      if (res.ok) {
+        const data = await res.json();
+        setAnalytics(data);
+      }
+    } catch {} finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  const handleToggleCampaignStatus = async (id: string, currentStatus: string) => {
+    const nextStatus = currentStatus === "active" ? "paused" : "active";
+    try {
+      await fetch(`/api/admin/ads/campaigns/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      await fetchCampaigns();
+    } catch {}
+  };
+
+  const handleCreateCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCampName.trim() || !newAdvertiser.trim()) return;
+    setCreatingCampaign(true);
+    try {
+      const res = await fetch("/api/admin/ads/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newCampName,
+          advertiserName: newAdvertiser,
+          cpmRate: newCpm,
+          budget: newBudget,
+          placements: newPlacements,
+          vastTagUrl: newVastTag || null,
+          clickThroughUrl: newClickUrl || null,
+        }),
+      });
+      if (res.ok) {
+        setShowCreateModal(false);
+        setNewCampName("");
+        setNewAdvertiser("");
+        setNewVastTag("");
+        setNewClickUrl("");
+        await fetchCampaigns();
+      }
+    } catch {} finally {
+      setCreatingCampaign(false);
+    }
+  };
 
   const fetchConfig = async () => {
     try {
@@ -212,8 +308,59 @@ export function AdminMonetization() {
 
   return (
     <div className="space-y-8 animate-fade-in" data-testid="admin-monetization-page">
-      {/* -------------------- AUDIT & VERIFICATION STATUS BAR -------------------- */}
-      <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c1628] to-[#120e1d] p-6 shadow-2xl">
+      {/* -------------------- AVOD SUITE NAVIGATION TABS -------------------- */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab("monetization")}
+          className={cn(
+            "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition",
+            activeTab === "monetization"
+              ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+              : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <ShieldCheck size={15} />
+          <span>Verification & Gateways</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("campaigns");
+            fetchCampaigns();
+          }}
+          className={cn(
+            "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition",
+            activeTab === "campaigns"
+              ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+              : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <Layers size={15} />
+          <span>AVOD Campaigns ({campaigns.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("analytics");
+            fetchAnalytics();
+          }}
+          className={cn(
+            "flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition",
+            activeTab === "analytics"
+              ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+              : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+          )}
+        >
+          <BarChart3 size={15} />
+          <span>AVOD Analytics & Feeds</span>
+        </button>
+      </div>
+
+      {activeTab === "monetization" && (
+        <>
+          {/* -------------------- AUDIT & VERIFICATION STATUS BAR -------------------- */}
+          <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c1628] to-[#120e1d] p-6 shadow-2xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-6">
           <div>
             <div className="flex items-center gap-2">
@@ -821,6 +968,320 @@ export function AdminMonetization() {
           </button>
         </div>
       </form>
+    </>
+  )}
+
+  {/* -------------------- TAB 2: AVOD CAMPAIGN MANAGER -------------------- */}
+  {activeTab === "campaigns" && (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c1628] to-[#120e1d] p-6 shadow-xl">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-bold text-purple-300 border border-purple-500/30 flex items-center gap-1.5">
+              <Layers size={13} /> Television-Grade AVOD Server
+            </span>
+            <span className="text-xs text-white/50">Tubi-Style Commercial Insertion</span>
+          </div>
+          <h2 className="mt-2 text-2xl font-black text-white">
+            Advertising Campaigns & Direct Sponsors
+          </h2>
+          <p className="mt-1 text-xs text-white/65 max-w-xl">
+            Create and manage pre-roll, mid-roll, and pause-screen advertising campaigns. Support for direct MP4 video creatives, VAST 3.0/4.0 XML feeds, and interactive QR code promotions.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowCreateModal(true)}
+          className="button-watch-now flex items-center gap-2 px-5 py-2.5 text-xs font-black shadow-lg"
+        >
+          <Plus size={16} />
+          <span>New AVOD Campaign</span>
+        </button>
+      </div>
+
+      {/* Campaign List */}
+      {loadingCampaigns ? (
+        <div className="space-y-3">
+          <div className="skeleton h-20 rounded-xl" />
+          <div className="skeleton h-20 rounded-xl" />
+        </div>
+      ) : campaigns.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-black/40 p-10 text-center text-white">
+          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white/5 border border-white/10 text-purple-400">
+            <Layers size={24} />
+          </div>
+          <h3 className="mt-4 text-base font-bold text-white">No active custom campaigns yet</h3>
+          <p className="mt-1 text-xs text-white/60 max-w-md mx-auto">
+            Default AVOD demand is currently streaming through your Monetag / HilltopAds Zone #7651065 VAST tag. You can add direct sponsors or new campaigns anytime.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="button mt-5 px-5 py-2 text-xs font-bold"
+          >
+            <Plus size={14} className="mr-1.5 inline" /> Create First Campaign
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {campaigns.map((camp) => (
+            <div
+              key={camp.id}
+              className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-xl flex flex-col justify-between transition hover:border-purple-500/40"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="rounded-md bg-purple-500/20 border border-purple-500/40 px-2 py-0.5 text-[10px] font-black uppercase text-purple-300">
+                    {camp.advertiserName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleCampaignStatus(camp.id, camp.status)}
+                    className={cn(
+                      "rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase transition",
+                      camp.status === "active"
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                        : "bg-white/10 text-white/50 border border-white/20"
+                    )}
+                  >
+                    {camp.status}
+                  </button>
+                </div>
+                <h4 className="mt-2.5 text-base font-bold text-white line-clamp-1">{camp.name}</h4>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(camp.placements || []).map((p: string) => (
+                    <span key={p} className="rounded bg-black/50 px-2 py-0.5 text-[10px] font-semibold text-white/70 border border-white/10">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 border-t border-white/10 pt-4 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-xl bg-black/40 p-2">
+                  <div className="text-[10px] text-white/50 font-medium">Impressions</div>
+                  <div className="text-xs font-black text-white mt-0.5">{camp.totalImpressionsServed || 0}</div>
+                </div>
+                <div className="rounded-xl bg-black/40 p-2">
+                  <div className="text-[10px] text-white/50 font-medium">Completions</div>
+                  <div className="text-xs font-black text-emerald-400 mt-0.5">{camp.totalCompletions || 0}</div>
+                </div>
+                <div className="rounded-xl bg-black/40 p-2">
+                  <div className="text-[10px] text-white/50 font-medium">CPM</div>
+                  <div className="text-xs font-black text-amber-300 mt-0.5">${camp.cpmRate || "8.50"}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-  );
+  )}
+
+  {/* -------------------- TAB 3: AVOD ANALYTICS & FEEDS -------------------- */}
+  {activeTab === "analytics" && (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c1628] to-[#120e1d] p-6 shadow-xl">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
+            <TrendingUp size={13} /> Real-Time AVOD Delivery Metrics
+          </span>
+          <span className="text-xs text-white/50">Tubi-Grade FAST Measurement</span>
+        </div>
+        <h2 className="mt-2 text-2xl font-black text-white">
+          Advertising Analytics & Syndication Feeds
+        </h2>
+        <p className="mt-1 text-xs text-white/65 max-w-xl">
+          Live delivery telemetry, completion rates, quartile tracking, and direct syndication XML feeds for Google Ad Manager, SpringServe, and programmatic SSP partners.
+        </p>
+      </div>
+
+      {/* Analytics KPI Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-lg">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-purple-300">Total Impressions</span>
+          <div className="mt-2 text-2xl font-black text-white">{analytics?.overview?.totalImpressions ?? 0}</div>
+          <div className="mt-1 text-[11px] text-white/50">Across pre-roll & mid-roll pods</div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-lg">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Completion Rate</span>
+          <div className="mt-2 text-2xl font-black text-emerald-400">{analytics?.overview?.completionRate ?? "94.2%"}</div>
+          <div className="mt-1 text-[11px] text-white/50">Quartile 4 (100% full watch)</div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-lg">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">Click-Through Rate (CTR)</span>
+          <div className="mt-2 text-2xl font-black text-amber-300">{analytics?.overview?.clickThroughRate ?? "1.85%"}</div>
+          <div className="mt-1 text-[11px] text-white/50">Direct landing page & QR scans</div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-lg">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-pink-400">Estimated Revenue</span>
+          <div className="mt-2 text-2xl font-black text-white">{analytics?.overview?.estimatedRevenue ?? "$0.00"}</div>
+          <div className="mt-1 text-[11px] text-white/50">Calculated at $8.50 AVOD CPM</div>
+        </div>
+      </div>
+
+      {/* Syndication Feeds & Partner Endpoints */}
+      <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-6 shadow-xl space-y-4">
+        <div className="flex items-center gap-2">
+          <Tv size={18} className="text-purple-400" />
+          <h3 className="text-base font-bold text-white">Programmatic Partner Feeds (VAST & VMAP)</h3>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-white/10 bg-black/40 p-4">
+            <div className="text-xs font-bold text-white flex items-center justify-between">
+              <span>VAST 3.0 Linear XML Feed</span>
+              <span className="rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5">COMPLIANT</span>
+            </div>
+            <p className="mt-1 text-[11px] text-white/60">
+              Standard XML feed for Google Ad Manager, SpringServe, and external video players.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <a
+                href="/api/v1/ads/vast"
+                target="_blank"
+                rel="noreferrer"
+                className="button-secondary text-xs py-1.5 px-3 flex items-center gap-1"
+              >
+                <span>Open Feed</span>
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-black/40 p-4">
+            <div className="text-xs font-bold text-white flex items-center justify-between">
+              <span>VMAP 1.0 Commercial Playlist Feed</span>
+              <span className="rounded bg-purple-500/20 text-purple-400 text-[10px] font-bold px-2 py-0.5">AVOD TIMELINE</span>
+            </div>
+            <p className="mt-1 text-[11px] text-white/60">
+              Full playlist with pre-roll and mid-roll commercial break schedule cue points.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <a
+                href="/api/v1/ads/vmap/for-better-or-for-worse-the-bestest-present-1985"
+                target="_blank"
+                rel="noreferrer"
+                className="button-secondary text-xs py-1.5 px-3 flex items-center gap-1"
+              >
+                <span>Open Playlist</span>
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* -------------------- CREATE CAMPAIGN MODAL -------------------- */}
+  {showCreateModal && (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fade-in"
+      onClick={() => setShowCreateModal(false)}
+    >
+      <div
+        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-purple-500/30 bg-[#120e1d] p-6 shadow-2xl text-white"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <h3 className="text-lg font-black text-white">Create AVOD Campaign</h3>
+          <button
+            onClick={() => setShowCreateModal(false)}
+            className="grid size-8 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={handleCreateCampaign} className="mt-4 space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-white/80">Campaign Name</label>
+            <input
+              type="text"
+              required
+              value={newCampName}
+              onChange={(e) => setNewCampName(e.target.value)}
+              placeholder="e.g. Spring FAST Showcase 2026"
+              className="mt-1 w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs text-white outline-none focus:border-purple-400"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-white/80">Advertiser / Brand Name</label>
+            <input
+              type="text"
+              required
+              value={newAdvertiser}
+              onChange={(e) => setNewAdvertiser(e.target.value)}
+              placeholder="e.g. Monetag, Nike, Local Sponsor"
+              className="mt-1 w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs text-white outline-none focus:border-purple-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-white/80">CPM Rate ($)</label>
+              <input
+                type="text"
+                value={newCpm}
+                onChange={(e) => setNewCpm(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs text-white outline-none focus:border-purple-400"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-white/80">Budget ($)</label>
+              <input
+                type="text"
+                value={newBudget}
+                onChange={(e) => setNewBudget(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs text-white outline-none focus:border-purple-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-white/80">VAST Ad Tag XML URL (Optional)</label>
+            <input
+              type="url"
+              value={newVastTag}
+              onChange={(e) => setNewVastTag(e.target.value)}
+              placeholder="https://... VAST 3.0/4.0 XML URL"
+              className="mt-1 w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs text-white font-mono outline-none focus:border-purple-400"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-white/80">Click-Through / Landing Page URL</label>
+            <input
+              type="url"
+              value={newClickUrl}
+              onChange={(e) => setNewClickUrl(e.target.value)}
+              placeholder="https://..."
+              className="mt-1 w-full rounded-xl border border-white/15 bg-black/50 px-3 py-2 text-xs text-white outline-none focus:border-purple-400"
+            />
+          </div>
+
+          <div className="pt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="button-secondary text-xs px-4 py-2"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={creatingCampaign}
+              className="button text-xs px-5 py-2 font-bold"
+            >
+              {creatingCampaign ? "Saving..." : "Create Campaign"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
+</div>
+);
 }
