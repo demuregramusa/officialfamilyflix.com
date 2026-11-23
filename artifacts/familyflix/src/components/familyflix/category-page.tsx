@@ -121,22 +121,30 @@ export function CategoryPage({ slug }: { slug: string }) {
   const catIcon = data?.category?.icon || metaCategory?.iconName || "Film";
   const subgenreList = metaCategory?.subgenres || [];
 
-  const catalogItems: Title[] = (data?.items || []).map((item) => ({
-    slug: item.slug,
-    name: item.name,
-    tagline: "",
-    type: item.kind,
-    synopsis: item.synopsis || "",
-    year: item.year || 0,
-    rating: item.rating || "PG",
-    score: item.score || 8.0,
-    genres: item.genres || [],
-    duration: "Feature",
-    creator: item.creatorAttribution || "Classic Cinema",
-    cast: [],
-    image: item.posterUrl || "photo-1489599849927-2ee91cede3ba",
-    palette: ["#120e1d", "#7c3aed"],
-  }));
+  const catalogItems: Title[] = (data?.items || []).map((item) => {
+    const rawPoster = item.posterUrl;
+    const poster = rawPoster ? rawPoster.replace("https://yts.pw/", "https://img.yts.pw/") : undefined;
+    const rawBackdrop = item.backdropUrl;
+    const backdrop = rawBackdrop ? rawBackdrop.replace("https://yts.pw/", "https://img.yts.pw/") : poster;
+    return {
+      slug: item.slug,
+      name: item.name,
+      tagline: "",
+      type: item.kind,
+      synopsis: item.synopsis || "",
+      year: item.year || 0,
+      rating: item.rating || "PG",
+      score: item.score || 8.0,
+      genres: item.genres || [],
+      duration: "Feature",
+      creator: item.creatorAttribution || "Classic Cinema",
+      cast: [],
+      poster,
+      backdrop,
+      image: poster || "photo-1489599849927-2ee91cede3ba",
+      palette: ["#120e1d", "#7c3aed"],
+    };
+  });
 
   const resetFilters = () => {
     setContentType("all");

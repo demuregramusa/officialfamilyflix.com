@@ -12,10 +12,12 @@ import categoriesRouter from "./categories";
 import developerPortalRouter from "./developer-portal";
 import developerV1Router from "./developer-v1";
 import adServerRouter from "./ad-server";
+import aiConciergeRouter from "./ai-concierge";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use("/v1/ai-concierge", aiConciergeRouter);
 router.use(categoriesRouter);
 router.use(developerPortalRouter);
 router.use(adServerRouter);

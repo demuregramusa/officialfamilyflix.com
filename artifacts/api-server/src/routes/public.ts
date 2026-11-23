@@ -13,6 +13,7 @@ import {
 } from "@workspace/api-zod";
 import { db, playbackProgress, siteSettings } from "@workspace/db";
 import { getCatalogRows, getEpisodePlaybackForRow, getPlaybackForRow, getPublicCatalogRowBySlug, toPublicTitle, toPublicTitleDetail } from "../lib/catalog";
+import { catalogService } from "../lib/catalog-service";
 import { validatePublicHttpUrl } from "../lib/rights";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { importedTorrentSources } from "@workspace/db";
@@ -32,10 +33,6 @@ setTorrentClientErrorHandler((error) => {
 });
 
 const router = Router();
-
-const failedTorrentCache = new Map<string, number>();
-const FAILED_TORRENT_TTL_MS = 15 * 60 * 1000;
-const FAST_CDN_STREAM_URL = "https://vjs.zencdn.net/v/oceans.mp4";
 
 async function serveTorrentMedia(
   request: import("express").Request,
@@ -72,22 +69,12 @@ async function serveTorrentMedia(
     return;
   }
 
-  const now = Date.now();
-  const failedAt = failedTorrentCache.get(source.id);
-  if (failedAt && now - failedAt < FAILED_TORRENT_TTL_MS) {
-    response.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400");
-    response.redirect(302, FAST_CDN_STREAM_URL);
-    return;
-  }
-
   let media;
   try {
     media = await openApprovedTorrentMedia(source);
   } catch (error) {
-    failedTorrentCache.set(source.id, Date.now());
-    request.log?.warn({ titleId: row.movie.id, torrentId: source.id, err: error }, "Approved torrent media is unavailable, redirecting to ultra-fast CDN stream");
-    response.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400");
-    response.redirect(302, FAST_CDN_STREAM_URL);
+    request.log?.warn({ titleId: row.movie.id, torrentId: source.id, err: error }, "Approved torrent media is connecting or momentarily unavailable");
+    response.status(503).json({ error: "This stream is currently initializing. Please retry in a moment." });
     return;
   }
 
@@ -117,7 +104,7 @@ async function serveTorrentMedia(
   if (range.partial) {
     response.setHeader("Content-Range", `bytes ${range.start}-${range.end}/${media.length}`);
   }
-  if (headOnly) {
+  if (headOnly || request.method === "HEAD") {
     response.end();
     return;
   }
@@ -141,6 +128,34 @@ async function serveTorrentMedia(
   stream.pipe(response);
 }
 
+router.get("/v1/image-proxy", async (req, res) => {
+  const imageUrl = req.query.url as string | undefined;
+  if (!imageUrl) {
+    res.status(400).send("Image URL required");
+    return;
+  }
+  try {
+    const target = imageUrl.replace("https://yts.pw/", "https://img.yts.pw/");
+    const upstream = await fetch(target, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://img.yts.pw/",
+      },
+    });
+    if (!upstream.ok) {
+      res.status(upstream.status).send("Failed to fetch image");
+      return;
+    }
+    const contentType = upstream.headers.get("content-type") || "image/jpeg";
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=604800, s-maxage=2592000, immutable");
+    const buffer = await upstream.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch {
+    res.status(502).send("Proxy error");
+  }
+});
+
 router.get("/v1/titles", async (request, response) => {
   const parsed = ListPublicTitlesQueryParams.safeParse(request.query);
   if (!parsed.success) {
@@ -148,12 +163,19 @@ router.get("/v1/titles", async (request, response) => {
     return;
   }
   const offset = request.query.offset ? Number(request.query.offset) : 0;
-  const rows = await getCatalogRows({
-    ...parsed.data,
+  const genre = request.query.genre as string | undefined;
+
+  await catalogService.ensureLoaded();
+  const { titles, total } = catalogService.getPublicTitles({
+    query: parsed.data.query,
+    kind: parsed.data.kind,
+    genre,
     offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
+    limit: parsed.data.limit,
   });
-  response.setHeader("X-Catalog-Total", "23272");
-  response.json(rows.map(toPublicTitle));
+
+  response.setHeader("X-Catalog-Total", String(total));
+  response.json(titles);
 });
 
 router.get("/v1/titles/:slug", async (request, response) => {
@@ -166,6 +188,9 @@ router.get("/v1/titles/:slug", async (request, response) => {
   if (!row) {
     response.status(404).json({ error: "This title is not available in the approved catalog." });
     return;
+  }
+  if (row.torrent) {
+    openApprovedTorrentMedia(row.torrent).catch(() => {});
   }
   response.json(toPublicTitleDetail(row));
 });
@@ -188,6 +213,7 @@ router.get("/playback/:slug", async (request, response) => {
   }
   const torrentStreamPath = `/api/playback/${encodeURIComponent(parsed.data.slug)}/media`;
   if (row.torrent && playback.url === torrentStreamPath) {
+    openApprovedTorrentMedia(row.torrent).catch(() => {});
     response.json(playback);
     return;
   }
@@ -256,6 +282,9 @@ router.get("/playback/:slug/episodes/:episodeId", async (request, response) => {
   }
   const torrentStreamPath = `/api/playback/${encodeURIComponent(parsed.data.slug)}/episodes/${encodeURIComponent(parsed.data.episodeId)}/media`;
   if (playback.url === torrentStreamPath) {
+    if (row.torrent) {
+      openApprovedTorrentMedia(row.torrent).catch(() => {});
+    }
     response.json(playback);
     return;
   }

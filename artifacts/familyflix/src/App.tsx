@@ -84,6 +84,8 @@ import { AvatarPickerModal } from "@/components/familyflix/avatar-picker-modal";
 import { AIAssistantModal } from "@/components/familyflix/ai-assistant-modal";
 import { AdminMonetization } from "@/components/familyflix/admin-monetization";
 import { CookieBanner } from "@/components/familyflix/cookie-banner";
+import { AiConciergeWidget } from "@/components/familyflix/ai-concierge-widget";
+import { AdminAiConciergePage } from "@/components/familyflix/admin-ai-concierge";
 import { HomeView } from "@/components/familyflix/home-view";
 import { CategoryPage } from "@/components/familyflix/category-page";
 import { CategoriesDirectory } from "@/components/familyflix/categories-directory";
@@ -104,6 +106,7 @@ const ADMIN_NAV: [string, string, typeof LayoutDashboard][] = [
   ["/admin/moderation", "Moderation Queue", ShieldCheck],
   ["/admin/ads", "Ad Breaks & Cues", Sparkles],
   ["/admin/monetization", "Monetization & Ads", DollarSign],
+  ["/admin/ai-concierge", "AI Concierge", Bot],
   ["/admin/users", "User Management", UsersRound],
   ["/admin/import", "Import titles", Upload],
   ["/admin/copyright", "Copyright cases", Copyright],
@@ -319,16 +322,16 @@ function toCatalogTitle(title: PublicTitle | PublicTitleDetail): CatalogTitle {
     synopsis: title.synopsis,
     cast: detail.cast ?? [],
     creator: title.creatorAttribution,
-    image: "photo-1489599849927-2ee91cede3ba",
-    ...(title.posterUrl ? { poster: title.posterUrl } : {}),
-    ...(detail.backdropUrl || title.posterUrl ? { backdrop: detail.backdropUrl || title.posterUrl || undefined } : {}),
+    image: title.posterUrl ? title.posterUrl.replace("https://yts.pw/", "https://img.yts.pw/") : "photo-1489599849927-2ee91cede3ba",
+    ...(title.posterUrl ? { poster: title.posterUrl.replace("https://yts.pw/", "https://img.yts.pw/") } : {}),
+    ...(detail.backdropUrl || title.posterUrl ? { backdrop: (detail.backdropUrl || title.posterUrl)!.replace("https://yts.pw/", "https://img.yts.pw/") } : {}),
     palette: ["#100b1a", "#6d28ff"],
     ...(title.featured ? { featured: true } : {}),
   };
 }
 function Poster({ title, className = "" }: { title: Pick<PublicTitle, "id" | "name" | "kind"> & { posterUrl?: string | null }; className?: string }) {
   const [failed, setFailed] = useState(false);
-  const image = !failed && title.posterUrl ? title.posterUrl : null;
+  const image = !failed && title.posterUrl ? title.posterUrl.replace("https://yts.pw/", "https://img.yts.pw/") : null;
   if (image) {
     return (
       <div
@@ -751,9 +754,7 @@ function DetailPage({ slug }: { slug: string }) {
         {detail.durationMinutes && <><span>·</span><span>{detail.durationMinutes} min</span></>}
         {detail.rating && <><span>·</span><span className="rounded border border-white/25 px-1.5 py-0.5 text-[10px] font-semibold text-white/80">{detail.rating}</span></>}
         <span>·</span>
-        <span className="rounded bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/85">Audio: English (Default)</span>
-        <span>·</span>
-        <span className="rounded border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 text-[11px] font-semibold text-purple-300">English [CC]</span>
+        <span className="rounded bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/85">HD · English · [CC]</span>
       </div>
       <p style={{ maxWidth: 670, color: "hsl(260 10% 78%)", lineHeight: 1.8 }}>{detail.synopsis || "No synopsis has been provided."}</p>
       <p className="helper">Creator attribution: <strong style={{ color: "hsl(42 26% 92%)" }}>{detail.creatorAttribution || "Not supplied"}</strong></p>
@@ -1183,10 +1184,7 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
               </span>
             )}
             <span className="rounded border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 font-semibold text-purple-300">
-              English Audio
-            </span>
-            <span className="rounded border border-white/20 bg-white/5 px-2 py-0.5 font-semibold text-white/70">
-              English [CC]
+              HD · English · [CC]
             </span>
           </div>
 
@@ -1809,11 +1807,13 @@ function AppRoutes() {
     <Route path="/privacy" component={()=> <PublicInfo page="privacy"/>}/>
     <Route path="/dmca" component={()=> <PublicInfo page="dmca"/>}/>
     <Route path="/account" component={AccountSettingsPage}/>
+    <Route path="/profile" component={AccountSettingsPage}/>
     <Route path="/settings" component={AccountSettingsPage}/>
     <Route path="/admin" component={()=> <AdminGate><AdminOverview/></AdminGate>}/>
     <Route path="/admin/moderation" component={()=> <AdminGate><ModeratorPortal/></AdminGate>}/>
     <Route path="/admin/ads" component={()=> <AdminGate adminOnly><AdBreakManager/></AdminGate>}/>
     <Route path="/admin/monetization" component={()=> <AdminGate adminOnly><AdminMonetizationPage/></AdminGate>}/>
+    <Route path="/admin/ai-concierge" component={()=> <AdminGate adminOnly><AdminAiConciergePage/></AdminGate>}/>
     <Route path="/admin/users" component={()=> <AdminGate adminOnly><UserManager/></AdminGate>}/>
     <Route path="/admin/library" component={()=> <AdminGate><AdminLibrary/></AdminGate>}/>
     <Route path="/admin/developer" component={()=> <AdminGate adminOnly><AdminDeveloperPage/></AdminGate>}/>
@@ -1842,6 +1842,7 @@ export default function App() {
       <ProfileProvider>
         <Router>
           <AppRoutes />
+          <AiConciergeWidget />
         </Router>
       </ProfileProvider>
     </SubscriptionProvider>

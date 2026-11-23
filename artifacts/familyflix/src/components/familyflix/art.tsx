@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Film } from "lucide-react";
 import { backdropUrl, posterUrl, wideUrl } from "@/lib/art-utils";
 import type { Title } from "@/lib/catalog-types";
@@ -31,7 +31,21 @@ export function PosterArt({
   const badge = badgeText(title);
   const [, p1] = getPalette(title);
   const url = posterUrl(title);
+  const [imgSrc, setImgSrc] = useState(url);
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(url);
+    setHasError(false);
+  }, [url]);
+
+  const handleImageError = () => {
+    if (imgSrc && imgSrc.startsWith("https://img.yts.pw/")) {
+      setImgSrc(`/api/v1/image-proxy?url=${encodeURIComponent(imgSrc)}`);
+    } else {
+      setHasError(true);
+    }
+  };
 
   return (
     <div
@@ -41,12 +55,12 @@ export function PosterArt({
       )}
     >
       {/* Crisp Poster Image Artwork */}
-      {!hasError && url ? (
+      {!hasError && imgSrc ? (
         <img
-          src={url}
+          src={imgSrc}
           alt={title.name || "Movie poster"}
           loading="lazy"
-          onError={() => setHasError(true)}
+          onError={handleImageError}
           className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover/card:scale-105"
         />
       ) : (
@@ -110,16 +124,30 @@ export function BackdropArt({
   animate?: boolean;
 }) {
   const [p0, p1] = getPalette(title);
-  const [hasError, setHasError] = useState(false);
   const url = backdropUrl(title);
+  const [imgSrc, setImgSrc] = useState(url);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(url);
+    setHasError(false);
+  }, [url]);
+
+  const handleImageError = () => {
+    if (imgSrc && imgSrc.startsWith("https://img.yts.pw/")) {
+      setImgSrc(`/api/v1/image-proxy?url=${encodeURIComponent(imgSrc)}`);
+    } else {
+      setHasError(true);
+    }
+  };
 
   return (
     <div className={cn("grain absolute inset-0 isolate overflow-hidden bg-ink", className)}>
-      {!hasError && url ? (
+      {!hasError && imgSrc ? (
         <img
-          src={url}
+          src={imgSrc}
           alt={title.name || "Cinema backdrop"}
-          onError={() => setHasError(true)}
+          onError={handleImageError}
           className={cn(
             "absolute inset-0 size-full object-cover",
             animate && "animate-soft-zoom",
@@ -154,8 +182,22 @@ export function WideArt({
   animate?: boolean;
 }) {
   const [, p1] = getPalette(title);
-  const [hasError, setHasError] = useState(false);
   const url = wideUrl(title);
+  const [imgSrc, setImgSrc] = useState(url);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setImgSrc(url);
+    setHasError(false);
+  }, [url]);
+
+  const handleImageError = () => {
+    if (imgSrc && imgSrc.startsWith("https://img.yts.pw/")) {
+      setImgSrc(`/api/v1/image-proxy?url=${encodeURIComponent(imgSrc)}`);
+    } else {
+      setHasError(true);
+    }
+  };
 
   return (
     <div
@@ -164,12 +206,12 @@ export function WideArt({
         className,
       )}
     >
-      {!hasError && url ? (
+      {!hasError && imgSrc ? (
         <img
-          src={url}
+          src={imgSrc}
           alt={title.name || "Artwork"}
           loading="lazy"
-          onError={() => setHasError(true)}
+          onError={handleImageError}
           className={cn(
             "absolute inset-0 size-full object-cover transition-transform duration-500 ease-out group-hover/card:scale-105",
             animate && "animate-soft-zoom",

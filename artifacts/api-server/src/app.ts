@@ -135,10 +135,40 @@ app.get(["/1dfb67786257b52ff8a2.txt", "/1dfb67786257b52ff8a2d3408fc53d3161faad0c
 
 const staticDir = path.resolve(process.cwd(), "artifacts/familyflix/dist/public");
 if (fs.existsSync(staticDir)) {
-  app.use(express.static(staticDir));
-  app.use("/familyflix", express.static(staticDir));
+  const staticOpts = {
+    setHeaders(res: express.Response, filePath: string) {
+      if (filePath.endsWith(".html")) {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+    },
+  };
+  app.use(express.static(staticDir, staticOpts));
+  app.use("/familyflix", express.static(staticDir, staticOpts));
+
+  // Fallback for stale cached asset hashes (/assets/index-*.js or /assets/index-*.css)
+  app.get(/^\/(?:familyflix\/)?assets\/index-[A-Za-z0-9_-]+\.(js|css)$/, (req, res, next) => {
+    const ext = req.path.endsWith(".css") ? ".css" : ".js";
+    const assetsDir = path.join(staticDir, "assets");
+    try {
+      const files = fs.readdirSync(assetsDir);
+      const currentAsset = files.find((f) => f.startsWith("index-") && f.endsWith(ext));
+      if (currentAsset) {
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+        res.type(ext === ".css" ? "text/css" : "application/javascript");
+        res.sendFile(path.join(assetsDir, currentAsset));
+        return;
+      }
+    } catch {}
+    next();
+  });
+
   app.use((req, res, next) => {
-    if (req.method !== "GET" || req.path.startsWith("/api")) return next();
+    if ((req.method !== "GET" && req.method !== "HEAD") || req.path.startsWith("/api") || req.path.startsWith("/v1")) return next();
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     res.sendFile(path.join(staticDir, "index.html"));
   });
 }

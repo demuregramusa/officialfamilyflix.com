@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { and, desc, eq, ilike, inArray, or, isNull, gt } from "drizzle-orm";
 import {
   db,
@@ -86,8 +89,8 @@ export async function getCatalogRows(options: {
   // When no specific kind is requested (e.g. Home page / mixed catalog browse),
   // guarantee TV series are included alongside movies so both are prominently displayed!
   const targetTotal = Math.max(1, Math.min(options.limit ?? 100, 100));
-  const seriesLimit = Math.min(30, Math.max(15, Math.floor(targetTotal * 0.35)));
-  const moviesLimit = targetTotal - seriesLimit;
+  const seriesLimit = Math.max(1, Math.min(30, Math.floor(targetTotal * 0.35)));
+  const moviesLimit = Math.max(1, targetTotal - seriesLimit);
 
   const [seriesRows, movieRows] = await Promise.all([
     db
@@ -153,7 +156,23 @@ async function hydrateCatalogMovies(movieRows: Movie[]): Promise<CatalogRow[]> {
   }
   const videoByMovie = new Map(videoRows.map((video) => [video.movieId, video]));
   const torrentByMovie = new Map<string, typeof importedTorrentSources.$inferSelect>();
-  for (const row of torrentRows) {
+  // Prefer cached torrents on disk first, then universal x264 720p/1080p with highest seeders.
+  const torrentCacheDir = path.join(os.tmpdir(), "familyflix-torrents");
+  const scoreTorrent = (t: typeof importedTorrentSources.$inferSelect): number => {
+    let score = (t.seeders ?? 0) * 5;
+    if (t.infoHash && fs.existsSync(path.join(torrentCacheDir, `${t.infoHash}.torrent`))) {
+      score += 10000;
+    }
+    if (t.videoCodec !== "x265") score += 500;
+    if (t.quality === "720p") score += 150;
+    else if (t.quality === "1080p") score += 100;
+    else if (t.quality === "2160p") score -= 500;
+    return score;
+  };
+  const byBestSource = [...torrentRows].sort(
+    (a, b) => scoreTorrent(b.torrent) - scoreTorrent(a.torrent),
+  );
+  for (const row of byBestSource) {
     if (isTorrentPlaybackEligible(row.torrent, true) && !torrentByMovie.has(row.movieId)) {
       torrentByMovie.set(row.movieId, row.torrent);
     }
@@ -291,6 +310,8 @@ export function toPublicTitle(row: CatalogRow): PublicTitle {
   const mainRight = row.rights.find((right) => right.id === row.video?.mediaRightId) ??
     row.rights.find((right) => right.assetKind === "main_video");
   const poster = row.rights.find((right) => right.assetKind === "poster");
+  const rawPoster = poster?.assetUrl ?? row.movie.posterUrl ?? null;
+  const posterUrl = rawPoster ? rawPoster.replace("https://yts.pw/", "https://img.yts.pw/") : null;
   return {
     id: row.movie.id,
     slug: row.movie.slug,
@@ -300,7 +321,7 @@ export function toPublicTitle(row: CatalogRow): PublicTitle {
     year: row.movie.year,
     genres: row.genres,
     creatorAttribution: mainRight?.creatorAttribution ?? row.movie.creatorAttribution ?? "",
-    posterUrl: poster?.assetUrl ?? null,
+    posterUrl,
     featured: row.movie.featured,
   };
 }
@@ -308,10 +329,12 @@ export function toPublicTitle(row: CatalogRow): PublicTitle {
 export function toPublicTitleDetail(row: CatalogRow): PublicTitleDetail {
   const title = toPublicTitle(row);
   const backdrop = row.rights.find((right) => right.assetKind === "backdrop");
+  const rawBackdrop = backdrop?.assetUrl ?? row.movie.backdropUrl ?? row.movie.posterUrl ?? null;
+  const backdropUrl = rawBackdrop ? rawBackdrop.replace("https://yts.pw/", "https://img.yts.pw/") : title.posterUrl;
   return {
     ...title,
     tagline: row.movie.tagline,
-    backdropUrl: backdrop?.assetUrl ?? null,
+    backdropUrl,
     cast: row.movie.cast,
     rating: row.movie.rating,
     durationMinutes: row.movie.durationMinutes,
@@ -343,9 +366,10 @@ export async function getPublicCatalogRowBySlug(slug: string): Promise<CatalogRo
 }
 
 export async function getPlaybackForRow(row: CatalogRow): Promise<Playback | null> {
-  if (row.movie.kind === "series") return null;
-  const video = row.video;
-  const primaryRight = row.rights.find((right) => right.id === video?.mediaRightId);
+  const firstEpisode = row.movie.kind === "series" ? row.episodes[0] : undefined;
+  const video = row.video ?? firstEpisode?.video ?? null;
+  const rightsPool = row.rights.length ? row.rights : (firstEpisode?.rights ?? []);
+  const primaryRight = rightsPool.find((right) => (video && right.id === video.mediaRightId) || right.assetKind === "main_video");
 
   let url: string | null = null;
   let streamType: Playback["streamType"] | null = null;
@@ -385,11 +409,14 @@ export async function getPlaybackForRow(row: CatalogRow): Promise<Playback | nul
       or(isNull(mediaRights.expiresAt), gt(mediaRights.expiresAt, new Date())),
     ));
 
+  const rawPoster = row.rights.find((right) => right.assetKind === "poster")?.assetUrl ?? row.movie.posterUrl ?? null;
+  const posterUrl = rawPoster ? rawPoster.replace("https://yts.pw/", "https://img.yts.pw/") : null;
+
   return {
     titleName: row.movie.name,
     streamType,
     url,
-    posterUrl: row.rights.find((right) => right.assetKind === "poster")?.assetUrl ?? null,
+    posterUrl,
     subtitles: subtitlesForTitle
       .filter((subtitle) => isRightCurrent(subtitle.mediaRight))
       .map(({ id, language, label, url: subtitleUrl, isDefault }) => ({
@@ -432,11 +459,14 @@ export async function getEpisodePlaybackForRow(
   }
   if (!url || !streamType) return null;
   if (!url.startsWith("/") && (!url.startsWith("https://") || validatePublicHttpUrl(url))) return null;
+  const rawPoster = row.rights.find((right) => right.assetKind === "poster")?.assetUrl ?? row.movie.posterUrl ?? null;
+  const posterUrl = rawPoster ? rawPoster.replace("https://yts.pw/", "https://img.yts.pw/") : null;
+
   return {
     titleName: `${row.movie.name} · S${episode.seasonNumber} E${episode.episode.episodeNumber}: ${episode.episode.name}`,
     streamType,
     url,
-    posterUrl: row.rights.find((right) => right.assetKind === "poster")?.assetUrl ?? null,
+    posterUrl,
     subtitles: [],
     episodeId: episode.episode.id,
     seasonNumber: episode.seasonNumber,

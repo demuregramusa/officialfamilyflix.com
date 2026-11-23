@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Readable } from "node:stream";
@@ -43,17 +44,22 @@ type TorrentSource = TorrentRightsState & {
   sourceUrl?: string | null;
 };
 
-const metadataWaitMs = 1_000;
+const metadataWaitMs = 15_000;
 const torrentPath = path.join(os.tmpdir(), "familyflix-torrents");
 const defaultTrackers = [
   "udp://tracker.opentrackr.org:1337/announce",
-  "udp://open.stealth.si:80/announce",
+  "udp://open.tracker.cl:1337/announce",
+  "udp://open.demonii.com:1337/announce",
+  "udp://tracker.openbittorrent.com:6969/announce",
+  "udp://tracker.openbittorrent.com:80/announce",
+  "udp://p4p.arenabg.com:1337/announce",
+  "udp://explodie.org:6969/announce",
   "udp://tracker.torrent.eu.org:451/announce",
   "udp://tracker.bittor.pw:1337/announce",
+  "https://tracker.tamersunion.org:443/announce",
+  "udp://open.stealth.si:80/announce",
   "udp://public.tracker.virenkuil.com:6969/announce",
   "udp://tracker.dler.org:6969/announce",
-  "udp://explodie.org:6969/announce",
-  "http://tracker.opentrackr.org:1337/announce",
   "wss://tracker.openwebtorrent.com",
   "wss://tracker.btorrent.xyz",
 ];
@@ -112,26 +118,64 @@ export function createTorrentPlayback(
   const infoHashBySource = new Map<string, string>();
   const generationBySource = new Map<string, number>();
 
-  async function removeTorrentIfUnused(infoHash: string): Promise<void> {
-    if ([...infoHashBySource.values()].some((activeHash) => activeHash === infoHash)) return;
-    const torrent = client.torrents.find(
-      (item) => item.infoHash.toLowerCase() === infoHash.toLowerCase(),
-    );
-    if (!torrent) return;
-    if (client.remove) {
-      await client.remove(infoHash, { destroyStore: true }).catch(handleTorrentClientError);
-    } else {
-      torrent.destroy?.();
-    }
+  async function removeTorrentIfUnused(_infoHash: string): Promise<void> {
+    // Keep torrents cached in memory and on disk for rapid subsequent playback & seeking
+    return;
   }
 
-  async function getTorrent(infoHash: string): Promise<Torrent> {
+  async function getTorrent(infoHash: string, sourceUrl?: string | null): Promise<Torrent> {
     const existing = client.torrents.find(
       (torrent) => torrent.infoHash.toLowerCase() === infoHash.toLowerCase(),
     );
-    if (existing?.files.length) return existing;
+    if (existing?.files.length) {
+      return existing;
+    }
+    if (existing) {
+      return new Promise<Torrent>((resolve, reject) => {
+        const timer = setTimeout(() => finish(new Error("Torrent metadata was unavailable.")), 10_000);
+        function finish(err: Error | null, t?: Torrent) {
+          clearTimeout(timer);
+          if (err) reject(err);
+          else resolve(t!);
+        }
+        (existing as any).once?.("ready", () => finish(null, existing));
+        (existing as any).once?.("metadata", () => finish(null, existing));
+        existing.once("error", (err) => finish(err));
+        if (existing.files.length) finish(null, existing);
+      });
+    }
 
     await mkdir(torrentPath, { recursive: true });
+
+    // Check disk cache for .torrent file first for instant zero-latency loading
+    const cachedTorrentPath = path.join(torrentPath, `${infoHash}.torrent`);
+    let torrentBuffer: Buffer | null = null;
+    try {
+      if (fs.existsSync(cachedTorrentPath)) {
+        torrentBuffer = fs.readFileSync(cachedTorrentPath);
+      }
+    } catch {}
+
+    if (!torrentBuffer && sourceUrl && /^https?:\/\//i.test(sourceUrl)) {
+      try {
+        const resp = await fetch(sourceUrl, {
+          signal: AbortSignal.timeout(3500),
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://yts.pw/",
+          },
+        });
+        if (resp.ok) {
+          const ab = await resp.arrayBuffer();
+          if (ab.byteLength > 100) {
+            torrentBuffer = Buffer.from(ab);
+            fs.writeFileSync(cachedTorrentPath, torrentBuffer);
+          }
+        }
+      } catch (err: any) {
+      }
+    }
+
     return new Promise<Torrent>((resolve, reject) => {
       let settled = false;
       let timer: NodeJS.Timeout;
@@ -139,6 +183,7 @@ export function createTorrentPlayback(
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        
         if (torrent) torrent.removeListener("error", onError);
         if (error) reject(error);
         else if (torrent) resolve(torrent);
@@ -150,12 +195,16 @@ export function createTorrentPlayback(
       try {
         const trackerQuery = defaultTrackers.map((tr) => `&tr=${encodeURIComponent(tr)}`).join("");
         const magnetUri = `magnet:?xt=urn:btih:${infoHash}${trackerQuery}`;
-        const torrent = client.add(magnetUri, {
+        const torrentTarget: any = torrentBuffer || magnetUri;
+        const addOpts: Record<string, unknown> = {
           path: torrentPath,
-          announce: defaultTrackers,
-          uploads: false,
+          deselect: true,
           strategy: "sequential",
-        }, (readyTorrent) => finish(null, readyTorrent));
+        };
+        if (!torrentBuffer) {
+          addOpts.announce = defaultTrackers;
+        }
+        const torrent = client.add(torrentTarget, addOpts, (readyTorrent) => finish(null, readyTorrent));
         torrent.once("error", onError);
         if (torrent.files.length) finish(null, torrent);
       } catch (error) {
@@ -173,12 +222,34 @@ export function createTorrentPlayback(
     const generation = generationBySource.get(source.id) ?? 0;
     infoHashBySource.set(source.id, infoHash);
     try {
-      const torrent = await getTorrent(infoHash);
+      const torrent = await getTorrent(infoHash, source.sourceUrl);
       if ((generationBySource.get(source.id) ?? 0) !== generation) {
         throw new Error("This torrent source is no longer active.");
       }
       const file = playableMp4File(torrent);
       if (!file) throw new Error("No supported MP4 video is available in this torrent.");
+
+      // Prioritize only the initial and tail MP4 pieces so all connected peers focus 100% bandwidth on instant playback
+      const pieceLength = (torrent as any).pieceLength || 1048576;
+      const totalPieces = (torrent as any).pieces?.length || 1000;
+      const startP = typeof (file as any)._startPiece === "number"
+        ? (file as any)._startPiece
+        : Math.max(0, Math.floor(((file as any).offset || 0) / pieceLength));
+      const endP = typeof (file as any)._endPiece === "number"
+        ? (file as any)._endPiece
+        : Math.min(totalPieces - 1, Math.floor((((file as any).offset || 0) + file.length) / pieceLength));
+
+      const headEnd = Math.min(endP, startP + 5);
+      const tailStart = Math.max(startP, endP - 1);
+      if (typeof (torrent as any).select === "function") {
+        (torrent as any).select(startP, headEnd, 10);
+        (torrent as any).select(tailStart, endP, 5);
+      }
+      if (typeof (torrent as any).critical === "function") {
+        (torrent as any).critical(startP, headEnd);
+        (torrent as any).critical(tailStart, endP);
+      }
+
       return {
         name: file.name,
         length: file.length,
@@ -187,6 +258,16 @@ export function createTorrentPlayback(
         createReadStream: (options) => {
           if ((generationBySource.get(source.id) ?? 0) !== generation) {
             throw new Error("This torrent source is no longer active.");
+          }
+          const reqStart = options?.start ?? 0;
+          const fileOffset = (file as any).offset || 0;
+          const targetPiece = Math.max(startP, Math.floor((fileOffset + reqStart) / pieceLength));
+          const targetEndPiece = Math.min(endP, targetPiece + 5);
+          if (typeof (torrent as any).select === "function") {
+            (torrent as any).select(targetPiece, targetEndPiece, 10);
+          }
+          if (typeof (torrent as any).critical === "function") {
+            (torrent as any).critical(targetPiece, targetEndPiece);
           }
           const stream = file.createReadStream(options);
           const openStreams = streamsBySource.get(source.id) ?? new Set<Readable>();
@@ -223,11 +304,11 @@ export function createTorrentPlayback(
 function getDefaultTorrentPlayback() {
   if (defaultTorrentPlayback) return defaultTorrentPlayback;
   const client = new WebTorrent({
+    maxConns: 200,
     dht: true,
-    lsd: false,
-    natPmp: false,
-    natUpnp: false,
-    seedOutgoingConnections: false,
+    lsd: true,
+    natPmp: true,
+    natUpnp: true,
     tracker: {},
   }) as unknown as TorrentClient;
   client.on("error", (error) => handleTorrentClientError(error));

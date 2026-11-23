@@ -82,7 +82,7 @@ export function TubiPlayer({
 
   // Pre-roll ad state - skip completely if VIP / Ad-Free subscriber
   const [showingAd, setShowingAd] = useState(!hasAdFree);
-  const [adRemaining, setAdRemaining] = useState(12);
+  const [adRemaining, setAdRemaining] = useState(5);
   const [adCanSkip, setAdCanSkip] = useState(false);
   const [quality, setQuality] = useState("1080p Full HD (Uncapped)");
   const [isSavingOffline, setIsSavingOffline] = useState(false);
@@ -98,7 +98,7 @@ export function TubiPlayer({
 
   // VAST & Ad network configuration
   const [vastTagUrl, setVastTagUrl] = useState<string | null>(null);
-  const [vastMediaUrl, setVastMediaUrl] = useState<string | null>("https://vjs.zencdn.net/v/oceans.mp4");
+  const [vastMediaUrl, setVastMediaUrl] = useState<string | null>(null);
   const [vastClickThrough, setVastClickThrough] = useState<string | null>(null);
   const [vastImpressions, setVastImpressions] = useState<string[]>([]);
   const [hasFiredImpression, setHasFiredImpression] = useState(false);
@@ -232,11 +232,12 @@ export function TubiPlayer({
 
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const waitingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize secondary preview video stream for timeline thumbnail previews
+  // Initialize secondary preview video stream ONLY for external CDN streams (never compete with backend /api/playback streams)
   useEffect(() => {
     const pVideo = previewVideoRef.current;
-    if (!pVideo || !playback?.url) return;
+    if (!pVideo || !playback?.url || playback.url.startsWith("/api/playback/")) return;
 
     const isHls = /\.m3u8(?:$|[?#])/i.test(playback.url);
     if (isHls && !pVideo.canPlayType("application/vnd.apple.mpegurl") && Hls.isSupported()) {
@@ -249,6 +250,7 @@ export function TubiPlayer({
       hls.loadSource(playback.url);
       hls.attachMedia(pVideo);
     } else {
+      pVideo.preload = "metadata";
       pVideo.src = playback.url;
     }
 
@@ -391,12 +393,12 @@ export function TubiPlayer({
     [isScrubbing, updateScrubTime, onTimeUpdate, duration]
   );
 
-  // Countdown for pre-roll ad
+  // Countdown for pre-roll ad (fast 5-second sponsor showcase, skippable in 2s)
   useEffect(() => {
     if (!showingAd) return;
     const timer = setInterval(() => {
       setAdRemaining((prev) => {
-        if (prev <= 8) setAdCanSkip(true);
+        if (prev <= 3) setAdCanSkip(true);
         if (prev <= 1) {
           clearInterval(timer);
           setShowingAd(false);
@@ -408,16 +410,36 @@ export function TubiPlayer({
     return () => clearInterval(timer);
   }, [showingAd]);
 
+  const startMainVideoPlayback = useCallback((video: HTMLVideoElement | null) => {
+    if (!video) return;
+    if (waitingTimeoutRef.current) {
+      clearTimeout(waitingTimeoutRef.current);
+      waitingTimeoutRef.current = null;
+    }
+    video.play().then(() => {
+      setIsPlaying(true);
+      setIsBuffering(false);
+    }).catch(() => {
+      // Browser blocked unmuted timer-based autoplay — fallback to muted autoplay so stream starts immediately
+      video.muted = true;
+      setIsMuted(true);
+      video.play().then(() => {
+        setIsPlaying(true);
+        setIsBuffering(false);
+      }).catch(() => {
+        setIsPlaying(false);
+        if (video.readyState >= 2) setIsBuffering(false);
+      });
+    });
+  }, []);
+
   const handleSkipAd = useCallback(() => {
     setShowingAd(false);
     if (adVideoRef.current) {
       adVideoRef.current.pause();
     }
-    const video = videoRef.current;
-    if (video && video.paused) {
-      video.play().then(() => setIsPlaying(true)).catch(() => {});
-    }
-  }, []);
+    startMainVideoPlayback(videoRef.current);
+  }, [startMainVideoPlayback]);
 
   const handleAdPlay = useCallback(() => {
     if (!hasFiredImpression && vastImpressions.length > 0) {
@@ -432,11 +454,8 @@ export function TubiPlayer({
 
   const handleAdEnded = useCallback(() => {
     setShowingAd(false);
-    const video = videoRef.current;
-    if (video && video.paused) {
-      video.play().then(() => setIsPlaying(true)).catch(() => {});
-    }
-  }, []);
+    startMainVideoPlayback(videoRef.current);
+  }, [startMainVideoPlayback]);
 
   const triggerPulse = useCallback((type: "play" | "pause") => {
     setPulseIcon(type);
@@ -533,13 +552,22 @@ export function TubiPlayer({
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
           if (initialTime > 0) performInitialSeek(video, initialTime);
           if (!showingAd) {
-            video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+            startMainVideoPlayback(video);
           }
         });
         hlsInstance.on(Hls.Events.ERROR, (_evt, data) => {
           if (data.fatal) {
-            video.src = "https://vjs.zencdn.net/v/oceans.mp4";
-            if (!showingAd) video.play().catch(() => {});
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hlsInstance.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hlsInstance.recoverMediaError();
+                break;
+              default:
+                setHasError(true);
+                break;
+            }
           }
         });
       }
@@ -547,15 +575,13 @@ export function TubiPlayer({
       if (!video.src || !video.src.includes(playback.url)) {
         video.src = playback.url;
         video.preload = "auto";
+        video.load();
       }
       if (!showingAd) {
-        setIsBuffering(false);
-        video.play().then(() => {
-          setIsPlaying(true);
-        }).catch(() => {
-          setIsPlaying(false);
-        });
+        startMainVideoPlayback(video);
       } else {
+        // Preload video stream silently in background while sponsor ad displays
+        video.preload = "auto";
         video.pause();
       }
     }
@@ -563,7 +589,7 @@ export function TubiPlayer({
     return () => {
       if (hlsInstance) hlsInstance.destroy();
     };
-  }, [playback?.url, showingAd, initialTime, performInitialSeek]);
+  }, [playback?.url, showingAd, initialTime, performInitialSeek, startMainVideoPlayback]);
 
   // Handle Subtitle track change on HTML5 video
   const handleSubtitleChange = useCallback((sub: string) => {
@@ -588,9 +614,21 @@ export function TubiPlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    const clearWaitingTimer = () => {
+      if (waitingTimeoutRef.current) {
+        clearTimeout(waitingTimeoutRef.current);
+        waitingTimeoutRef.current = null;
+      }
+    };
+
     const onTime = () => {
       const cur = video.currentTime;
       setCurrentTime(cur);
+      if (!video.paused && cur > 0) {
+        clearWaitingTimer();
+        setIsBuffering(false);
+        setIsPlaying(true);
+      }
       if (onTimeUpdate) onTimeUpdate(cur, video.duration || 0);
 
       if (video.buffered.length > 0 && video.duration > 0) {
@@ -638,6 +676,7 @@ export function TubiPlayer({
     };
 
     const onLoadedMetadata = () => {
+      clearWaitingTimer();
       setDuration(video.duration || 0);
       setIsBuffering(false);
       if (initialTime > 0) {
@@ -646,41 +685,40 @@ export function TubiPlayer({
     };
 
     const onCanPlay = () => {
+      clearWaitingTimer();
+      setIsBuffering(false);
       if (initialTime > 0 && !hasSeekedInitialRef.current) {
         performInitialSeek(video, initialTime);
       }
     };
 
-    const onWaiting = () => setIsBuffering(true);
+    const onWaiting = () => {
+      clearWaitingTimer();
+      waitingTimeoutRef.current = setTimeout(() => {
+        if (videoRef.current && videoRef.current.readyState < 3) {
+          setIsBuffering(true);
+        }
+      }, 450);
+    };
     const onPlaying = () => {
+      clearWaitingTimer();
       setIsBuffering(false);
       setIsPlaying(true);
     };
-    const onPause = () => setIsPlaying(false);
+    const onPause = () => {
+      clearWaitingTimer();
+      setIsPlaying(false);
+    };
     let retryCount = 0;
     const onError = () => {
-      const vid = videoRef.current;
-      if (vid) {
-        const fallbackUrl = "https://vjs.zencdn.net/v/oceans.mp4";
-        if (!vid.src.includes("oceans.mp4")) {
-          vid.src = fallbackUrl;
-          vid.load();
-          vid.play().then(() => {
-            setIsPlaying(true);
-            setIsBuffering(false);
-            setHasError(false);
-          }).catch(() => {});
-          return;
-        }
-      }
-      if (retryCount < 4) {
+      if (retryCount < 3) {
         retryCount += 1;
         setTimeout(() => {
           if (videoRef.current) {
             videoRef.current.load();
             videoRef.current.play().catch(() => {});
           }
-        }, 500);
+        }, 1200);
         return;
       }
       setHasError(true);
@@ -871,21 +909,14 @@ export function TubiPlayer({
             <>
               {/* Professional FAST Ad Commercial Slate */}
               <div className="absolute inset-0 bg-gradient-to-br from-[#0e0820] via-[#150d2c] to-[#07040d]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,_rgba(124,58,237,0.28)_0%,_transparent_65%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,_rgba(245,158,11,0.15)_0%,_transparent_55%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,_rgba(124,58,237,0.22)_0%,_transparent_70%)]" />
               <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
 
-              {/* Center Commercial Stage Indicator */}
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-                <div className="grid size-16 place-items-center rounded-2xl bg-white/[0.06] border border-white/10 shadow-2xl backdrop-blur-md">
-                  <Sparkles className="size-8 text-amber-300 animate-pulse" />
+              {/* Minimal Center Brand Mark - Zero Text Collision */}
+              <div className="pointer-events-none absolute inset-x-0 top-14 bottom-20 hidden sm:flex items-center justify-center">
+                <div className="grid size-14 place-items-center rounded-2xl bg-white/[0.05] border border-white/10 shadow-2xl backdrop-blur-md">
+                  <BrandLogo className="size-8 fill-white/80 text-white/80" />
                 </div>
-                <span className="mt-3.5 text-[11px] sm:text-xs font-bold uppercase tracking-[0.24em] text-purple-300">
-                  FamilyFlix Free Streaming Sponsor
-                </span>
-                <p className="mt-1 text-xs sm:text-sm text-white/50 max-w-sm">
-                  Your free presentation begins in moments.
-                </p>
               </div>
             </>
           )}
@@ -893,7 +924,7 @@ export function TubiPlayer({
           {/* Top Bar - pinned to top */}
           <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between p-3 sm:p-5">
             <div className="flex items-center gap-2">
-              <span className="rounded bg-white px-2 py-0.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-black shadow-md">
+              <span className="rounded bg-amber-400 text-black px-2 py-0.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-md">
                 AD
               </span>
               <span className="hidden items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 py-0.5 text-[11px] font-medium text-white/80 backdrop-blur-md sm:inline-flex">
@@ -905,21 +936,21 @@ export function TubiPlayer({
               {adRemaining > 0 ? (
                 <>Your movie starts in <span className="font-bold text-amber-300">{adRemaining}s</span></>
               ) : (
-                "Starting feature presentation..."
+                "Starting presentation..."
               )}
             </div>
           </div>
 
-          {/* Bottom Bar - pinned to bottom, Title on Left, Skip on Right (ZERO OVERLAP) */}
+          {/* Bottom Bar - Title on Left, Skip on Right (ZERO OVERLAP) */}
           <div className="absolute inset-x-0 bottom-3 sm:bottom-4 z-20 flex items-end justify-between gap-3 px-3 sm:px-6">
             <div className="min-w-0 max-w-[62%] sm:max-w-[70%]">
               <span className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-300 truncate">
-                Sponsored Showcase
+                Sponsored Presentation
               </span>
-              <h2 className="mt-0.5 truncate text-base sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-white drop-shadow-md">
+              <h2 className="mt-0.5 truncate text-sm sm:text-lg md:text-xl font-black uppercase tracking-tight text-white drop-shadow-md">
                 {adTitle}
               </h2>
-              <p className="mt-0.5 line-clamp-1 text-xs text-white/75 sm:text-sm">
+              <p className="hidden sm:block mt-0.5 truncate text-xs text-white/75">
                 {adTagline}
               </p>
             </div>
@@ -960,7 +991,7 @@ export function TubiPlayer({
                       border: "1px solid rgba(245, 158, 11, 0.5)",
                     }}
                   >
-                    {Math.max(0, adRemaining - 7)}s
+                    {Math.max(0, adRemaining - 3)}s
                   </span>
                 </div>
               )}
@@ -971,7 +1002,7 @@ export function TubiPlayer({
           <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10 z-20">
             <div
               className="h-full bg-gradient-to-r from-purple-500 to-amber-400 transition-all duration-1000 ease-linear"
-              style={{ width: `${Math.max(0, Math.min(100, ((12 - adRemaining) / 12) * 100))}%` }}
+              style={{ width: `${Math.max(0, Math.min(100, ((5 - adRemaining) / 5) * 100))}%` }}
             />
           </div>
         </div>
@@ -998,44 +1029,38 @@ export function TubiPlayer({
         </div>
       )}
 
-      {/* -------------------- PAUSE-SCREEN ADVERTISEMENT (TUBI AVOD) -------------------- */}
-      {!isPlaying && !showingAd && !isBuffering && currentTime > 3 && (
+      {/* -------------------- PAUSE-SCREEN ADVERTISEMENT (TUBI AVOD - ZERO OVERLAP WITH TOP/BOTTOM BARS) -------------------- */}
+      {!isPlaying && !showingAd && !isBuffering && !hasError && currentTime > 3 && (
         <div
           onClick={togglePlay}
-          className="absolute inset-0 z-20 flex flex-col justify-between p-6 sm:p-10 bg-black/75 backdrop-blur-sm cursor-pointer animate-fade-in select-none"
+          className="absolute inset-x-3 top-14 bottom-20 z-15 flex items-center justify-center cursor-pointer animate-fade-in select-none"
         >
-          {/* Top Bar */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs font-bold text-white">
-              <span className="size-2 rounded-full bg-amber-400 animate-ping" />
-              <span>STREAM PAUSED</span>
-            </div>
-            <div className="text-xs text-white/60 font-medium">
-              Click anywhere or press Space to resume
-            </div>
-          </div>
-
-          {/* Center Card - Pause Ad & QR Code */}
+          {/* Center Card - Pause Ad & QR Code (strictly bounded between top header and bottom scrubber) */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="self-center w-full max-w-md rounded-3xl border border-white/15 bg-gradient-to-br from-[#1c122e]/95 via-[#120e1d]/95 to-[#08060f]/95 p-6 shadow-2xl text-white backdrop-blur-xl"
+            className="w-full max-w-md rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c122e]/95 via-[#120e1d]/95 to-[#08060f]/95 p-4 sm:p-5 shadow-2xl text-white backdrop-blur-xl"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <span className="inline-block rounded-md bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300 tracking-wider">
-                  Featured Sponsor
-                </span>
-                <h3 className="mt-2 text-lg font-black tracking-tight text-white sm:text-xl">
-                  {promotedTitle?.name || "FamilyFlix Free Streaming Sponsor"}
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block rounded-md bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300 tracking-wider">
+                    Stream Paused
+                  </span>
+                  <span className="text-[10px] font-semibold text-white/50 truncate">
+                    Sponsored
+                  </span>
+                </div>
+                <h3 className="mt-1.5 truncate text-base font-black tracking-tight text-white sm:text-lg">
+                  {promotedTitle?.name || "FamilyFlix Free Streaming"}
                 </h3>
-                <p className="mt-1 text-xs text-white/70 line-clamp-2">
-                  {promotedTitle?.tagline || "Free, unlimited public-domain streaming powered by DemureGram."}
+                <p className="mt-0.5 text-xs text-white/70 line-clamp-1">
+                  {promotedTitle?.tagline || "Free, unlimited streaming powered by DemureGram."}
                 </p>
-                <div className="mt-4 flex items-center gap-3">
+                <div className="mt-3 flex items-center gap-3">
                   <button
                     type="button"
                     onClick={togglePlay}
-                    className="button-watch-now text-xs py-2 px-4 shadow-md font-bold"
+                    className="button-watch-now text-xs py-1.5 px-3.5 shadow-md font-bold"
                   >
                     Resume Playback
                   </button>
@@ -1044,7 +1069,7 @@ export function TubiPlayer({
                       href={vastClickThrough}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 underline font-semibold"
+                      className="inline-flex items-center gap-1 text-xs text-amber-300 hover:text-amber-200 underline font-semibold whitespace-nowrap"
                     >
                       <span>Learn More</span>
                       <ExternalLink size={12} />
@@ -1053,29 +1078,24 @@ export function TubiPlayer({
                 </div>
               </div>
 
-              {/* QR Code */}
-              <div className="hidden sm:flex flex-col items-center shrink-0 rounded-2xl bg-white p-2 text-center shadow-lg">
+              {/* QR Code (desktop/tablet only) */}
+              <div className="hidden md:flex flex-col items-center shrink-0 rounded-xl bg-white p-1.5 text-center shadow-lg">
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(vastClickThrough || "https://familyflix.demuregram.com")}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=76x76&data=${encodeURIComponent(vastClickThrough || "https://familyflix.demuregram.com")}`}
                   alt="Sponsor QR Code"
-                  className="size-20 rounded-lg"
+                  className="size-16 rounded-md"
                 />
-                <span className="mt-1 text-[9px] font-bold text-black uppercase tracking-wider">
+                <span className="mt-0.5 text-[8px] font-bold text-black uppercase tracking-wider">
                   Scan on Phone
                 </span>
               </div>
             </div>
           </div>
-
-          {/* Bottom Bar */}
-          <div className="text-center text-xs text-white/40">
-            FamilyFlix AVOD — Free high-bitrate streaming sponsored by DemureGram
-          </div>
         </div>
       )}
 
       {/* -------------------- OVERLAY TOP HEADER & WATERMARK (ZERO OVERLAP) -------------------- */}
-      {!showingAd && (
+      {!showingAd && !isBuffering && (
         <div
           className="pointer-events-none absolute inset-x-0 top-0 z-15 flex items-center justify-between gap-3 p-3.5 sm:p-5 bg-gradient-to-b from-black/85 via-black/40 to-transparent"
         >
@@ -1134,11 +1154,11 @@ export function TubiPlayer({
         </div>
       ) : null}
 
-      {/* -------------------- BUFFERING SPINNER ("Loading, please wait...") -------------------- */}
+      {/* -------------------- BUFFERING SPINNER ("Loading presentation...") -------------------- */}
       {isBuffering && !showingAd && !hasError ? (
-        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/40 backdrop-blur-xs">
-          <Loader2 className="size-10 animate-spin text-purple-400" />
-          <span className="text-xs font-semibold tracking-wider text-white/80 uppercase">Loading, please wait...</span>
+        <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2.5 bg-black/60 backdrop-blur-xs select-none">
+          <Loader2 className="size-8 sm:size-9 animate-spin text-purple-400" />
+          <span className="text-[11px] sm:text-xs font-semibold tracking-wider text-white/90 uppercase">Loading presentation...</span>
         </div>
       ) : null}
 
@@ -1151,10 +1171,10 @@ export function TubiPlayer({
         </div>
       ) : null}
 
-      {/* -------------------- TUBI-STYLE RESUME PILL (MICRO 50% COMPACT, ZERO OVERLAP) -------------------- */}
-      {showResumeBanner && !showingAd ? (
+      {/* -------------------- TUBI-STYLE RESUME PILL (MICRO COMPACT, ZERO OVERLAP) -------------------- */}
+      {showResumeBanner && !showingAd && !isBuffering && resumedPosition >= 15 ? (
         <div
-          className="absolute bottom-22 sm:bottom-24 left-3 sm:left-4 z-30 animate-fade-in pointer-events-auto"
+          className="absolute bottom-16 sm:bottom-18 left-3 sm:left-4 z-30 animate-fade-in pointer-events-auto"
           data-testid="player-resume-card"
         >
           <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-[#0e081c]/95 px-2 py-0.5 shadow-xl backdrop-blur-xl text-white">
@@ -1224,7 +1244,9 @@ export function TubiPlayer({
       <div
         className={cn(
           "absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end p-3 bg-gradient-to-t from-black/95 via-black/60 to-transparent transition-opacity duration-300 sm:p-5",
-          controlsVisible || !isPlaying ? "opacity-100" : "opacity-0 pointer-events-none"
+          (controlsVisible || !isPlaying) && !(isBuffering && currentTime < 1)
+            ? "opacity-100"
+            : "opacity-0 pointer-events-none"
         )}
       >
         {/* Scrubber Bar Container with Live Frame Preview (Tubi Style - 50% Compact) */}
@@ -1254,7 +1276,7 @@ export function TubiPlayer({
                 ref={previewVideoRef}
                 muted
                 playsInline
-                preload="auto"
+                preload="none"
                 className="relative z-10 h-full w-full object-cover"
               />
 
@@ -1318,9 +1340,9 @@ export function TubiPlayer({
           </div>
         </div>
 
-        {/* Control Buttons Row */}
-        <div className="mt-2 flex items-center justify-between gap-2 overflow-hidden">
-          <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+        {/* Control Buttons Row - Flex nowrap so buttons and timestamps never stack or wrap */}
+        <div className="mt-2 flex items-center justify-between gap-2 overflow-hidden flex-nowrap">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 shrink-0">
             {/* Play/Pause */}
             <button
               type="button"

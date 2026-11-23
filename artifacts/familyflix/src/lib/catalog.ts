@@ -37,14 +37,22 @@ export interface Title {
 const unsplash = (image: string, width: number, height: number) =>
   `https://images.unsplash.com/${image}?auto=format&fit=crop&w=${width}&h=${height}&q=65`;
 
+function sanitizeCatalogUrl(raw?: string | null, width = 400, height = 600): string {
+  if (!raw) return `https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=${width}&h=${height}&q=65`;
+  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("//") || raw.startsWith("/")) {
+    return raw.replace("https://yts.pw/", "https://img.yts.pw/");
+  }
+  return unsplash(raw, width, height);
+}
+
 export const posterUrl = (title: Title) =>
-  title.poster ?? unsplash(title.image, 400, 600);
+  title.poster ? sanitizeCatalogUrl(title.poster, 400, 600) : sanitizeCatalogUrl(title.image, 400, 600);
 
 export const backdropUrl = (title: Title) =>
-  title.backdrop ?? title.poster ?? unsplash(title.image, 1440, 810);
+  title.backdrop ? sanitizeCatalogUrl(title.backdrop, 1440, 810) : title.poster ? sanitizeCatalogUrl(title.poster, 1440, 810) : sanitizeCatalogUrl(title.image, 1440, 810);
 
 export const wideUrl = (title: Title) =>
-  title.backdrop ?? title.poster ?? unsplash(title.image, 640, 360);
+  title.backdrop ? sanitizeCatalogUrl(title.backdrop, 640, 360) : title.poster ? sanitizeCatalogUrl(title.poster, 640, 360) : sanitizeCatalogUrl(title.image, 640, 360);
 
 /**
  * The public catalog contains only real, playable content:

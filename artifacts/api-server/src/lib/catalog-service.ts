@@ -56,32 +56,45 @@ class CatalogService {
           COALESCE(array_agg(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL), '{}') as genres,
           COALESCE(array_agg(DISTINCT c.value) FILTER (WHERE c.value IS NOT NULL), '{}') as cast
         FROM movies m
+        LEFT JOIN (
+          SELECT ims.movie_id, MAX(t.seeders) as max_seeders
+          FROM imported_movie_sources ims
+          JOIN imported_torrent_sources t ON t.movie_source_id = ims.id
+          WHERE t.playback_status = 'active' AND t.rights_status = 'approved'
+          GROUP BY ims.movie_id
+        ) ts ON ts.movie_id = m.id
         LEFT JOIN movie_genres mg ON m.id = mg.movie_id
         LEFT JOIN genres g ON mg.genre_id = g.id
         LEFT JOIN LATERAL jsonb_array_elements_text(m.cast) c(value) ON true
         WHERE m.status = 'published'
-        GROUP BY m.id, m.slug, m.name, m.kind, m.synopsis, m.year, m.rating, m.score, m.poster_url, m.backdrop_url, m.creator_attribution, m.featured
-        ORDER BY m.featured DESC, m.published_at DESC NULLS LAST, m.created_at DESC
+        GROUP BY m.id, m.slug, m.name, m.kind, m.synopsis, m.year, m.rating, m.score, m.poster_url, m.backdrop_url, m.creator_attribution, m.featured, ts.max_seeders
+        ORDER BY m.featured DESC, COALESCE(ts.max_seeders, 0) DESC, m.published_at DESC NULLS LAST, m.created_at DESC
       `;
 
       const result = await client.query(query);
 
-      const loadedTitles: CatalogTitleData[] = result.rows.map((r) => ({
-        id: r.id,
-        slug: r.slug,
-        name: r.name,
-        kind: r.kind,
-        synopsis: r.synopsis || "",
-        year: r.year,
-        rating: r.rating,
-        score: Number(r.score) || 0,
-        genres: Array.isArray(r.genres) ? r.genres : [],
-        cast: Array.isArray(r.cast) ? r.cast : [],
-        creatorAttribution: r.creatorAttribution,
-        posterUrl: r.posterUrl,
-        backdropUrl: r.backdropUrl,
-        featured: Boolean(r.featured),
-      }));
+      const loadedTitles: CatalogTitleData[] = result.rows.map((r) => {
+        const rawPoster = r.posterUrl;
+        const posterUrl = rawPoster ? rawPoster.replace("https://yts.pw/", "https://img.yts.pw/") : null;
+        const rawBackdrop = r.backdropUrl;
+        const backdropUrl = rawBackdrop ? rawBackdrop.replace("https://yts.pw/", "https://img.yts.pw/") : posterUrl;
+        return {
+          id: r.id,
+          slug: r.slug,
+          name: r.name,
+          kind: r.kind,
+          synopsis: r.synopsis || "",
+          year: r.year,
+          rating: r.rating,
+          score: Number(r.score) || 0,
+          genres: Array.isArray(r.genres) ? r.genres : [],
+          cast: Array.isArray(r.cast) ? r.cast : [],
+          creatorAttribution: r.creatorAttribution,
+          posterUrl,
+          backdropUrl,
+          featured: Boolean(r.featured),
+        };
+      });
 
       this.titles = loadedTitles;
       this.titlesById.clear();
@@ -143,6 +156,41 @@ class CatalogService {
 
   public getTitleBySlug(slug: string): CatalogTitleData | undefined {
     return this.titlesBySlug.get(slug);
+  }
+
+  public searchTitles(query: string, limit = 5): CatalogTitleData[] {
+    if (!query || !query.trim()) return [];
+    const q = query.toLowerCase().trim();
+
+    const scored: { title: CatalogTitleData; score: number }[] = [];
+    for (const title of this.titles) {
+      const name = title.name.toLowerCase();
+      const slug = title.slug.toLowerCase();
+      let matchScore = 0;
+
+      if (name === q || slug === q) {
+        matchScore = 100;
+      } else if (name.startsWith(q)) {
+        matchScore = 80;
+      } else if (name.includes(q)) {
+        matchScore = 60;
+      } else if (slug.includes(q)) {
+        matchScore = 50;
+      } else if (title.synopsis && title.synopsis.toLowerCase().includes(q)) {
+        matchScore = 30;
+      } else if (title.genres && title.genres.some((g) => g.toLowerCase().includes(q))) {
+        matchScore = 20;
+      }
+
+      if (matchScore > 0) {
+        matchScore += (title.score / 100) * 5;
+        if (title.featured) matchScore += 2;
+        scored.push({ title, score: matchScore });
+      }
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, limit).map((s) => s.title);
   }
 
   public getCategorySummary(): Array<{
@@ -512,6 +560,73 @@ class CatalogService {
     }
 
     return { recommended, becauseYouWatched };
+  }
+
+  // -------------------------------------------------------------
+  // PUBLIC TITLES QUERY (Blazing fast in-memory query, <1ms)
+  // -------------------------------------------------------------
+  public getPublicTitles(options: {
+    query?: string;
+    kind?: "movie" | "series" | "live";
+    genre?: string;
+    offset?: number;
+    limit?: number;
+  }): {
+    titles: Array<{
+      id: string;
+      slug: string;
+      name: string;
+      kind: "movie" | "series" | "live";
+      synopsis: string;
+      year: number;
+      genres: string[];
+      creatorAttribution: string;
+      posterUrl: string | null;
+      featured: boolean;
+    }>;
+    total: number;
+  } {
+    let matched = this.titles;
+
+    if (options.kind) {
+      matched = matched.filter((t) => t.kind === options.kind);
+    }
+
+    if (options.genre && options.genre.trim()) {
+      const g = options.genre.toLowerCase().trim();
+      matched = matched.filter((t) => t.genres.some((genre) => genre.toLowerCase().includes(g)));
+    }
+
+    if (options.query && options.query.trim()) {
+      const q = options.query.toLowerCase().trim();
+      matched = matched.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q) ||
+          t.synopsis.toLowerCase().includes(q) ||
+          (t.creatorAttribution && t.creatorAttribution.toLowerCase().includes(q)) ||
+          t.genres.some((genre) => genre.toLowerCase().includes(q)),
+      );
+    }
+
+    const total = matched.length;
+    const offset = Math.max(0, options.offset || 0);
+    const limit = Math.max(1, Math.min(options.limit || 40, 100));
+    const paged = matched.slice(offset, offset + limit);
+
+    const titles = paged.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      kind: t.kind,
+      synopsis: t.synopsis,
+      year: t.year ?? 0,
+      genres: t.genres,
+      creatorAttribution: t.creatorAttribution || `${t.name} (${t.year || 2026})`,
+      posterUrl: t.posterUrl || null,
+      featured: Boolean(t.featured),
+    }));
+
+    return { titles, total };
   }
 }
 
