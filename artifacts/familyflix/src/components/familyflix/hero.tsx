@@ -63,10 +63,6 @@ export function Hero({ titles }: { titles: Title[] }) {
       <div className="relative mx-auto flex h-full w-full max-w-[1600px] flex-col justify-end px-4 pb-10 sm:px-6 sm:pb-12 md:px-8 lg:pb-16 xl:px-12">
         <div key={active.slug} className="relative z-10 max-w-[580px] xl:max-w-[640px] animate-fade-up">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.35)]">
-              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Online
-            </span>
             {active.badge ? (
               <span className="rounded-[5px] bg-white px-2 py-1 text-[10px] font-black uppercase leading-none tracking-[0.12em] text-black">
                 {active.badge}

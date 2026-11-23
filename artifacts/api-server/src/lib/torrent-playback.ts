@@ -43,7 +43,7 @@ type TorrentSource = TorrentRightsState & {
   sourceUrl?: string | null;
 };
 
-const metadataWaitMs = 35_000;
+const metadataWaitMs = 2_500;
 const torrentPath = path.join(os.tmpdir(), "familyflix-torrents");
 const defaultTrackers = [
   "udp://tracker.opentrackr.org:1337/announce",

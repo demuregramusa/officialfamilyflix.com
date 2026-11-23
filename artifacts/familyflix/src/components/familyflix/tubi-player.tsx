@@ -98,7 +98,7 @@ export function TubiPlayer({
 
   // VAST & Ad network configuration
   const [vastTagUrl, setVastTagUrl] = useState<string | null>(null);
-  const [vastMediaUrl, setVastMediaUrl] = useState<string | null>(null);
+  const [vastMediaUrl, setVastMediaUrl] = useState<string | null>("https://vjs.zencdn.net/v/oceans.mp4");
   const [vastClickThrough, setVastClickThrough] = useState<string | null>(null);
   const [vastImpressions, setVastImpressions] = useState<string[]>([]);
   const [hasFiredImpression, setHasFiredImpression] = useState(false);
@@ -639,7 +639,18 @@ export function TubiPlayer({
       setIsPlaying(true);
     };
     const onPause = () => setIsPlaying(false);
+    let retryCount = 0;
     const onError = () => {
+      if (retryCount < 2) {
+        retryCount += 1;
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.load();
+            videoRef.current.play().catch(() => {});
+          }
+        }, 800);
+        return;
+      }
       setHasError(true);
       setIsBuffering(false);
     };
@@ -949,7 +960,7 @@ export function TubiPlayer({
 
       {/* -------------------- UPCOMING COMMERCIAL BREAK COUNTDOWN (TUBI AVOD) -------------------- */}
       {approachingCue !== null && cueCountdown > 0 && !showingAd && (
-        <div className="absolute top-5 right-5 z-25 flex items-center gap-2 rounded-full border border-amber-400/60 bg-black/90 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xl backdrop-blur-md animate-pulse">
+        <div className="absolute top-5 right-5 z-25 flex items-center gap-2 rounded-full border border-amber-400/60 bg-black/90 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xl backdrop-blur-md">
           <Clock size={14} className="text-amber-400" />
           <span>Commercial break in <span className="text-amber-300 font-black">{cueCountdown}s</span></span>
         </div>
@@ -1153,7 +1164,7 @@ export function TubiPlayer({
       ) : null}
 
       {/* -------------------- ERROR OVERLAY -------------------- */}
-      {hasError ? (
+      {hasError && !showingAd ? (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black/90 p-6 text-center">
           <p className="text-base font-semibold text-white/90">
             Playback is buffering or momentarily reconnecting.

@@ -188,14 +188,6 @@ function Header() {
         </button>
       </nav>
       <div className="top-actions">
-        {/* Live Network Online Indicator */}
-        <div
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)] select-none"
-          title="FamilyFlix Cloud Network Status: Online 24/7"
-        >
-          <span className="size-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-          <span>Online</span>
-        </div>
 
         {/* AI Movie Concierge Trigger */}
         <button
@@ -251,10 +243,6 @@ function Footer() {
   return <footer className="app-footer">
     <div className="footer-brand">
       <Link href="/" className="footer-wordmark" aria-label="FamilyFlix by DemureGram home">family<span>flix</span></Link>
-      <div className="my-2 inline-flex items-center gap-2 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-        <span className="size-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-        <span>DemureGram Network Status: All Systems Online 24/7</span>
-      </div>
       <p>Films and television series, with rights verified and cleared for commercial AVOD streaming.</p>
       <small>© 2026 DemureGram LLC. All public domain and Creative Commons works remain with their respective rights holders.</small>
     </div>
@@ -745,10 +733,6 @@ function DetailPage({ slug }: { slug: string }) {
   return <Shell><Link href="/" className="feature-line" data-testid="link-back-catalog"><ArrowLeft size={15} /> Back to catalog</Link>
     <div className="detail-layout" style={{ marginTop: 25 }}><Poster title={detail} className="detail-poster" /><div>
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.35)]">
-          <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          Online · Free Stream
-        </span>
         <span className="eyebrow">Approved FamilyFlix title</span>
         {detail.kind === "series" && (
           <span className="rounded bg-purple-600/30 px-2 py-0.5 text-[10px] font-black uppercase text-purple-300 border border-purple-500/30">
@@ -1140,22 +1124,6 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
             <ChevronLeft size={16} />
             Back to details
           </Link>
-          <div className="flex items-center gap-2 text-xs font-medium text-white/50">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1 font-bold text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
-              <span className="size-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-              Stream Online · Free with ads
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">
-              <Volume2 size={13} />
-              HD
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-purple-300 font-semibold">
-              Audio: English (Default)
-            </span>
-            <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-white/70">
-              CC: English
-            </span>
-          </div>
         </div>
 
         {isLoading ? (
@@ -1203,10 +1171,6 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
         <div className="mt-6 space-y-4">
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-2 text-[10px]">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2.5 py-0.5 font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.35)]">
-              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Online
-            </span>
             <span className="rounded bg-gradient-to-r from-amber-400 to-orange-500 px-2.5 py-0.5 font-black uppercase tracking-wider text-black shadow-sm">
               FREE STREAM
             </span>

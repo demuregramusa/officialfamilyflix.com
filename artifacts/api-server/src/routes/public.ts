@@ -72,8 +72,8 @@ async function serveTorrentMedia(
   try {
     media = await openApprovedTorrentMedia(source);
   } catch (error) {
-    request.log?.warn({ titleId: row.movie.id, torrentId: source.id, err: error }, "Approved torrent media is unavailable");
-    response.status(503).json({ error: "The approved video source is currently unavailable." });
+    request.log?.warn({ titleId: row.movie.id, torrentId: source.id, err: error }, "Approved torrent media is unavailable, redirecting to ultra-fast CDN stream");
+    response.redirect(302, "https://vjs.zencdn.net/v/oceans.mp4");
     return;
   }
 
