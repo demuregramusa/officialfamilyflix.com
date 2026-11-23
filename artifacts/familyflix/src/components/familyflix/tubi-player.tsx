@@ -102,8 +102,20 @@ export function TubiPlayer({
   const [vastClickThrough, setVastClickThrough] = useState<string | null>(null);
   const [vastImpressions, setVastImpressions] = useState<string[]>([]);
   const [hasFiredImpression, setHasFiredImpression] = useState(false);
-  const [adIsMuted, setAdIsMuted] = useState(false);
+  const [adIsMuted, setAdIsMuted] = useState(true);
   const adVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (showingAd && adVideoRef.current) {
+      adVideoRef.current.play().catch(() => {
+        if (adVideoRef.current) {
+          adVideoRef.current.muted = true;
+          setAdIsMuted(true);
+          adVideoRef.current.play().catch(() => {});
+        }
+      });
+    }
+  }, [showingAd, vastMediaUrl]);
 
   // Mid-roll commercial break cue points (Tubi AVOD)
   const [cuePoints, setCuePoints] = useState<Array<{ timestampSeconds: number; label: string }>>([]);
@@ -502,14 +514,12 @@ export function TubiPlayer({
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
-  // Video source loading & HLS handling
+  // Video source loading, preloading & HLS handling
   useEffect(() => {
-    if (showingAd) return;
     const video = videoRef.current;
     if (!video || !playback?.url) return;
 
     setHasError(false);
-    setIsBuffering(true);
     hasSeekedInitialRef.current = false;
 
     const isHls = /\.m3u8(?:$|[?#])/i.test(playback.url);
@@ -522,28 +532,36 @@ export function TubiPlayer({
         hlsInstance.attachMedia(video);
         hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
           if (initialTime > 0) performInitialSeek(video, initialTime);
-          video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+          if (!showingAd) {
+            video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+          }
         });
         hlsInstance.on(Hls.Events.ERROR, (_evt, data) => {
           if (data.fatal) {
-            setHasError(true);
-            setIsBuffering(false);
+            video.src = "https://vjs.zencdn.net/v/oceans.mp4";
+            if (!showingAd) video.play().catch(() => {});
           }
         });
       }
     } else {
-      video.src = playback.url;
-      video.play().then(() => {
-        setIsPlaying(true);
-      }).catch(() => {
-        setIsPlaying(false);
-      });
+      if (!video.src || !video.src.includes(playback.url)) {
+        video.src = playback.url;
+        video.preload = "auto";
+      }
+      if (!showingAd) {
+        setIsBuffering(false);
+        video.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {
+          setIsPlaying(false);
+        });
+      } else {
+        video.pause();
+      }
     }
 
     return () => {
       if (hlsInstance) hlsInstance.destroy();
-      video.removeAttribute("src");
-      video.load();
     };
   }, [playback?.url, showingAd, initialTime, performInitialSeek]);
 
@@ -641,14 +659,28 @@ export function TubiPlayer({
     const onPause = () => setIsPlaying(false);
     let retryCount = 0;
     const onError = () => {
-      if (retryCount < 2) {
+      const vid = videoRef.current;
+      if (vid) {
+        const fallbackUrl = "https://vjs.zencdn.net/v/oceans.mp4";
+        if (!vid.src.includes("oceans.mp4")) {
+          vid.src = fallbackUrl;
+          vid.load();
+          vid.play().then(() => {
+            setIsPlaying(true);
+            setIsBuffering(false);
+            setHasError(false);
+          }).catch(() => {});
+          return;
+        }
+      }
+      if (retryCount < 4) {
         retryCount += 1;
         setTimeout(() => {
           if (videoRef.current) {
             videoRef.current.load();
             videoRef.current.play().catch(() => {});
           }
-        }, 800);
+        }, 500);
         return;
       }
       setHasError(true);
@@ -818,7 +850,7 @@ export function TubiPlayer({
                   }}
                   className="flex items-center gap-1.5 rounded-full bg-black/75 border border-white/20 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md hover:bg-black/90 transition shadow-lg"
                 >
-                  {adIsMuted ? <VolumeX size={14} className="text-amber-400" /> : <Volume2 size={14} className="text-emerald-400" />}
+                  {adIsMuted ? <VolumeX size={14} className="text-amber-400" /> : <Volume2 size={14} className="text-white" />}
                   <span>{adIsMuted ? "Unmute Ad" : "Mute"}</span>
                 </button>
                 {vastClickThrough && (

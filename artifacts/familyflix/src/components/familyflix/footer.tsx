@@ -38,7 +38,6 @@ export function SiteFooter() {
               can enjoy. Always free, always ad-supported.
             </p>
             <p className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-[11px] font-medium text-white/50">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
               Streaming in HD
             </p>
             <Link

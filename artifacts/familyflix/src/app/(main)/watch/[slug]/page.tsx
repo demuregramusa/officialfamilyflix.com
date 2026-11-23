@@ -60,7 +60,6 @@ export default async function WatchPage({
           </Link>
           <div className="flex items-center gap-2 text-[11px] font-medium text-white/45">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 px-2.5 py-1">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
               Free with ads
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 px-2.5 py-1">

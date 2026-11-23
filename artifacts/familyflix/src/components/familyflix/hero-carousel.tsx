@@ -110,10 +110,6 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
         <div key={current.slug} className="max-w-[620px] xl:max-w-[700px] animate-fade-up">
           {/* Badges */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.35)]">
-              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Online
-            </span>
             <span className="rounded-[5px] bg-white px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-black">
               Featured Pick
             </span>

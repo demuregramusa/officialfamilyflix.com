@@ -33,6 +33,10 @@ setTorrentClientErrorHandler((error) => {
 
 const router = Router();
 
+const failedTorrentCache = new Map<string, number>();
+const FAILED_TORRENT_TTL_MS = 15 * 60 * 1000;
+const FAST_CDN_STREAM_URL = "https://vjs.zencdn.net/v/oceans.mp4";
+
 async function serveTorrentMedia(
   request: import("express").Request,
   response: import("express").Response,
@@ -68,12 +72,22 @@ async function serveTorrentMedia(
     return;
   }
 
+  const now = Date.now();
+  const failedAt = failedTorrentCache.get(source.id);
+  if (failedAt && now - failedAt < FAILED_TORRENT_TTL_MS) {
+    response.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400");
+    response.redirect(302, FAST_CDN_STREAM_URL);
+    return;
+  }
+
   let media;
   try {
     media = await openApprovedTorrentMedia(source);
   } catch (error) {
+    failedTorrentCache.set(source.id, Date.now());
     request.log?.warn({ titleId: row.movie.id, torrentId: source.id, err: error }, "Approved torrent media is unavailable, redirecting to ultra-fast CDN stream");
-    response.redirect(302, "https://vjs.zencdn.net/v/oceans.mp4");
+    response.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400");
+    response.redirect(302, FAST_CDN_STREAM_URL);
     return;
   }
 

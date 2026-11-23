@@ -169,7 +169,6 @@ export default async function TitlePage({
 
             <aside className="h-fit rounded-2xl border border-white/[0.09] bg-white/[0.025] p-5">
               <p className="inline-flex items-center gap-2 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-300">
-                <span className="size-1.5 rounded-full bg-emerald-400" />
                 Free with ads
               </p>
               <h2 className="mt-4 text-[16px] font-bold text-white">
