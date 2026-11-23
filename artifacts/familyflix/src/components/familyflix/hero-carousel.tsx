@@ -10,8 +10,10 @@ interface HeroCarouselProps {
   titles?: Title[];
 }
 
+let cachedHeroTitles: Title[] = [];
+
 export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
-  const [internalTitles, setInternalTitles] = useState<Title[]>([]);
+  const [internalTitles, setInternalTitles] = useState<Title[]>(() => cachedHeroTitles);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
@@ -23,6 +25,7 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
         .then((r) => (r.ok ? r.json() : []))
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {
+            cachedHeroTitles = data;
             setInternalTitles(data);
           }
         })

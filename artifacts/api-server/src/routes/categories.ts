@@ -7,6 +7,7 @@ const router = Router();
 router.get("/v1/categories", async (_req, res) => {
   await catalogService.ensureLoaded();
   const categories = catalogService.getCategorySummary();
+  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   res.json({
     total: categories.length,
     categories,
@@ -17,6 +18,7 @@ router.get("/v1/categories", async (_req, res) => {
 router.get("/v1/subgenres", async (_req, res) => {
   await catalogService.ensureLoaded();
   const subgenres = catalogService.getSubgenreSummary();
+  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   res.json({
     total: subgenres.length,
     subgenres,
@@ -50,6 +52,7 @@ router.get("/v1/categories/:slug", async (req, res) => {
     return;
   }
 
+  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   res.json(result);
 });
 
@@ -64,6 +67,7 @@ router.get("/v1/home/curated-rows", async (_req, res) => {
     slug: val.slug,
     items: val.items,
   }));
+  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   res.json(collections);
 });
 
@@ -71,6 +75,7 @@ router.get("/v1/home/curated-rows", async (_req, res) => {
 router.get("/v1/home/featured-hero", async (_req, res) => {
   await catalogService.ensureLoaded();
   const heroTitles = catalogService.getFeaturedHeroTitles();
+  res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   res.json(heroTitles);
 });
 

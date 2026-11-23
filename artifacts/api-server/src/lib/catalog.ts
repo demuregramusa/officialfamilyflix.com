@@ -46,7 +46,39 @@ type CatalogRow = {
   episodes: EpisodeCatalogRow[];
 };
 
+const catalogRowsCache = new Map<string, { rows: CatalogRow[]; expiresAt: number }>();
+const catalogSlugCache = new Map<string, { row: CatalogRow | null; expiresAt: number }>();
+const CATALOG_CACHE_TTL_MS = 10 * 60 * 1000;
+
+export function invalidatePublicCatalogCache(): void {
+  catalogRowsCache.clear();
+  catalogSlugCache.clear();
+}
+
 export async function getCatalogRows(options: {
+  query?: string;
+  kind?: Movie["kind"];
+  limit?: number;
+  offset?: number;
+} = {}): Promise<CatalogRow[]> {
+  const cacheKey = `${options.kind ?? "all"}:${options.query?.trim() ?? ""}:${options.limit ?? 40}:${options.offset ?? 0}`;
+  const cached = catalogRowsCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.rows;
+  }
+
+  const rows = await fetchCatalogRowsUncached(options);
+  if (catalogRowsCache.size > 200) catalogRowsCache.clear();
+  catalogRowsCache.set(cacheKey, { rows, expiresAt: Date.now() + CATALOG_CACHE_TTL_MS });
+  for (const r of rows) {
+    if (catalogSlugCache.size < 1000) {
+      catalogSlugCache.set(r.movie.slug, { row: r, expiresAt: Date.now() + CATALOG_CACHE_TTL_MS });
+    }
+  }
+  return rows;
+}
+
+async function fetchCatalogRowsUncached(options: {
   query?: string;
   kind?: Movie["kind"];
   limit?: number;
@@ -357,13 +389,30 @@ function toPublicEpisode(row: EpisodeCatalogRow): PublicSeriesEpisode {
 }
 
 export async function getPublicCatalogRowBySlug(slug: string): Promise<CatalogRow | null> {
+  const cached = catalogSlugCache.get(slug);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.row;
+  }
   const [movie] = await db.select().from(movies)
     .where(and(eq(movies.slug, slug), eq(movies.status, "published")))
     .limit(1);
   if (!movie) return null;
   const [row] = await hydrateCatalogMovies([movie]);
-  return row ?? null;
+  const resolved = row ?? null;
+  if (catalogSlugCache.size > 1000) catalogSlugCache.clear();
+  catalogSlugCache.set(slug, { row: resolved, expiresAt: Date.now() + CATALOG_CACHE_TTL_MS });
+  return resolved;
 }
+
+// Eagerly pre-warm the top catalog queries on boot for 0ms page loads
+setTimeout(() => {
+  void Promise.all([
+    getCatalogRows({ limit: 100 }),
+    getCatalogRows({ kind: "movie", limit: 100 }),
+    getCatalogRows({ kind: "series", limit: 100 }),
+    getCatalogRows({ kind: "movie", limit: 20 }),
+  ]).catch(() => {});
+}, 400);
 
 export async function getPlaybackForRow(row: CatalogRow): Promise<Playback | null> {
   const firstEpisode = row.movie.kind === "series" ? row.episodes[0] : undefined;

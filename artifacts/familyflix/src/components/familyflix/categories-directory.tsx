@@ -16,11 +16,13 @@ interface CategorySummaryItem {
   counts: { total: number; movies: number; series: number };
 }
 
+let cachedCategoryCounts: Record<string, { total: number; movies: number; series: number }> | null = null;
+
 export function CategoriesDirectory() {
   const [activeSection, setActiveSection] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [countsMap, setCountsMap] = useState<Record<string, { total: number; movies: number; series: number }>>({});
-  const [loading, setLoading] = useState(true);
+  const [countsMap, setCountsMap] = useState<Record<string, { total: number; movies: number; series: number }>>(() => cachedCategoryCounts || {});
+  const [loading, setLoading] = useState(() => !cachedCategoryCounts);
 
   useEffect(() => {
     fetch("/api/v1/categories")
@@ -31,6 +33,7 @@ export function CategoriesDirectory() {
           for (const c of data.categories) {
             map[c.slug] = c.counts;
           }
+          cachedCategoryCounts = map;
           setCountsMap(map);
         }
       })
@@ -91,7 +94,7 @@ export function CategoriesDirectory() {
       </section>
 
       {/* Section Filter Tabs */}
-      <section className="sticky top-14 z-20 border-b border-white/10 bg-[#08060f]/95 px-4 py-3 backdrop-blur-xl sm:px-6 md:px-8 lg:px-12">
+      <section className="sticky top-[68px] md:top-[72px] z-20 border-b border-white/10 bg-[#08060f]/95 px-4 py-3 backdrop-blur-xl sm:px-6 md:px-8 lg:px-12">
         <div className="mx-auto flex max-w-[1600px] items-center gap-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
           {CATEGORY_SECTIONS.map((sec) => {
             const isActive = activeSection === sec.id;

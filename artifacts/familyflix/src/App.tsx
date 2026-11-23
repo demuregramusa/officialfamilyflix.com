@@ -141,7 +141,6 @@ function Brand() {
 function Header() {
   const [path] = useLocation();
   const [open, setOpen] = useState(false);
-  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const { isKidsMode, toggleKidsMode, exitKidsMode } = useProfile();
   const { isSubscribed, openSubscriptionModal } = useSubscription();
@@ -149,12 +148,11 @@ function Header() {
     ["/", "Home"],
     ["/movies", "Movies"],
     ["/tv-shows", "TV Shows"],
-    ["/categories", "Categories"],
     ["/my-list", "My List"],
     ["/developers", "Developers"],
   ];
   return <>
-    <div className="sticky top-0 z-40 w-full">
+    <div className="sticky top-0 z-50 w-full">
       {isKidsMode ? (
       <div className="flex items-center justify-between px-4 py-1.5 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 text-black text-xs font-bold shadow-md">
         <div className="flex items-center gap-2">
@@ -179,7 +177,7 @@ function Header() {
           type="button"
           onClick={toggleKidsMode}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition",
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition shrink-0",
             isKidsMode
               ? "bg-amber-400 text-black shadow-md hover:bg-amber-300"
               : "text-amber-300 hover:bg-amber-400/10 hover:text-amber-200"
@@ -191,24 +189,12 @@ function Header() {
         </button>
       </nav>
       <div className="top-actions">
-
-        {/* AI Movie Concierge Trigger */}
-        <button
-          type="button"
-          onClick={() => setAiModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-full border border-purple-500/40 bg-purple-500/15 px-3 py-1.5 text-xs font-bold text-purple-300 hover:bg-purple-500/25 transition shadow-sm"
-          title="Ask FamilyFlix AI Movie Concierge"
-        >
-          <Bot size={15} className="text-purple-400" />
-          <span className="hidden sm:inline">AI Concierge</span>
-        </button>
-
         {/* VIP Pass Trigger */}
         {!isSubscribed && (
           <button
             type="button"
             onClick={openSubscriptionModal}
-            className="hidden md:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-pink-500 px-3 py-1 text-xs font-black text-black hover:brightness-110 transition shadow-md"
+            className="hidden lg:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-pink-500 px-3 py-1 text-xs font-black text-black hover:brightness-110 transition shadow-md shrink-0 whitespace-nowrap"
             title="Unlock FamilyFlix VIP (Ad-Free, 4K, Offline)"
           >
             <Sparkles size={13} />
@@ -219,15 +205,11 @@ function Header() {
         <Link href="/search" className="icon-link" aria-label="Search titles" data-testid="link-search"><Search size={19} /></Link>
         <ProfileMenu
           onOpenAvatarPicker={() => setAvatarPickerOpen(true)}
-          onOpenAIAssistant={() => setAiModalOpen(true)}
         />
         <button className="quiet-button menu-toggle" onClick={() => setOpen(!open)} aria-label={open ? "Close navigation" : "Open navigation"} data-testid="button-mobile-menu">{open ? <X size={20} /> : <Menu size={20} />}</button>
       </div>
       {open && <nav className="mobile-nav" aria-label="Mobile navigation" style={{ position: "absolute", top: "100%", left: 0, right: 0, padding: 16, flexDirection: "column", background: "hsl(258 24% 8%)", borderBottom: "1px solid hsl(260 14% 25%)" }}>
-        {[...links, ["/about", "About"]].map(([href, label]) => <Link onClick={() => setOpen(false)} key={href} className="nav-link" href={href} data-testid={`link-mobile-${label.toLowerCase().replaceAll(" ","-")}`}>{label}</Link>)}
-        <button type="button" onClick={() => { setAiModalOpen(true); setOpen(false); }} className="nav-link text-left text-purple-300 font-bold">
-          🤖 AI Movie Concierge
-        </button>
+        {[...links, ["/categories", "Categories"], ["/about", "About"]].map(([href, label]) => <Link onClick={() => setOpen(false)} key={href} className="nav-link" href={href} data-testid={`link-mobile-${label.toLowerCase().replaceAll(" ","-")}`}>{label}</Link>)}
         <button type="button" onClick={() => { openSubscriptionModal(); setOpen(false); }} className="nav-link text-left text-amber-300 font-bold">
           ⭐ FamilyFlix VIP (Ad-Free & 4K)
         </button>
@@ -237,7 +219,6 @@ function Header() {
       </nav>}
     </header>
   </div>
-  <AIAssistantModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} />
   <AvatarPickerModal isOpen={avatarPickerOpen} onClose={() => setAvatarPickerOpen(false)} />
   <SubscriptionModal />
 </>;
@@ -411,7 +392,7 @@ function Catalog({ kind, query, home = false }: { kind?: "movie" | "series"; que
   }, [kind, query]);
 
   const params = useMemo(() => ({ ...(kind ? { kind } : {}), ...(query ? { query } : {}), limit: 100 }), [kind, query]);
-  const q = useListPublicTitles(params);
+  const q = useListPublicTitles(params, { query: { enabled: !home, queryKey: getListPublicTitlesQueryKey(params) } });
   const baseTitles = useMemo(() => (q.data ?? []).map(toCatalogTitle), [q.data]);
   const rawTitles = accumulated.length > 0 ? accumulated : baseTitles;
 
@@ -1781,8 +1762,8 @@ function AppRoutes() {
     <Route path="/" component={()=> <Catalog home/>}/>
     <Route path="/movies" component={()=> <Catalog kind="movie"/>}/>
     <Route path="/tv-shows" component={()=> <Catalog kind="series"/>}/>
-    <Route path="/categories" component={CategoriesDirectory}/>
-    <Route path="/category/:slug">{p=>p?<CategoryPage slug={p.slug}/>:null}</Route>
+    <Route path="/categories" component={()=> <Shell fullBleed><CategoriesDirectory/></Shell>}/>
+    <Route path="/category/:slug">{p=>p?<Shell fullBleed><CategoryPage slug={p.slug}/></Shell>:null}</Route>
     <Route path="/developers" component={DeveloperHome}/>
     <Route path="/developers/dashboard" component={DeveloperDashboard}/>
     <Route path="/developers/keys" component={DeveloperKeys}/>

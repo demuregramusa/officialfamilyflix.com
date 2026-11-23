@@ -287,20 +287,6 @@ export function ProfileMenu({
                 </span>
               </button>
 
-              {onOpenAIAssistant && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    onOpenAIAssistant();
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-purple-300 transition hover:bg-purple-500/10"
-                >
-                  <Bot className="size-4 text-purple-400" />
-                  <span>AI Movie Concierge</span>
-                </button>
-              )}
-
               <Link
                 href="/my-list"
                 onClick={() => setDropdownOpen(false)}

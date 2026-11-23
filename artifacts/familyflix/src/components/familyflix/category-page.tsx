@@ -241,7 +241,7 @@ export function CategoryPage({ slug }: { slug: string }) {
       </section>
 
       {/* Subgenres & Refinements Bar */}
-      <section className="sticky top-14 z-30 border-b border-white/10 bg-[#08060f]/95 px-4 py-3 shadow-lg backdrop-blur-xl sm:px-6 md:px-8 lg:px-12">
+      <section className="sticky top-[68px] md:top-[72px] z-30 border-b border-white/10 bg-[#08060f]/95 px-4 py-3 shadow-lg backdrop-blur-xl sm:px-6 md:px-8 lg:px-12">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
           {/* Subgenre Chips Row */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">

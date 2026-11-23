@@ -128,15 +128,25 @@ async function serveTorrentMedia(
   stream.pipe(response);
 }
 
+const imageProxyCache = new Map<string, { buf: Buffer; contentType: string }>();
+
 router.get("/v1/image-proxy", async (req, res) => {
   const imageUrl = req.query.url as string | undefined;
   if (!imageUrl) {
     res.status(400).send("Image URL required");
     return;
   }
+  const target = imageUrl.replace("https://yts.pw/", "https://img.yts.pw/");
+  const cachedImg = imageProxyCache.get(target);
+  if (cachedImg) {
+    res.setHeader("Content-Type", cachedImg.contentType);
+    res.setHeader("Cache-Control", "public, max-age=604800, s-maxage=2592000, immutable");
+    res.send(cachedImg.buf);
+    return;
+  }
   try {
-    const target = imageUrl.replace("https://yts.pw/", "https://img.yts.pw/");
     const upstream = await fetch(target, {
+      signal: AbortSignal.timeout(4000),
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Referer": "https://img.yts.pw/",
@@ -149,8 +159,13 @@ router.get("/v1/image-proxy", async (req, res) => {
     const contentType = upstream.headers.get("content-type") || "image/jpeg";
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=604800, s-maxage=2592000, immutable");
-    const buffer = await upstream.arrayBuffer();
-    res.send(Buffer.from(buffer));
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    if (imageProxyCache.size > 400) {
+      const oldestKey = imageProxyCache.keys().next().value;
+      if (oldestKey) imageProxyCache.delete(oldestKey);
+    }
+    imageProxyCache.set(target, { buf: buffer, contentType });
+    res.send(buffer);
   } catch {
     res.status(502).send("Proxy error");
   }
@@ -175,6 +190,7 @@ router.get("/v1/titles", async (request, response) => {
   });
 
   response.setHeader("X-Catalog-Total", String(total));
+  response.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   response.json(titles);
 });
 
@@ -192,6 +208,7 @@ router.get("/v1/titles/:slug", async (request, response) => {
   if (row.torrent) {
     openApprovedTorrentMedia(row.torrent).catch(() => {});
   }
+  response.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
   response.json(toPublicTitleDetail(row));
 });
 

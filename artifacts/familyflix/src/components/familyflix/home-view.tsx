@@ -13,18 +13,28 @@ interface CuratedCollection {
   items: any[];
 }
 
+const cachedHomeCollections: Record<string, CuratedCollection[]> = {};
+const cachedHomePersonalized: Record<string, any[]> = {};
+
 export function HomeView() {
   const { isKidsMode } = useProfile();
-  const [collections, setCollections] = useState<CuratedCollection[]>([]);
-  const [personalizedItems, setPersonalizedItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = isKidsMode ? "kids" : "standard";
+  const [collections, setCollections] = useState<CuratedCollection[]>(() => cachedHomeCollections[cacheKey] || []);
+  const [personalizedItems, setPersonalizedItems] = useState<any[]>(() => cachedHomePersonalized[cacheKey] || []);
+  const [loading, setLoading] = useState(() => !cachedHomeCollections[cacheKey]?.length);
 
   useEffect(() => {
     let isMounted = true;
+    const hasCached = Boolean(cachedHomeCollections[cacheKey]?.length);
+    if (hasCached) {
+      setCollections(cachedHomeCollections[cacheKey]);
+      setPersonalizedItems(cachedHomePersonalized[cacheKey] || []);
+      setLoading(false);
+    }
 
     async function loadHomeContent() {
       try {
-        setLoading(true);
+        if (!hasCached) setLoading(true);
         // Load 22 Curated collections
         const rowsPromise = fetch("/api/v1/home/curated-rows").then((r) =>
           r.ok ? r.json() : []
@@ -51,6 +61,13 @@ export function HomeView() {
         }).then((r) => (r.ok ? r.json() : []));
 
         const [rowsData, recData] = await Promise.all([rowsPromise, recPromise]);
+
+        if (Array.isArray(rowsData) && rowsData.length > 0) {
+          cachedHomeCollections[cacheKey] = rowsData;
+        }
+        if (Array.isArray(recData)) {
+          cachedHomePersonalized[cacheKey] = recData;
+        }
 
         if (isMounted) {
           setCollections(rowsData);

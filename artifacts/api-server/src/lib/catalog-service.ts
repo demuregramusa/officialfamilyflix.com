@@ -8,18 +8,28 @@ class CatalogService {
   private titlesBySlug: Map<string, CatalogTitleData> = new Map();
   private categoryCounts: Map<string, { total: number; movies: number; series: number }> = new Map();
   private subgenreCounts: Map<string, number> = new Map();
+  private cachedCuratedRows: Record<string, { title: string; subtitle?: string; slug?: string; items: CatalogTitleData[] }> | null = null;
+  private cachedHeroTitles: CatalogTitleData[] | null = null;
   private isLoaded = false;
   private loadPromise: Promise<void> | null = null;
   private lastLoadedAt = 0;
 
   constructor() {
-    // Initial lazy load trigger
+    // Eagerly pre-warm in-memory catalog on startup so the first user request never waits
+    setTimeout(() => {
+      void this.ensureLoaded().catch(() => {});
+    }, 100);
   }
 
   public async ensureLoaded(): Promise<void> {
     const now = Date.now();
-    // Cache for 5 minutes
-    if (this.isLoaded && now - this.lastLoadedAt < 300000) {
+    // Stale-while-revalidate: once loaded, return in 0ms and refresh in background after 60 minutes
+    if (this.isLoaded) {
+      if (now - this.lastLoadedAt >= 3600000 && !this.loadPromise) {
+        this.loadPromise = this.refreshCatalog().finally(() => {
+          this.loadPromise = null;
+        });
+      }
       return;
     }
 
@@ -132,6 +142,11 @@ class CatalogService {
         }
         this.subgenreCounts.set(sub.slug, count);
       }
+
+      this.cachedCuratedRows = null;
+      this.cachedHeroTitles = null;
+      this.cachedCuratedRows = this.getCuratedRows();
+      this.cachedHeroTitles = this.getFeaturedHeroTitles();
 
       this.isLoaded = true;
       this.lastLoadedAt = Date.now();
@@ -324,6 +339,7 @@ class CatalogService {
   // HOMEPAGE CURATED ROWS (All 22 requested collections)
   // -------------------------------------------------------------
   public getCuratedRows(): Record<string, { title: string; subtitle?: string; slug?: string; items: CatalogTitleData[] }> {
+    if (this.cachedCuratedRows) return this.cachedCuratedRows;
     const movies = this.titles.filter((t) => t.kind === "movie");
     const series = this.titles.filter((t) => t.kind === "series");
 
@@ -467,6 +483,7 @@ class CatalogService {
   // FEATURED HERO CAROUSEL (5-8 high impact items)
   // -------------------------------------------------------------
   public getFeaturedHeroTitles(): CatalogTitleData[] {
+    if (this.cachedHeroTitles) return this.cachedHeroTitles;
     const featured = this.titles.filter((t) => t.featured && t.backdropUrl);
     if (featured.length >= 6) {
       return featured.slice(0, 8);
@@ -517,8 +534,9 @@ class CatalogService {
       }
     }
 
-    // 2. Score candidate titles with repeat suppression
-    const candidates = this.titles.filter((t) => !dislikedSet.has(t.slug));
+    // 2. Score top candidate pool with repeat suppression (fast O(1) slice of highest-seeded titles)
+    const candidatePool = this.titles.slice(0, 500);
+    const candidates = candidatePool.filter((t) => !dislikedSet.has(t.slug));
 
     const scored = candidates.map((t) => {
       let weight = 0;
