@@ -57,8 +57,14 @@ export function DeveloperCredits() {
         fetch("/api/dev/wallets"),
         fetch("/api/dev/wallets/transactions"),
       ]);
-      if (wRes.ok) setWallets(await wRes.json());
-      if (tRes.ok) setTransactions(await tRes.json());
+      if (wRes.ok) {
+        const wData = await wRes.json();
+        setWallets(Array.isArray(wData) ? wData : []);
+      }
+      if (tRes.ok) {
+        const tData = await tRes.json();
+        setTransactions(Array.isArray(tData) ? tData : []);
+      }
     } catch (err) {
       console.error("Failed to load wallets:", err);
     } finally {

@@ -66,7 +66,7 @@ export function DeveloperDashboard() {
       if (walletsRes.ok) {
         const wData = await walletsRes.json();
         const map: WalletBalances = {};
-        for (const w of wData) {
+        for (const w of Array.isArray(wData) ? wData : []) {
           if (w.walletType === "movies_api") map.movies_api = w;
           if (w.walletType === "ai_api") map.ai_api = w;
         }

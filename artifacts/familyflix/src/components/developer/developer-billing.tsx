@@ -66,9 +66,18 @@ export function DeveloperBilling() {
         fetch("/api/dev/invoices"),
       ]);
 
-      if (plansRes.ok) setPlans(await plansRes.json());
-      if (subsRes.ok) setSubscriptions(await subsRes.json());
-      if (invRes.ok) setInvoices(await invRes.json());
+      if (plansRes.ok) {
+        const pData = await plansRes.json();
+        setPlans(Array.isArray(pData) ? pData : []);
+      }
+      if (subsRes.ok) {
+        const sData = await subsRes.json();
+        setSubscriptions(Array.isArray(sData) ? sData : []);
+      }
+      if (invRes.ok) {
+        const iData = await invRes.json();
+        setInvoices(Array.isArray(iData) ? iData : []);
+      }
     } catch (err) {
       console.error("Failed to load developer billing:", err);
     } finally {

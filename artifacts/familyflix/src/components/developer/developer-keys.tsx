@@ -53,7 +53,7 @@ export function DeveloperKeys() {
       const res = await fetch("/api/dev/keys");
       if (res.ok) {
         const data = await res.json();
-        setKeys(data);
+        setKeys(Array.isArray(data) ? data : Array.isArray(data?.keys) ? data.keys : []);
       }
     } catch (err) {
       console.error("Failed to load API keys:", err);
@@ -86,7 +86,7 @@ export function DeveloperKeys() {
       if (!res.ok) {
         throw new Error(data.error || "Failed to create API key");
       }
-      setNewKeyResult(data.rawKey);
+      setNewKeyResult(data.rawKey || data.secret || "");
       fetchKeys();
     } catch (err: any) {
       setActionError(err.message || "Failed to generate key");
@@ -190,29 +190,29 @@ export function DeveloperKeys() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {keys.map((k) => (
+                {(Array.isArray(keys) ? keys : []).map((k) => (
                   <tr key={k.id} className="hover:bg-white/[0.02] transition">
                     <td className="py-3 font-bold text-white">
-                      {k.keyName}
+                      {k.keyName || (k as any).name || "API Key"}
                     </td>
                     <td className="py-3 font-mono font-medium text-purple-300">
-                      {k.keyPrefix}...
+                      {k.keyPrefix || (k as any).key_prefix || "ff_live_"}...
                     </td>
                     <td className="py-3">
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
-                          k.environment === "live"
+                          (k.environment || "live") === "live"
                             ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                             : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
                         )}
                       >
-                        {k.environment}
+                        {k.environment || "live"}
                       </span>
                     </td>
                     <td className="py-3">
                       <div className="flex flex-wrap gap-1">
-                        {k.scopes.map((scope) => (
+                        {(Array.isArray(k.scopes) ? k.scopes : ["*"]).map((scope) => (
                           <span
                             key={scope}
                             className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-white/60"
@@ -222,9 +222,9 @@ export function DeveloperKeys() {
                         ))}
                       </div>
                     </td>
-                    <td className="py-3 text-white/50">{new Date(k.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 text-white/50">{new Date(k.createdAt || (k as any).created_at || Date.now()).toLocaleDateString()}</td>
                     <td className="py-3 text-white/50">
-                      {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleDateString() : "Never"}
+                      {k.lastUsedAt || (k as any).last_used_at ? new Date(k.lastUsedAt || (k as any).last_used_at).toLocaleDateString() : "Never"}
                     </td>
                     <td className="py-3 text-right">
                       <button

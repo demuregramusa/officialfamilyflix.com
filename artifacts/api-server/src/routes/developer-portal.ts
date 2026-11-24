@@ -173,7 +173,38 @@ router.get("/dev/keys", async (req, res) => {
       ORDER BY k.created_at DESC
     `, [org.id]);
 
-    res.json({ keys: keys.rows });
+    const mappedKeys = keys.rows.map((k) => {
+      let parsedScopes: string[] = ["movies:read", "ai:search"];
+      if (Array.isArray(k.scopes)) {
+        parsedScopes = k.scopes.map(String);
+      } else if (typeof k.scopes === "string") {
+        try {
+          const p = JSON.parse(k.scopes);
+          if (Array.isArray(p)) parsedScopes = p.map(String);
+          else parsedScopes = [k.scopes];
+        } catch {
+          parsedScopes = [k.scopes];
+        }
+      }
+      const rpm = Number(k.rate_limit_per_min) || 60;
+      return {
+        id: k.id,
+        keyName: k.name || "Primary API Key",
+        name: k.name || "Primary API Key",
+        projectId: k.project_id,
+        projectName: k.project_name,
+        keyPrefix: k.key_display || k.key_prefix || "ff_live_",
+        environment: String(k.key_prefix || "").includes("test") ? "test" : "live",
+        scopes: parsedScopes,
+        rateLimitTier: rpm >= 600 ? "enterprise" : rpm >= 120 ? "pro" : "starter",
+        status: k.status || "active",
+        createdAt: k.created_at,
+        lastUsedAt: k.last_used_at,
+        ...k,
+      };
+    });
+
+    res.json(mappedKeys);
   } catch (err) {
     res.status(500).json({ error: "Failed to list API keys" });
   } finally {
@@ -189,15 +220,17 @@ router.post("/dev/keys", async (req, res) => {
   }
 
   const {
-    projectId,
+    projectId: requestedProjectId,
     name,
+    keyName,
     environment = "live",
-    scopes = ["*"],
+    scopes = ["movies:read", "ai:search", "ai:recommend"],
     expiresInDays,
   } = req.body || {};
 
-  if (!projectId || !name || !name.trim()) {
-    res.status(400).json({ error: "Project ID and key name are required" });
+  const resolvedName = String(name || keyName || "").trim();
+  if (!resolvedName) {
+    res.status(400).json({ error: "Key name is required" });
     return;
   }
 
@@ -211,15 +244,40 @@ router.post("/dev/keys", async (req, res) => {
 
   const client = await getDbClient();
   try {
+    const org = await ensureUserOrg(user.id, user.email, client);
+    let projectId = requestedProjectId;
+    if (!projectId) {
+      const projRes = await client.query(
+        "SELECT id FROM developer_projects WHERE organization_id = $1 ORDER BY created_at ASC LIMIT 1",
+        [org.id],
+      );
+      projectId = projRes.rows[0]?.id;
+    }
+    if (!projectId) {
+      res.status(400).json({ error: "No developer project available" });
+      return;
+    }
+
     const inserted = await client.query(`
       INSERT INTO api_key_credentials (project_id, name, key_prefix, key_display, key_hash, scopes, expires_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id, name, project_id, key_prefix, key_display, scopes, rate_limit_per_min, status, expires_at, created_at
-    `, [projectId, name.trim(), prefix, keyDisplay, keyHash, JSON.stringify(scopes), expiresAt]);
+    `, [projectId, resolvedName, prefix, keyDisplay, keyHash, JSON.stringify(scopes), expiresAt]);
 
+    const row = inserted.rows[0];
     res.json({
-      key: inserted.rows[0],
-      secret: fullSecretKey, // Displayed ONLY ONCE to user!
+      key: {
+        id: row.id,
+        keyName: row.name,
+        keyPrefix: row.key_display || row.key_prefix,
+        environment,
+        scopes: Array.isArray(scopes) ? scopes : ["*"],
+        status: row.status,
+        createdAt: row.created_at,
+        ...row,
+      },
+      secret: fullSecretKey,
+      rawKey: fullSecretKey, // Displayed ONLY ONCE to user!
       warning: "Copy this API key now. You will not be able to see it again!",
     });
   } catch (err) {

@@ -60,10 +60,13 @@ export function AdminDeveloperManager() {
         }),
       ]);
 
-      if (keysRes.ok) setKeys(await keysRes.json());
+      if (keysRes.ok) {
+        const kData = await keysRes.json();
+        setKeys(Array.isArray(kData) ? kData : Array.isArray(kData?.keys) ? kData.keys : []);
+      }
       if (modelsRes.ok) {
         const mData = await modelsRes.json();
-        setModels(mData.data || []);
+        setModels(Array.isArray(mData?.data) ? mData.data : Array.isArray(mData) ? mData : []);
       }
     } catch (err) {
       console.error("Failed to load admin dev data:", err);
@@ -176,21 +179,23 @@ export function AdminDeveloperManager() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {keys.map((k) => (
+                {(Array.isArray(keys) ? keys : []).map((k) => (
                   <tr key={k.id} className="hover:bg-white/[0.02]">
-                    <td className="py-3 font-bold text-white">{k.keyName}</td>
-                    <td className="py-3 font-mono text-purple-300">{k.keyPrefix}...</td>
+                    <td className="py-3 font-bold text-white">{k.keyName || (k as any).name || "API Key"}</td>
+                    <td className="py-3 font-mono text-purple-300">{k.keyPrefix || (k as any).key_prefix || "ff_live_"}...</td>
                     <td className="py-3 uppercase text-[10px] font-bold text-emerald-400">
-                      {k.environment}
+                      {k.environment || "live"}
                     </td>
-                    <td className="py-3 text-white/60">{k.scopes.join(", ")}</td>
+                    <td className="py-3 text-white/60">
+                      {(Array.isArray(k.scopes) ? k.scopes : ["*"]).join(", ")}
+                    </td>
                     <td className="py-3">
                       <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
-                        {k.status}
+                        {k.status || "active"}
                       </span>
                     </td>
                     <td className="py-3 text-white/40">
-                      {new Date(k.createdAt).toLocaleDateString()}
+                      {new Date(k.createdAt || (k as any).created_at || Date.now()).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}
