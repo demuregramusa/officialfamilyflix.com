@@ -25,6 +25,8 @@ import {
 import { requireCapability } from "../lib/auth-middleware";
 import { logAudit } from "../lib/audit";
 import { hasEpisodePlaybackAssets } from "../lib/episode-eligibility";
+import { invalidatePublicCatalogCache } from "../lib/catalog";
+import { catalogService } from "../lib/catalog-service";
 import {
   isEvidenceComplete,
   isRightCurrent,
@@ -356,6 +358,8 @@ router.post("/admin/episodes/:episodeId/publish", requireCapability("library.pub
     publishedAt: new Date(),
     updatedAt: new Date(),
   }).where(eq(seriesEpisodes.id, episodeId));
+  invalidatePublicCatalogCache();
+  await catalogService.refreshCatalog().catch(() => {});
   await logAudit(response.locals.session, "episode.publish", "episode", episodeId, {
     seriesId: row.series.id,
     seasonNumber: row.season.seasonNumber,

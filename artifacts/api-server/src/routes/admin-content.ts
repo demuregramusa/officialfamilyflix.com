@@ -200,10 +200,12 @@ async function insertDraft(
       cast: input.cast ?? [],
       creatorAttribution: input.creatorAttribution.trim(),
       featured: input.featured ?? false,
+      posterUrl: input.posterUrl ?? null,
+      backdropUrl: input.backdropUrl ?? null,
       status: "draft",
       createdBy: actor.user.id,
       updatedAt: new Date(),
-    }).returning({ id: movies.id });
+    }).returning({ id: movies.id, slug: movies.slug });
     const newRights = await tx.insert(mediaRights).values(
       input.rights.map((right) => rightsToInsert(right, movie.id, actor)),
     ).returning({ id: mediaRights.id, assetKind: mediaRights.assetKind });
@@ -244,7 +246,7 @@ async function insertDraft(
         updatedAt: new Date(),
       });
     }
-    return movie.id;
+    return { id: movie.id, slug: movie.slug };
   });
 }
 
@@ -445,6 +447,7 @@ router.post("/admin/import", requireCapability("library.import"), async (request
   }
 
   const issues: { row: number; title: string | null; message: string }[] = [];
+  const importedTitles: { row: number; id: string; slug: string; name: string; kind: string; action: "created" | "updated" }[] = [];
   let created = 0;
   let updated = 0;
   let skipped = 0;
@@ -574,6 +577,8 @@ router.post("/admin/import", requireCapability("library.import"), async (request
             rating: titleInput.rating ?? null,
             durationMinutes: titleInput.durationMinutes ?? null,
             cast: titleInput.cast ?? [],
+            posterUrl: titleInput.posterUrl ?? existing.posterUrl ?? null,
+            backdropUrl: titleInput.backdropUrl ?? existing.backdropUrl ?? null,
             status: "draft",
             publishedAt: null,
             updatedAt: new Date(),
@@ -626,10 +631,26 @@ router.post("/admin/import", requireCapability("library.import"), async (request
         });
         pendingReview += titleInput.rights.length;
         updated += 1;
+        importedTitles.push({
+          row: rowNumber,
+          id: existing.id,
+          slug: existing.slug,
+          name: titleInput.name.trim(),
+          kind: titleInput.kind,
+          action: "updated",
+        });
       } else {
-        await insertDraft(titleInput, session);
+        const inserted = await insertDraft(titleInput, session);
         pendingReview += titleInput.rights.length;
         created += 1;
+        importedTitles.push({
+          row: rowNumber,
+          id: inserted.id,
+          slug: inserted.slug,
+          name: titleInput.name.trim(),
+          kind: titleInput.kind,
+          action: "created",
+        });
       }
     } catch (error) {
       issues.push({
@@ -648,6 +669,7 @@ router.post("/admin/import", requireCapability("library.import"), async (request
       skipped,
       pendingReview,
       format: input.format,
+      titleIds: importedTitles.map((t) => t.id),
     });
   }
   response.json({
@@ -658,6 +680,7 @@ router.post("/admin/import", requireCapability("library.import"), async (request
     skipped,
     issues,
     pendingReview,
+    importedTitles,
   });
 });
 

@@ -8,6 +8,7 @@ import adminContentRouter from "./admin-content";
 import adminOperationsRouter from "./admin-operations";
 import seriesEpisodesRouter from "./series-episodes";
 import adminMovieArchiveRouter from "./admin-movie-archive";
+import adminProductionImporterRouter from "./admin-production-importer";
 import categoriesRouter from "./categories";
 import developerPortalRouter from "./developer-portal";
 import developerV1Router from "./developer-v1";
@@ -29,5 +30,6 @@ router.use(adminContentRouter);
 router.use(adminOperationsRouter);
 router.use(seriesEpisodesRouter);
 router.use(adminMovieArchiveRouter);
+router.use(adminProductionImporterRouter);
 
 export default router;

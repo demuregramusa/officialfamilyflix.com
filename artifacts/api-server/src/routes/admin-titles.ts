@@ -40,6 +40,8 @@ import {
   validateRightsInput,
 } from "../lib/rights";
 import { isTorrentPlaybackEligible } from "../lib/torrent-source-policy.mjs";
+import { invalidatePublicCatalogCache } from "../lib/catalog";
+import { catalogService } from "../lib/catalog-service";
 
 const router = Router();
 
@@ -193,8 +195,8 @@ router.post("/admin/titles", requireCapability("rights.manage"), async (request,
         creatorAttribution: input.creatorAttribution.trim(),
         featured: input.featured ?? false,
         status: "draft",
-        posterUrl: null,
-        backdropUrl: null,
+        posterUrl: input.posterUrl ?? null,
+        backdropUrl: input.backdropUrl ?? null,
         createdBy: session.user.id,
         updatedAt: new Date(),
       }).returning({ id: movies.id });
@@ -382,6 +384,8 @@ router.post("/admin/titles/:id/publish", requireCapability("library.publish"), a
     publishedAt: new Date(),
     updatedAt: new Date(),
   }).where(eq(movies.id, movie.id));
+  invalidatePublicCatalogCache();
+  await catalogService.refreshCatalog().catch(() => {});
   await logAudit(response.locals.session, "title.publish", "title", movie.id);
   response.json(await getAdminTitle(movie.id));
 });

@@ -62,6 +62,7 @@ import type { Title as CatalogTitle } from "@/lib/catalog-types";
 import { ArchiveImportPanel } from "@/components/admin/archive-import-panel";
 import { ArchiveSourcePanel } from "@/components/admin/archive-source-panel";
 import { SeriesEpisodeManager } from "@/components/admin/series-episode-manager";
+import { ProductionImporterDashboard } from "@/components/admin/production-importer-dashboard";
 import { curatedPublicDomainTitles } from "@/lib/curated-public-domain-titles";
 import {
   getNextPlaybackTarget,
@@ -1586,7 +1587,13 @@ function AdminImport() {
   function download(){const blob=new Blob([format==="csv"?csvHeader+"\n":"[]"],{type:format==="csv"?"text/csv":"application/json"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=`familyflix-template.${format}`;a.click();URL.revokeObjectURL(u);}
   async function loadCurated(){setMessage("");setCuratedLoading(true);try{const records=await getCuratedPublicDomainTitles();setText(JSON.stringify(records,null,2));setFormat("json");setDryRun(true);setUpdateExisting(false);setAttest(false);setReport(null);}catch(e){setMessage(errorText(e));}finally{setCuratedLoading(false);}}
   function run(){setMessage("");mutation.mutate({data:{format:format as ImportInputFormat,payload:text,dryRun,updateExisting,uploaderAttested:true}},{onSuccess:r=>{setReport(r);if(!dryRun)qc.invalidateQueries({queryKey:getListAdminTitlesQueryKey()});},onError:e=>setMessage(errorText(e))});}
-  return <Shell admin><div><Heading eyebrow="Studio / import" title="Import titles" description="Validate CSV or JSON and supplied archive data before making changes. Imported catalog metadata remains private until separately reviewed." />
+  return <Shell admin><div><Heading eyebrow="Studio / import" title="Production Catalog Importer & Publisher" description="Select additions → Validate Preflight → Dry Run → Import into Production → Review Rights → Publish → Verify Live Catalog." />
+    <div style={{marginBottom:24}}>
+      <ProductionImporterDashboard onCatalogUpdated={() => {
+        qc.invalidateQueries({queryKey:getListAdminTitlesQueryKey()});
+        qc.invalidateQueries({queryKey:getListPublicTitlesQueryKey()});
+      }} />
+    </div>
     <div className="notice" style={{marginBottom:16}}><ShieldCheck size={17}/><span>Start with a dry run. Imported records remain subject to separate rights approval. A torrent or magnet reference is never a playable source or proof of rights.</span></div>
     <ArchiveImportPanel/>
     <div className="panel"><div className="notice" style={{marginBottom:14}}><Info size={17}/><span>The three NASA candidates remain withheld because their creator/employment basis and complete audiovisual contents have not been verified. The LOC films below have item-specific records stating that their collection is public domain and free to reuse; they still require administrator rights review and explicit publication.</span></div><div className="helper" style={{marginBottom:14}}>Source records: {curatedPublicDomainTitles.map((title,index)=><span key={title.sourceUrl}>{index>0?" · ":""}<a href={title.sourceUrl} target="_blank" rel="noreferrer">{title.name} ({title.year})</a></span>)}</div><div className="form-actions" style={{marginTop:0,marginBottom:15}}><button className="button-secondary" disabled={curatedLoading} onClick={()=>void loadCurated()} data-testid="button-load-curated-public-domain">{curatedLoading?"Loading source records…":`Load LOC films (${curatedPublicDomainTitles.length})`}</button><button className={format==="csv"?"button":"button-secondary"} onClick={()=>setFormat("csv")} data-testid="button-format-csv">CSV</button><button className={format==="json"?"button":"button-secondary"} onClick={()=>setFormat("json")} data-testid="button-format-json">JSON</button><button className="button-secondary" onClick={download} data-testid="button-download-template">Download blank template</button><label className="button-secondary" style={{cursor:"pointer"}}>Load file<input type="file" accept=".csv,.json,application/json,text/csv" hidden onChange={e=>{const file=e.target.files?.[0];if(file){setFormat(file.name.endsWith(".json")?"json":"csv");file.text().then(setText);setReport(null);}}} data-testid="input-import-file"/></label></div>

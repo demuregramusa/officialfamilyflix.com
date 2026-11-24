@@ -1,0 +1,425 @@
+{
+  "platform": "FamilyFlix By DemureGram — Production Catalog Importer & Publisher Execution Report",
+  "executedAt": "2026-11-24T01:43:58.748Z",
+  "workflowCompleted": "Select additions -> Validate Preflight -> Dry Run -> Import into Production -> Review Rights -> Publish -> Verify Live Catalog",
+  "job": {
+    "id": "0bc3a937-5d8b-4833-b572-1af002f94815",
+    "name": "Library of Congress Public-Domain Movies & Series Production Import",
+    "payloadSha256": "a60b4a54d92c64124c825357f158301b943fbe3c2e2bc60ce40720a2ab1d2e9a",
+    "status": "published_verified",
+    "updateExisting": false,
+    "createdBy": "5s2yBgcjDuKcI3KRAqgbWhsnI20Mp2vK",
+    "createdByEmail": "iam23yhb@gmail.com",
+    "metrics": {
+      "failedImports": 0,
+      "approvedTitles": 1,
+      "missingMetadata": 0,
+      "publishedTitles": 1,
+      "newTitlesDetected": 1,
+      "tvSeasonsImported": 1,
+      "missingMediaAssets": 5,
+      "tvEpisodesImported": 2,
+      "verifiedLiveTitles": 1,
+      "pendingRightsReview": 0,
+      "successfullyImported": 1,
+      "totalRecordsSubmitted": 5,
+      "batchDuplicatesSkipped": 0,
+      "existingDuplicatesSkipped": 4,
+      "playbackSourcesAwaitingApproval": 0
+    },
+    "items": [
+      {
+        "row": 1,
+        "kind": "movie",
+        "year": 1906,
+        "errors": [],
+        "status": "skipped_existing_duplicate",
+        "imdbCode": null,
+        "warnings": [
+          "Protected published catalog title matched by Slug (a-trip-down-market-street-before-the-fire). Existing published records are never overwritten."
+        ],
+        "rightsIds": [],
+        "reviewedAt": null,
+        "reviewerId": null,
+        "publishedAt": null,
+        "reviewerNote": null,
+        "seasonsCount": 0,
+        "verification": null,
+        "episodesCount": 0,
+        "missingPoster": true,
+        "requestedSlug": "a-trip-down-market-street-before-the-fire",
+        "reviewerEmail": null,
+        "normalizedName": "A trip down Market Street before the fire",
+        "productionSlug": "a-trip-down-market-street-before-the-fire",
+        "existingMovieId": "609fff28-7316-4502-8a12-05e7ea6d7886",
+        "missingBackdrop": true,
+        "importedEpisodes": [],
+        "importedTorrents": [],
+        "productionMovieId": null,
+        "missingMediaSource": false,
+        "rightsReviewStatus": "none",
+        "duplicateMatchBasis": "Slug (a-trip-down-market-street-before-the-fire)",
+        "missingMetadataFields": []
+      },
+      {
+        "row": 2,
+        "kind": "movie",
+        "year": 1906,
+        "errors": [],
+        "status": "skipped_existing_duplicate",
+        "imdbCode": null,
+        "warnings": [
+          "Protected published catalog title matched by Slug (san-francisco-earthquake-and-fire-april-18-1906). Existing published records are never overwritten."
+        ],
+        "rightsIds": [],
+        "reviewedAt": null,
+        "reviewerId": null,
+        "publishedAt": null,
+        "reviewerNote": null,
+        "seasonsCount": 0,
+        "verification": null,
+        "episodesCount": 0,
+        "missingPoster": true,
+        "requestedSlug": "san-francisco-earthquake-and-fire-april-18-1906",
+        "reviewerEmail": null,
+        "normalizedName": "San Francisco earthquake and fire, April 18, 1906",
+        "productionSlug": "san-francisco-earthquake-and-fire-april-18-1906",
+        "existingMovieId": "1cd75349-3896-4e0f-9575-0373ef4cc93d",
+        "missingBackdrop": true,
+        "importedEpisodes": [],
+        "importedTorrents": [],
+        "productionMovieId": null,
+        "missingMediaSource": false,
+        "rightsReviewStatus": "none",
+        "duplicateMatchBasis": "Slug (san-francisco-earthquake-and-fire-april-18-1906)",
+        "missingMetadataFields": []
+      },
+      {
+        "row": 3,
+        "kind": "movie",
+        "year": 1903,
+        "errors": [],
+        "status": "skipped_existing_duplicate",
+        "imdbCode": null,
+        "warnings": [
+          "Protected published catalog title matched by Slug (tr-in-san-francisco-1903). Existing published records are never overwritten."
+        ],
+        "rightsIds": [],
+        "reviewedAt": null,
+        "reviewerId": null,
+        "publishedAt": null,
+        "reviewerNote": null,
+        "seasonsCount": 0,
+        "verification": null,
+        "episodesCount": 0,
+        "missingPoster": true,
+        "requestedSlug": "tr-in-san-francisco-1903",
+        "reviewerEmail": null,
+        "normalizedName": "TR in San Francisco, 1903",
+        "productionSlug": "tr-in-san-francisco-1903",
+        "existingMovieId": "913b2312-893e-4638-ba6c-7cdb135efdb3",
+        "missingBackdrop": true,
+        "importedEpisodes": [],
+        "importedTorrents": [],
+        "productionMovieId": null,
+        "missingMediaSource": false,
+        "rightsReviewStatus": "none",
+        "duplicateMatchBasis": "Slug (tr-in-san-francisco-1903)",
+        "missingMetadataFields": []
+      },
+      {
+        "row": 4,
+        "kind": "series",
+        "year": 1906,
+        "errors": [],
+        "status": "published_verified",
+        "imdbCode": null,
+        "warnings": [
+          "Poster URL is not supplied (title will use placeholder card artwork).",
+          "Backdrop URL is not supplied."
+        ],
+        "rightsIds": [
+          "3e684d0c-221d-49bf-8921-9e8c52aeafa2"
+        ],
+        "reviewedAt": "2026-11-24T01:43:55.737Z",
+        "reviewerId": "5s2yBgcjDuKcI3KRAqgbWhsnI20Mp2vK",
+        "publishedAt": "2026-11-24T01:43:55.845Z",
+        "reviewerNote": "Verified Library of Congress item-level public-domain rights records, source attributions, and IIIF HLS viewing copies.",
+        "seasonsCount": 1,
+        "verification": {
+          "checks": {
+            "titleExists": true,
+            "metadataValid": true,
+            "idAndSlugMatch": true,
+            "rightsApproved": true,
+            "watchPageReady": true,
+            "statusPublished": true,
+            "playbackBindingValid": true,
+            "classificationMatches": true,
+            "mediaEndpointResponds": true,
+            "discoverableInPublicCatalog": true,
+            "seriesSeasonsAndEpisodesVerified": true
+          },
+          "errors": [],
+          "passed": true,
+          "details": {
+            "kind": "series",
+            "slug": "early-san-francisco-chronicles-1897-1916",
+            "status": "published",
+            "watchUrl": "/watch/early-san-francisco-chronicles-1897-1916",
+            "detailUrl": "/title/early-san-francisco-chronicles-1897-1916",
+            "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00015143:00015143/full/full/0/full/default.m3u8",
+            "streamType": "hls",
+            "productionId": "23cdb2a4-04b0-4bca-a3f6-c3af9d3d7e2e",
+            "playbackApiUrl": "/api/playback/early-san-francisco-chronicles-1897-1916",
+            "approvedRightsCount": 1,
+            "verifiedSeasonsCount": 1,
+            "verifiedEpisodesCount": 2
+          },
+          "checkedAt": "2026-11-24T01:43:57.167Z"
+        },
+        "episodesCount": 2,
+        "missingPoster": true,
+        "requestedSlug": "early-san-francisco-chronicles-1897-1916",
+        "reviewerEmail": "iam23yhb@gmail.com",
+        "normalizedName": "Early San Francisco Chronicles (1897–1916)",
+        "productionSlug": "early-san-francisco-chronicles-1897-1916",
+        "existingMovieId": null,
+        "missingBackdrop": true,
+        "importedEpisodes": [
+          {
+            "name": "Part I: Market Street Before the Fire (April 14, 1906)",
+            "status": "published",
+            "rightsId": "7cfd2966-09d4-4c7f-a49f-d001344e1b5e",
+            "episodeId": "3e2f4c8e-6907-43c3-b807-972dc5d5cd63",
+            "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00015143:00015143/full/full/0/full/default.m3u8",
+            "rightsStatus": "approved",
+            "seasonNumber": 1,
+            "episodeNumber": 1
+          },
+          {
+            "name": "Part II: San Francisco Earthquake & Fire Aftermath (May 1906)",
+            "status": "published",
+            "rightsId": "1cb9079c-ec96-4042-a9b6-b50b95e06ebc",
+            "episodeId": "affe7261-2335-4431-be3b-71bf55a55e12",
+            "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00007947:00007947/full/full/0/full/default.m3u8",
+            "rightsStatus": "approved",
+            "seasonNumber": 1,
+            "episodeNumber": 2
+          }
+        ],
+        "importedTorrents": [],
+        "productionMovieId": "23cdb2a4-04b0-4bca-a3f6-c3af9d3d7e2e",
+        "missingMediaSource": false,
+        "rightsReviewStatus": "approved",
+        "duplicateMatchBasis": null,
+        "missingMetadataFields": []
+      },
+      {
+        "row": 5,
+        "kind": "movie",
+        "year": 2027,
+        "errors": [],
+        "status": "skipped_existing_duplicate",
+        "imdbCode": null,
+        "warnings": [
+          "Protected published catalog title matched by Slug (a-ghost-at-gilmore-house-2027). Existing published records are never overwritten."
+        ],
+        "rightsIds": [],
+        "reviewedAt": null,
+        "reviewerId": null,
+        "publishedAt": null,
+        "reviewerNote": null,
+        "seasonsCount": 0,
+        "verification": null,
+        "episodesCount": 0,
+        "missingPoster": true,
+        "requestedSlug": "a-ghost-at-gilmore-house-2027",
+        "reviewerEmail": null,
+        "normalizedName": "A Ghost at Gilmore House",
+        "productionSlug": "a-ghost-at-gilmore-house-2027",
+        "existingMovieId": "8b816019-7b17-4ce0-93b4-2fdcb3f3d916",
+        "missingBackdrop": true,
+        "importedEpisodes": [],
+        "importedTorrents": [],
+        "productionMovieId": null,
+        "missingMediaSource": true,
+        "rightsReviewStatus": "none",
+        "duplicateMatchBasis": "Slug (a-ghost-at-gilmore-house-2027)",
+        "missingMetadataFields": []
+      }
+    ],
+    "batches": [
+      {
+        "dryRun": true,
+        "issues": [],
+        "created": 1,
+        "skipped": 0,
+        "updated": 0,
+        "batchIndex": 1,
+        "rowNumbers": [
+          4
+        ],
+        "completedAt": "2026-11-24T01:43:55.549Z",
+        "payloadBytes": 5216
+      },
+      {
+        "dryRun": false,
+        "issues": [],
+        "created": 1,
+        "skipped": 0,
+        "updated": 0,
+        "batchIndex": 2,
+        "rowNumbers": [
+          4
+        ],
+        "completedAt": "2026-11-24T01:43:55.724Z",
+        "payloadBytes": 5216
+      }
+    ],
+    "auditTrail": [
+      {
+        "phase": "preflight",
+        "actorId": "5s2yBgcjDuKcI3KRAqgbWhsnI20Mp2vK",
+        "details": {
+          "metrics": {
+            "failedImports": 0,
+            "approvedTitles": 0,
+            "missingMetadata": 0,
+            "publishedTitles": 0,
+            "newTitlesDetected": 1,
+            "tvSeasonsImported": 0,
+            "missingMediaAssets": 5,
+            "tvEpisodesImported": 0,
+            "verifiedLiveTitles": 0,
+            "pendingRightsReview": 0,
+            "successfullyImported": 0,
+            "totalRecordsSubmitted": 5,
+            "batchDuplicatesSkipped": 0,
+            "existingDuplicatesSkipped": 4,
+            "playbackSourcesAwaitingApproval": 0
+          }
+        },
+        "summary": "Preflight validated 5 records: 1 new eligible, 4 existing duplicates skipped, 0 batch duplicates skipped, 0 failed validation.",
+        "timestamp": "2026-11-24T01:43:55.530Z",
+        "actorEmail": "iam23yhb@gmail.com"
+      },
+      {
+        "phase": "dry_run",
+        "actorId": "5s2yBgcjDuKcI3KRAqgbWhsnI20Mp2vK",
+        "summary": "Dry run completed across 1 batch(es). 1 title(s) ready for production import.",
+        "timestamp": "2026-11-24T01:43:55.549Z",
+        "actorEmail": "iam23yhb@gmail.com"
+      },
+      {
+        "phase": "production_import",
+        "actorId": "5s2yBgcjDuKcI3KRAqgbWhsnI20Mp2vK",
+        "details": {
+          "createdMovieIds": [
+            {
+              "id": "23cdb2a4-04b0-4bca-a3f6-c3af9d3d7e2e",
+              "name": "Early San Francisco Chronicles (1897–1916)",
+              "slug": "early-san-francisco-chronicles-1897-1916"
+            }
+          ]
+        },
+        "summary": "Imported records into production: 1 created as draft pending rights review, 0 failed.",
+        "timestamp": "2026-11-24T01:43:55.724Z",
+        "actorEmail": "iam23yhb@gmail.com"
+      },
+      {
+        "phase": "rights_review",
+        "actorId": "5s2yBgcjDuKcI3KRAqgbWhsnI20Mp2vK",
+        "summary": "Administrator iam23yhb@gmail.com recorded 'approve' decision for 1 title(s) and 2 episode(s). Note: \"Verified Library of Congress item-level public-domain rights records, source attributions, and IIIF HLS viewing copies.\"",
+        "timestamp": "2026-11-24T01:43:55.737Z",
+        "actorEmail": "iam23yhb@gmail.com"
+      },
+      {
+        "phase": "publish_and_verify",
+        "actorId": "5s2yBgcjDuKcI3KRAqgbWhsnI20Mp2vK",
+        "details": {
+          "failedPublishCount": 0,
+          "publishedVerifiedCount": 1
+        },
+        "summary": "Published and verified 1 title(s) in the live FamilyFlix catalog (0 failed).",
+        "timestamp": "2026-11-24T01:43:58.624Z",
+        "actorEmail": "iam23yhb@gmail.com"
+      }
+    ],
+    "createdAt": "2026-11-24T01:43:55.000Z",
+    "updatedAt": "2026-11-24T01:43:58.000Z"
+  },
+  "livePublicHttpVerification": [
+    {
+      "slug": "a-trip-down-market-street-before-the-fire",
+      "name": "A trip down Market Street before the fire",
+      "kind": "movie",
+      "detailApiStatus": 200,
+      "playbackApiStatus": 200,
+      "watchPageHttpStatus": 200,
+      "streamType": "hls",
+      "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00015143:00015143/full/full/0/full/default.m3u8",
+      "rightsCount": 1,
+      "episodesVerified": [],
+      "allPassed": true
+    },
+    {
+      "slug": "san-francisco-earthquake-and-fire-april-18-1906",
+      "name": "San Francisco earthquake and fire, April 18, 1906",
+      "kind": "movie",
+      "detailApiStatus": 200,
+      "playbackApiStatus": 200,
+      "watchPageHttpStatus": 200,
+      "streamType": "hls",
+      "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00007947:00007947/full/full/0/full/default.m3u8",
+      "rightsCount": 1,
+      "episodesVerified": [],
+      "allPassed": true
+    },
+    {
+      "slug": "tr-in-san-francisco-1903",
+      "name": "TR in San Francisco, 1903",
+      "kind": "movie",
+      "detailApiStatus": 200,
+      "playbackApiStatus": 200,
+      "watchPageHttpStatus": 200,
+      "streamType": "hls",
+      "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:01877808:01877808/full/full/0/full/default.m3u8",
+      "rightsCount": 1,
+      "episodesVerified": [],
+      "allPassed": true
+    },
+    {
+      "slug": "early-san-francisco-chronicles-1897-1916",
+      "name": "Early San Francisco Chronicles (1897–1916)",
+      "kind": "series",
+      "detailApiStatus": 200,
+      "playbackApiStatus": 200,
+      "watchPageHttpStatus": 200,
+      "streamType": "hls",
+      "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00015143:00015143/full/full/0/full/default.m3u8",
+      "rightsCount": 1,
+      "episodesVerified": [
+        {
+          "episodeId": "3e2f4c8e-6907-43c3-b807-972dc5d5cd63",
+          "seasonNumber": 1,
+          "episodeNumber": 1,
+          "name": "Part I: Market Street Before the Fire (April 14, 1906)",
+          "httpStatus": 200,
+          "streamType": "hls",
+          "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00015143:00015143/full/full/0/full/default.m3u8"
+        },
+        {
+          "episodeId": "affe7261-2335-4431-be3b-71bf55a55e12",
+          "seasonNumber": 1,
+          "episodeNumber": 2,
+          "name": "Part II: San Francisco Earthquake & Fire Aftermath (May 1906)",
+          "httpStatus": 200,
+          "streamType": "hls",
+          "streamUrl": "https://tile.loc.gov/streaming-services/iiif/service:mbrs:ntscrm:00007947:00007947/full/full/0/full/default.m3u8"
+        }
+      ],
+      "allPassed": true
+    }
+  ]
+}
