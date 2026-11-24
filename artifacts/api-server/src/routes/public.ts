@@ -384,18 +384,29 @@ async function savePlaybackProgress(
     durationSeconds,
     updatedAt: new Date(),
   };
-  if (target.episodeId) {
-    await db.insert(playbackProgress).values(values).onConflictDoUpdate({
-      target: [playbackProgress.userId, playbackProgress.episodeId],
-      targetWhere: sql`${playbackProgress.episodeId} IS NOT NULL`,
-      set: { progressSeconds, durationSeconds, updatedAt: values.updatedAt },
-    });
-  } else {
-    await db.insert(playbackProgress).values(values).onConflictDoUpdate({
-      target: [playbackProgress.userId, playbackProgress.movieId],
-      targetWhere: sql`${playbackProgress.episodeId} IS NULL`,
-      set: { progressSeconds, durationSeconds, updatedAt: values.updatedAt },
-    });
+  try {
+    const filters = [
+      eq(playbackProgress.userId, userId),
+      eq(playbackProgress.movieId, target.row.movie.id),
+      target.episodeId
+        ? eq(playbackProgress.episodeId, target.episodeId)
+        : isNull(playbackProgress.episodeId),
+    ];
+    const [existing] = await db
+      .select({ userId: playbackProgress.userId })
+      .from(playbackProgress)
+      .where(and(...filters))
+      .limit(1);
+    if (existing) {
+      await db
+        .update(playbackProgress)
+        .set({ progressSeconds, durationSeconds, updatedAt: values.updatedAt })
+        .where(and(...filters));
+    } else {
+      await db.insert(playbackProgress).values(values);
+    }
+  } catch (err) {
+    logger.warn({ err, slug, episodeId }, "Non-fatal playback progress persistence warning");
   }
   response.json(progressResponse(values));
 }

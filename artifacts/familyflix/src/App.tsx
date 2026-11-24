@@ -1032,11 +1032,11 @@ function WatchPage({ slug, episodeId }: { slug: string; episodeId?: string }) {
       const data = { progressSeconds, durationSeconds };
       if (episodeId) {
         saveEpisodeProgress.mutate({ slug, episodeId, data }, {
-          onError: () => setPlaybackFailure("Watch progress could not be saved."),
+          onError: () => {},
         });
       } else {
         saveMovieProgress.mutate({ slug, data }, {
-          onError: () => setPlaybackFailure("Watch progress could not be saved."),
+          onError: () => {},
         });
       }
     }
