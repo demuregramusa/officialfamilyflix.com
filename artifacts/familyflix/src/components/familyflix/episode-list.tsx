@@ -32,7 +32,7 @@ export function EpisodeList({ title }: { title: Title }) {
               href={`/watch/${title.slug}`}
               className="group flex gap-3 p-3 transition hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white sm:gap-4 sm:p-4"
             >
-              <span className="relative block aspect-video w-[132px] shrink-0 overflow-hidden rounded-lg bg-[#120e1d] sm:w-[168px]">
+              <span className="relative block aspect-video w-[132px] shrink-0 overflow-hidden rounded-lg bg-[#12161b] sm:w-[168px]">
                 <span
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ backgroundImage: `url("${wideUrl(title)}")` }}

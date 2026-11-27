@@ -76,7 +76,7 @@ export function AdminShell({
   }
 
   return (
-    <div className="min-h-dvh bg-[#08060f] lg:flex">
+    <div className="min-h-dvh bg-[#0c1014] lg:flex">
       <aside className="hidden w-[248px] shrink-0 flex-col border-r border-white/[0.07] bg-[#0a0712] px-4 py-5 lg:flex">
         <div className="px-1">
           <FamilyFlixLogo />
@@ -143,7 +143,7 @@ export function AdminShell({
       </aside>
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#08060f]/95 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-40 border-b border-white/[0.07] bg-[#0c1014]/95 backdrop-blur lg:hidden">
           <div className="flex h-14 items-center justify-between px-4">
             <FamilyFlixLogo />
             <button

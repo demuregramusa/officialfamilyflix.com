@@ -4,7 +4,7 @@ import { backdropUrl, posterUrl, wideUrl } from "@/lib/art-utils";
 import type { Title } from "@/lib/catalog-types";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_PALETTE: [string, string] = ["#120e1d", "#7c3aed"];
+const DEFAULT_PALETTE: [string, string] = ["#12161b", "#7c3aed"];
 
 function getPalette(title?: Partial<Title> | null): [string, string] {
   if (title?.palette && Array.isArray(title.palette) && title.palette.length >= 2) {
@@ -50,7 +50,7 @@ export function PosterArt({
   return (
     <div
       className={cn(
-        "relative isolate aspect-[2/3] w-full overflow-hidden rounded-xl bg-[#120e1d] shadow-md ring-1 ring-white/10 transition-all duration-300 group-hover/card:shadow-2xl group-hover/card:ring-white/25",
+        "relative isolate aspect-[2/3] w-full overflow-hidden rounded-xl bg-[#12161b] shadow-md ring-1 ring-white/10 transition-all duration-300 group-hover/card:shadow-2xl group-hover/card:ring-white/25",
         className,
       )}
     >
@@ -202,7 +202,7 @@ export function WideArt({
   return (
     <div
       className={cn(
-        "relative isolate aspect-video w-full overflow-hidden rounded-xl bg-[#120e1d] shadow-md ring-1 ring-white/10 transition-all duration-300 group-hover/card:shadow-2xl group-hover/card:ring-white/25",
+        "relative isolate aspect-video w-full overflow-hidden rounded-xl bg-[#12161b] shadow-md ring-1 ring-white/10 transition-all duration-300 group-hover/card:shadow-2xl group-hover/card:ring-white/25",
         className,
       )}
     >
@@ -246,7 +246,7 @@ export function PosterImage({
   return (
     <div
       className={cn(
-        "grain relative isolate aspect-[2/3] w-full overflow-hidden rounded-xl bg-[#120e1d]",
+        "grain relative isolate aspect-[2/3] w-full overflow-hidden rounded-xl bg-[#12161b]",
         className,
       )}
     >

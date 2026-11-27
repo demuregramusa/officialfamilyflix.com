@@ -81,9 +81,9 @@ for movie in ai_results.data:
   };
 
   return (
-    <div className="min-h-screen bg-[#08060f] text-white">
+    <div className="min-h-screen bg-[#0c1014] text-white">
       {/* Developer Hero */}
-      <section className="relative overflow-hidden border-b border-white/10 bg-gradient-to-b from-[#180e2b] via-[#0d0718] to-[#08060f] px-4 py-16 sm:px-6 md:px-8 lg:px-12 lg:py-24">
+      <section className="relative overflow-hidden border-b border-white/10 bg-gradient-to-b from-[#180e2b] via-[#0d0718] to-[#0c1014] px-4 py-16 sm:px-6 md:px-8 lg:px-12 lg:py-24">
         <div aria-hidden className="pointer-events-none absolute -right-40 -top-40 size-[600px] rounded-full bg-purple-600/20 blur-[120px]" />
         <div aria-hidden className="pointer-events-none absolute -left-40 bottom-0 size-[500px] rounded-full bg-pink-500/15 blur-[120px]" />
 
@@ -133,7 +133,7 @@ for movie in ai_results.data:
 
       {/* Code Snippets Preview */}
       <section className="mx-auto max-w-[1400px] px-4 py-16 sm:px-6 md:px-8 lg:px-12">
-        <div className="rounded-3xl border border-white/15 bg-[#120e1d]/90 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="rounded-3xl border border-white/15 bg-[#12161b]/90 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-purple-400">Quickstart</span>

@@ -142,7 +142,7 @@ export function CategoryPage({ slug }: { slug: string }) {
       poster,
       backdrop,
       image: poster || "photo-1489599849927-2ee91cede3ba",
-      palette: ["#120e1d", "#7c3aed"],
+      palette: ["#12161b", "#7c3aed"],
     };
   });
 
@@ -155,9 +155,9 @@ export function CategoryPage({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#08060f] pb-24 text-white">
+    <div className="min-h-screen bg-[#0c1014] pb-24 text-white">
       {/* Category Hero Banner */}
-      <section className="relative overflow-hidden border-b border-white/10 bg-gradient-to-b from-[#1b1233] via-[#0f0a1d] to-[#08060f] px-4 py-12 sm:px-6 md:px-8 lg:px-12">
+      <section className="relative overflow-hidden border-b border-white/10 bg-gradient-to-b from-[#1b1233] via-[#0f0a1d] to-[#0c1014] px-4 py-12 sm:px-6 md:px-8 lg:px-12">
         <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 size-96 rounded-full bg-purple-600/20 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -left-20 bottom-0 size-80 rounded-full bg-pink-500/15 blur-3xl" />
 
@@ -241,7 +241,7 @@ export function CategoryPage({ slug }: { slug: string }) {
       </section>
 
       {/* Subgenres & Refinements Bar */}
-      <section className="sticky top-[68px] md:top-[72px] z-30 border-b border-white/10 bg-[#08060f]/95 px-4 py-3 shadow-lg backdrop-blur-xl sm:px-6 md:px-8 lg:px-12">
+      <section className="sticky top-[68px] md:top-[72px] z-30 border-b border-white/10 bg-[#0c1014]/95 px-4 py-3 shadow-lg backdrop-blur-xl sm:px-6 md:px-8 lg:px-12">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
           {/* Subgenre Chips Row */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
@@ -295,13 +295,13 @@ export function CategoryPage({ slug }: { slug: string }) {
                 onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
                 className="appearance-none rounded-xl border border-white/15 bg-white/[0.06] pl-3 pr-8 py-1.5 text-xs font-semibold text-white outline-none hover:border-white/30 transition cursor-pointer"
               >
-                <option value="all" className="bg-[#120e1d] text-white">All Release Years</option>
-                <option value="2020s" className="bg-[#120e1d] text-white">2020–2026 (New Releases)</option>
-                <option value="2010s" className="bg-[#120e1d] text-white">2010–2019</option>
-                <option value="2000s" className="bg-[#120e1d] text-white">2000–2009</option>
-                <option value="1990s" className="bg-[#120e1d] text-white">1990–1999</option>
-                <option value="1980s" className="bg-[#120e1d] text-white">1980–1989</option>
-                <option value="classics" className="bg-[#120e1d] text-white">Classics (Pre-1980)</option>
+                <option value="all" className="bg-[#12161b] text-white">All Release Years</option>
+                <option value="2020s" className="bg-[#12161b] text-white">2020–2026 (New Releases)</option>
+                <option value="2010s" className="bg-[#12161b] text-white">2010–2019</option>
+                <option value="2000s" className="bg-[#12161b] text-white">2000–2009</option>
+                <option value="1990s" className="bg-[#12161b] text-white">1990–1999</option>
+                <option value="1980s" className="bg-[#12161b] text-white">1980–1989</option>
+                <option value="classics" className="bg-[#12161b] text-white">Classics (Pre-1980)</option>
               </select>
             </div>
 
@@ -312,10 +312,10 @@ export function CategoryPage({ slug }: { slug: string }) {
                 onChange={(e) => { setSortBy(e.target.value as any); setPage(1); }}
                 className="appearance-none rounded-xl border border-white/15 bg-white/[0.06] pl-3 pr-8 py-1.5 text-xs font-semibold text-white outline-none hover:border-white/30 transition cursor-pointer"
               >
-                <option value="popular" className="bg-[#120e1d] text-white">Most Popular</option>
-                <option value="recent" className="bg-[#120e1d] text-white">Newest Release</option>
-                <option value="score" className="bg-[#120e1d] text-white">Highest Rated</option>
-                <option value="title" className="bg-[#120e1d] text-white">Title (A–Z)</option>
+                <option value="popular" className="bg-[#12161b] text-white">Most Popular</option>
+                <option value="recent" className="bg-[#12161b] text-white">Newest Release</option>
+                <option value="score" className="bg-[#12161b] text-white">Highest Rated</option>
+                <option value="title" className="bg-[#12161b] text-white">Title (A–Z)</option>
               </select>
             </div>
 

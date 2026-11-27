@@ -174,7 +174,7 @@ export default function AboutPage() {
 
           <Link
             href="/contact"
-            className="mt-6 inline-flex h-10 w-full items-center justify-center rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#08060f]"
+            className="mt-6 inline-flex h-10 w-full items-center justify-center rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1014]"
           >
             Contact FamilyFlix
           </Link>

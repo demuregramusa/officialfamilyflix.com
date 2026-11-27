@@ -336,7 +336,7 @@ export function AIAssistantModal({ isOpen, onClose }: AIAssistantModalProps) {
       onClick={onClose}
     >
       <div
-        className="relative flex h-[85vh] max-h-[720px] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-b from-[#1b122c] via-[#120e1d] to-[#08060f] shadow-2xl text-white"
+        className="relative flex h-[85vh] max-h-[720px] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-purple-500/30 bg-gradient-to-b from-[#1b122c] via-[#12161b] to-[#0c1014] shadow-2xl text-white"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}

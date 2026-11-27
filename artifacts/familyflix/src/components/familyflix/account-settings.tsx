@@ -162,7 +162,7 @@ export function AccountSettingsPage() {
       </div>
 
       {/* Account Info Pill */}
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl">
         <div className="flex items-center gap-4">
           <div
             className="grid size-14 place-items-center rounded-2xl shadow-lg overflow-hidden border border-white/10"
@@ -277,7 +277,7 @@ export function AccountSettingsPage() {
       {/* TAB CONTENT: PROFILES */}
       {activeTab === "profiles" && (
         <div className="space-y-6">
-          <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl">
+          <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-base font-bold text-white">Active Profiles</h3>
@@ -370,7 +370,7 @@ export function AccountSettingsPage() {
       {/* TAB CONTENT: VIP & SUBSCRIPTION */}
       {activeTab === "vip" && (
         <div className="space-y-6 max-w-2xl">
-          <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-br from-[#1c122e] to-[#120e1d] p-6 sm:p-8 shadow-xl">
+          <div className="rounded-3xl border border-purple-500/30 bg-gradient-to-br from-[#181b20] to-[#12161b] p-6 sm:p-8 shadow-xl">
             <div className="flex items-center justify-between">
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-300">
@@ -441,7 +441,7 @@ export function AccountSettingsPage() {
           </div>
 
           {/* Voice Assistant Settings */}
-          <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl">
+          <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <div className="grid size-10 place-items-center rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30">
@@ -515,7 +515,7 @@ export function AccountSettingsPage() {
           </div>
 
           {/* Pre-ordered Titles List */}
-          <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl">
+          <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl">
             <div className="flex items-center gap-2 mb-3">
               <CalendarCheck size={18} className="text-amber-400" />
               <h4 className="text-sm font-bold text-white">Reserved Early-Access Titles ({preOrders.length})</h4>
@@ -540,7 +540,7 @@ export function AccountSettingsPage() {
 
       {/* TAB CONTENT: OFFLINE DOWNLOADS */}
       {activeTab === "downloads" && (
-        <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl max-w-2xl">
+        <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl max-w-2xl">
           <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
             <div>
               <h3 className="text-base font-bold text-white">Offline Downloads ({offlineDownloads.length})</h3>
@@ -601,7 +601,7 @@ export function AccountSettingsPage() {
 
       {/* TAB CONTENT: SECURITY & PASSWORD */}
       {activeTab === "security" && (
-        <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl max-w-xl">
+        <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl max-w-xl">
           <h3 className="text-base font-bold text-white mb-1">Change Password</h3>
           <p className="text-xs text-white/50 mb-6">
             Update your account password. Must be at least 10 characters long.
@@ -679,7 +679,7 @@ export function AccountSettingsPage() {
       {/* TAB CONTENT: WATCH HISTORY & WATCHLIST */}
       {activeTab === "history" && (
         <div className="space-y-6 max-w-xl">
-          <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl">
+          <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl">
             <h3 className="text-base font-bold text-white mb-1">Continue Watching History</h3>
             <p className="text-xs text-white/50 mb-4">
               Clear your viewing history and resume timestamps for this profile.
@@ -693,7 +693,7 @@ export function AccountSettingsPage() {
             </button>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl">
+          <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl">
             <h3 className="text-base font-bold text-white mb-1">Personalized Watchlist</h3>
             <p className="text-xs text-white/50 mb-4">
               Remove all saved titles from your personalized My List.
@@ -711,7 +711,7 @@ export function AccountSettingsPage() {
 
       {/* TAB CONTENT: PRIVACY & GDPR */}
       {activeTab === "privacy" && (
-        <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl max-w-xl">
+        <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl max-w-xl">
           <h3 className="text-base font-bold text-white mb-1">Data Rights & Account Deletion</h3>
           <p className="text-xs text-white/50 mb-6">
             Under GDPR and CCPA regulations, you have the right to request the permanent deletion of your account and associated viewer data.

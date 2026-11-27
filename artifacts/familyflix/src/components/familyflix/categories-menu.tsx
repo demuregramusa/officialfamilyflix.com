@@ -50,7 +50,7 @@ export function CategoriesMenu() {
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-full mt-2 w-[340px] sm:w-[560px] rounded-2xl border border-white/15 bg-[#120e1d]/98 p-4 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in">
+        <div className="absolute left-0 top-full mt-2 w-[340px] sm:w-[560px] rounded-2xl border border-white/15 bg-[#12161b]/98 p-4 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in">
           {/* Header & Content Type Filter */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
             <div>

@@ -171,7 +171,7 @@ export function ContinueWatchingRow() {
           return (
             <div
               key={`${item.slug}-${item.episodeId || "movie"}`}
-              className="group/card relative w-[240px] shrink-0 sm:w-[280px] md:w-[320px] rounded-2xl border border-white/10 bg-[#120e1d] p-2 transition hover:border-white/25 hover:shadow-2xl"
+              className="group/card relative w-[240px] shrink-0 sm:w-[280px] md:w-[320px] rounded-2xl border border-white/10 bg-[#12161b] p-2 transition hover:border-white/25 hover:shadow-2xl"
               data-testid={`card-continue-${item.slug}`}
             >
               {/* Dismiss Button */}

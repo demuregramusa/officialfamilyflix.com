@@ -89,7 +89,7 @@ export function DeveloperDashboard() {
   const successRate = total > 0 ? ((success / total) * 100).toFixed(1) : "100.0";
 
   return (
-    <div className="min-h-screen bg-[#08060f] text-white">
+    <div className="min-h-screen bg-[#0c1014] text-white">
       <DeveloperNav activeTab="dashboard" />
 
       <main className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">

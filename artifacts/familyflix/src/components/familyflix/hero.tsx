@@ -58,7 +58,7 @@ export function Hero({ titles }: { titles: Title[] }) {
       ))}
 
       <div className="absolute inset-0 hero-fade pointer-events-none" />
-      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#08060f]/70 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#0c1014]/70 to-transparent pointer-events-none" />
 
       <div className="relative mx-auto flex h-full w-full max-w-[1600px] flex-col justify-end px-4 pb-10 sm:px-6 sm:pb-12 md:px-8 lg:pb-16 xl:px-12">
         <div key={active.slug} className="relative z-10 max-w-[580px] xl:max-w-[640px] animate-fade-up">

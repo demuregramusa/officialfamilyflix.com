@@ -198,7 +198,7 @@ export default function DevelopersPage() {
       <div className="mt-7 flex flex-wrap items-center gap-3">
         <a
           href={requestHref}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#08060f]"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1014]"
         >
           Get API access
           <ArrowRight className="size-4" aria-hidden />
@@ -421,7 +421,7 @@ export default function DevelopersPage() {
             </ul>
             <a
               href={requestHref}
-              className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#08060f]"
+              className="mt-6 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1014]"
             >
               <Wallet className="size-4" aria-hidden />
               Request access

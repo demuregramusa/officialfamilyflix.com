@@ -81,7 +81,7 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
   return (
     <section
       aria-label="Featured on FamilyFlix"
-      className="group/hero relative h-[72vh] min-h-[520px] w-full overflow-hidden bg-[#08060f] sm:h-[76vh] lg:h-[82vh] lg:max-h-[780px]"
+      className="group/hero relative h-[72vh] min-h-[520px] w-full overflow-hidden bg-[#0c1014] sm:h-[76vh] lg:h-[82vh] lg:max-h-[780px]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
@@ -105,8 +105,8 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
 
       {/* Cinematic Vignettes */}
       <div className="absolute inset-0 hero-fade pointer-events-none" />
-      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#08060f]/80 to-transparent pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#08060f] via-[#08060f]/60 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#0c1014]/80 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0c1014] via-[#0c1014]/60 to-transparent pointer-events-none" />
 
       {/* Hero Content Box */}
       <div className="relative mx-auto flex h-full w-full max-w-[1600px] flex-col justify-end px-4 pb-12 sm:px-6 sm:pb-14 md:px-8 lg:pb-16 xl:px-12 z-10">

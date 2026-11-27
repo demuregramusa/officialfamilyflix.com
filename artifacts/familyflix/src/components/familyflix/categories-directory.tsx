@@ -54,9 +54,9 @@ export function CategoriesDirectory() {
   });
 
   return (
-    <div className="min-h-screen bg-[#08060f] pb-24 text-white">
+    <div className="min-h-screen bg-[#0c1014] pb-24 text-white">
       {/* Directory Hero */}
-      <section className="relative overflow-hidden border-b border-white/10 bg-gradient-to-b from-[#19102f] via-[#0c0817] to-[#08060f] px-4 py-12 sm:px-6 md:px-8 lg:px-12">
+      <section className="relative overflow-hidden border-b border-white/10 bg-gradient-to-b from-[#19102f] via-[#0c0817] to-[#0c1014] px-4 py-12 sm:px-6 md:px-8 lg:px-12">
         <div aria-hidden className="pointer-events-none absolute -right-16 top-0 size-80 rounded-full bg-purple-600/20 blur-3xl" />
         <div className="relative mx-auto max-w-[1600px]">
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-white/50 mb-4">
@@ -94,7 +94,7 @@ export function CategoriesDirectory() {
       </section>
 
       {/* Section Filter Tabs */}
-      <section className="sticky top-[68px] md:top-[72px] z-20 border-b border-white/10 bg-[#08060f]/95 px-4 py-3 backdrop-blur-xl sm:px-6 md:px-8 lg:px-12">
+      <section className="sticky top-[68px] md:top-[72px] z-20 border-b border-white/10 bg-[#0c1014]/95 px-4 py-3 backdrop-blur-xl sm:px-6 md:px-8 lg:px-12">
         <div className="mx-auto flex max-w-[1600px] items-center gap-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
           {CATEGORY_SECTIONS.map((sec) => {
             const isActive = activeSection === sec.id;

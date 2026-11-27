@@ -81,7 +81,7 @@ export function OnboardingExperience({
   }
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-[#08060f]">
+    <div className="relative min-h-dvh overflow-hidden bg-[#0c1014]">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-brand/25 blur-[120px]"
@@ -162,7 +162,7 @@ export function OnboardingExperience({
           </p>
         ) : null}
 
-        <div className="sticky bottom-0 mt-8 flex flex-col items-center gap-3 border-t border-white/[0.06] bg-[#08060f]/95 py-4 backdrop-blur sm:flex-row sm:justify-between">
+        <div className="sticky bottom-0 mt-8 flex flex-col items-center gap-3 border-t border-white/[0.06] bg-[#0c1014]/95 py-4 backdrop-blur sm:flex-row sm:justify-between">
           <p className="text-[12.5px] text-white/45">
             {selected.length === 0
               ? `Select at least ${MIN_SELECTED} to continue`

@@ -1038,7 +1038,7 @@ export function TubiPlayer({
           {/* Center Card - Pause Ad & QR Code (strictly bounded between top header and bottom scrubber) */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c122e]/95 via-[#120e1d]/95 to-[#08060f]/95 p-4 sm:p-5 shadow-2xl text-white backdrop-blur-xl"
+            className="w-full max-w-md rounded-2xl border border-white/15 bg-gradient-to-br from-[#181b20]/95 via-[#12161b]/95 to-[#0c1014]/95 p-4 sm:p-5 shadow-2xl text-white backdrop-blur-xl"
           >
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
@@ -1433,7 +1433,7 @@ export function TubiPlayer({
               {/* Tubi Audio & Subtitles Popover */}
               {showSettings && (
                 <div
-                  className="absolute bottom-12 right-0 z-50 w-72 max-w-[calc(100vw-24px)] max-h-72 overflow-y-auto rounded-2xl border border-white/20 bg-[#120e1d]/95 p-4 shadow-2xl backdrop-blur-2xl text-white animate-fade-in"
+                  className="absolute bottom-12 right-0 z-50 w-72 max-w-[calc(100vw-24px)] max-h-72 overflow-y-auto rounded-2xl border border-white/20 bg-[#12161b]/95 p-4 shadow-2xl backdrop-blur-2xl text-white animate-fade-in"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between pb-2.5 border-b border-white/10">

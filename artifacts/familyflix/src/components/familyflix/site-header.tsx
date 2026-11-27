@@ -60,7 +60,7 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#08060f]/92 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0c1014]/92 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-6 px-4 sm:px-6 md:px-8 xl:px-12">
         <FamilyFlixLogo />
 

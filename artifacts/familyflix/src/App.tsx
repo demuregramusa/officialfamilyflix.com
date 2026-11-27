@@ -349,11 +349,11 @@ function TitleCards({ titles }: { titles: PublicTitle[] }) {
 }
 function EmptyOriginalHero() {
   const { isKidsMode, exitKidsMode } = useProfile();
-  return <section className="relative flex min-h-[500px] w-full items-end overflow-hidden bg-[#08060f] sm:min-h-[580px] lg:min-h-[640px]" data-testid="section-featured-catalog">
+  return <section className="relative flex min-h-[500px] w-full items-end overflow-hidden bg-[#0c1014] sm:min-h-[580px] lg:min-h-[640px]" data-testid="section-featured-catalog">
     <div aria-hidden className="pointer-events-none absolute inset-0" style={{
       background: isKidsMode
-        ? "radial-gradient(58% 65% at 78% 30%, rgba(245,158,11,.25), transparent 68%), radial-gradient(40% 45% at 78% 58%, rgba(236,72,153,.2), transparent 70%), linear-gradient(90deg,#08060f 0%,rgba(8,6,15,.84) 46%,rgba(8,6,15,.18) 100%)"
-        : "radial-gradient(58% 65% at 78% 30%, rgba(109,40,255,.34), transparent 68%), radial-gradient(40% 45% at 78% 58%, rgba(255,46,136,.15), transparent 70%), linear-gradient(90deg,#08060f 0%,rgba(8,6,15,.84) 46%,rgba(8,6,15,.18) 100%)"
+        ? "radial-gradient(58% 65% at 78% 30%, rgba(245,158,11,.25), transparent 68%), radial-gradient(40% 45% at 78% 58%, rgba(236,72,153,.2), transparent 70%), linear-gradient(90deg,#0c1014 0%,rgba(8,6,15,.84) 46%,rgba(8,6,15,.18) 100%)"
+        : "radial-gradient(58% 65% at 78% 30%, rgba(109,40,255,.34), transparent 68%), radial-gradient(40% 45% at 78% 58%, rgba(255,46,136,.15), transparent 70%), linear-gradient(90deg,#0c1014 0%,rgba(8,6,15,.84) 46%,rgba(8,6,15,.18) 100%)"
     }} />
     <div aria-hidden className="pointer-events-none absolute right-[10%] top-[12%] hidden aspect-[.72] w-[29%] rotate-[4deg] rounded-[48%_48%_12px_12px] border border-white/20 bg-gradient-to-br from-[#38265f] via-[#1b1230] to-[#100b17] shadow-2xl md:block" />
     <div className="relative mx-auto w-full max-w-[1600px] px-4 pb-12 sm:px-6 md:px-8 md:pb-16 xl:px-12">
@@ -821,7 +821,7 @@ function DetailPage({ slug }: { slug: string }) {
 
       {/* Tubi-Style Season & Episode Selector */}
       {detail.kind === "series" && (
-        <section className="mt-8 rounded-2xl border border-white/10 bg-[#120e1d] p-5 sm:p-6" data-testid="public-series-episodes">
+        <section className="mt-8 rounded-2xl border border-white/10 bg-[#12161b] p-5 sm:p-6" data-testid="public-series-episodes">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div>
               <h2 className="text-lg font-bold text-white sm:text-xl">Episodes & Seasons</h2>

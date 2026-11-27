@@ -33,7 +33,7 @@ export function AdBreakManager() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl">
+      <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl">
         <div className="flex items-center gap-3 mb-2">
           <div className="grid size-10 place-items-center rounded-xl bg-purple-600/20 text-purple-400">
             <Sparkles size={20} />

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#08060f] px-4 py-12">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#0c1014] px-4 py-12">
       <div
         aria-hidden
         className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-brand/25 blur-[120px]"

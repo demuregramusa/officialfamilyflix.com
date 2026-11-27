@@ -12,10 +12,42 @@ export interface AvatarOption {
   id: string;
   name: string;
   url: string;
-  category: "kids" | "adults";
+  category: "demure" | "kids" | "adults";
   role: string;
   isDefault?: boolean;
 }
+
+// 4 Exclusive Demure 3D Neon Studio Avatars
+export const DEMURE_AVATARS: AvatarOption[] = [
+  {
+    id: "3d-demure-maya",
+    name: "Maya",
+    url: "/avatars/demure/demure-avatar-1.jpg",
+    category: "demure",
+    role: "Demure Creative Director",
+  },
+  {
+    id: "3d-demure-devon",
+    name: "Devon",
+    url: "/avatars/demure/demure-avatar-2.jpg",
+    category: "demure",
+    role: "Demure Neon Founder",
+  },
+  {
+    id: "3d-demure-chloe",
+    name: "Chloe",
+    url: "/avatars/demure/demure-avatar-3.jpg",
+    category: "demure",
+    role: "Demure Studio Curator",
+  },
+  {
+    id: "3d-demure-noah",
+    name: "Noah",
+    url: "/avatars/demure/demure-avatar-4.jpg",
+    category: "demure",
+    role: "Demure Producer",
+  },
+];
 
 // 8 High-Definition 3D Young Avatars for Kids
 export const KIDS_AVATARS: AvatarOption[] = [
@@ -167,46 +199,56 @@ export const ADULT_AVATARS: AvatarOption[] = [
   },
 ];
 
-// Combined list of all 20 avatars
-export const AVATAR_OPTIONS: AvatarOption[] = [...KIDS_AVATARS, ...ADULT_AVATARS];
+// Combined list of all 24 avatars (Demure Originals first, followed by Kids & Adults)
+export const AVATAR_OPTIONS: AvatarOption[] = [
+  ...DEMURE_AVATARS,
+  ...KIDS_AVATARS,
+  ...ADULT_AVATARS,
+];
 
 // Cinematic Banner Covers
 export const COVER_OPTIONS = [
   {
+    id: "cover-demure-crew",
+    name: "Demure Cinema Crew",
+    url: "/avatars/demure/demure-familyflix-crew.jpg",
+    gradient: "linear-gradient(135deg, #0c1014, #7c3aed, #d6249f)",
+  },
+  {
     id: "cover-cyberpunk",
     name: "Demure Cinema Stage",
     url: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=1200&h=400&q=80",
-    gradient: "linear-gradient(135deg, #1b0a2a, #4a154b, #6b21a8)",
+    gradient: "linear-gradient(135deg, #0c1014, #4a154b, #6b21a8)",
   },
   {
     id: "cover-velvet",
     name: "Golden Velvet Cinema",
     url: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&h=400&q=80",
-    gradient: "linear-gradient(135deg, #181024, #2d1847, #7c3aed)",
+    gradient: "linear-gradient(135deg, #0c1014, #2d1847, #7c3aed)",
   },
   {
     id: "cover-nebula",
     name: "Cosmic Nebula",
     url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&h=400&q=80",
-    gradient: "linear-gradient(135deg, #0f172a, #1e1b4b, #312e81)",
+    gradient: "linear-gradient(135deg, #0c1014, #1e1b4b, #0095f6)",
   },
   {
     id: "cover-neon",
     name: "Neon Horizon",
     url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&h=400&q=80",
-    gradient: "linear-gradient(135deg, #111827, #3730a3, #4338ca)",
+    gradient: "linear-gradient(135deg, #0c1014, #3730a3, #d6249f)",
   },
   {
     id: "cover-drivein",
     name: "Vintage Drive-In",
     url: "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?auto=format&fit=crop&w=1200&h=400&q=80",
-    gradient: "linear-gradient(135deg, #1c1917, #44403c, #78716c)",
+    gradient: "linear-gradient(135deg, #0c1014, #212328, #78716c)",
   },
   {
     id: "cover-kids",
     name: "FamilyFlix Kids World",
     url: "https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=1200&h=400&q=80",
-    gradient: "linear-gradient(135deg, #f59e0b, #ec4899, #8b5cf6)",
+    gradient: "linear-gradient(135deg, #fd5949, #d6249f, #0095f6)",
   },
 ];
 
@@ -215,7 +257,7 @@ export function AvatarPickerModal({ isOpen, onClose }: AvatarPickerModalProps) {
   const { isSubscribed } = useSubscription();
 
   const [activeTab, setActiveTab] = useState<"avatar" | "cover">("avatar");
-  const [avatarCategory, setAvatarCategory] = useState<"all" | "kids" | "adults">(
+  const [avatarCategory, setAvatarCategory] = useState<"all" | "demure" | "kids" | "adults">(
     isKidsMode || activeProfile.isKids ? "kids" : "all"
   );
   const [customUrl, setCustomUrl] = useState("");
@@ -248,7 +290,9 @@ export function AvatarPickerModal({ isOpen, onClose }: AvatarPickerModalProps) {
   };
 
   const displayedAvatars =
-    avatarCategory === "kids"
+    avatarCategory === "demure"
+      ? DEMURE_AVATARS
+      : avatarCategory === "kids"
       ? KIDS_AVATARS
       : avatarCategory === "adults"
       ? ADULT_AVATARS
@@ -256,11 +300,11 @@ export function AvatarPickerModal({ isOpen, onClose }: AvatarPickerModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c1014]/85 p-4 backdrop-blur-md animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-white/15 bg-[#120e1d] p-6 sm:p-8 shadow-2xl text-white"
+        className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-white/10 bg-[#12161b] p-6 sm:p-8 shadow-2xl text-[#f5f5f5]"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -290,18 +334,18 @@ export function AvatarPickerModal({ isOpen, onClose }: AvatarPickerModalProps) {
             onClick={() => setActiveTab("avatar")}
             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
               activeTab === "avatar"
-                ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                ? "bg-[#0095f6] text-white shadow-md shadow-[#0095f6]/30"
                 : "bg-white/5 text-white/60 hover:bg-white/10"
             }`}
           >
-            <User size={14} /> 3D Avatars (20)
+            <User size={14} /> 3D Avatars ({AVATAR_OPTIONS.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("cover")}
             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
               activeTab === "cover"
-                ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                ? "bg-[#0095f6] text-white shadow-md shadow-[#0095f6]/30"
                 : "bg-white/5 text-white/60 hover:bg-white/10"
             }`}
           >
@@ -310,24 +354,26 @@ export function AvatarPickerModal({ isOpen, onClose }: AvatarPickerModalProps) {
         </div>
 
         {/* Preview Section */}
-        <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/40">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#0c1014]/70">
           <div
             className="h-28 w-full bg-cover bg-center transition-all duration-300"
             style={{ backgroundImage: `url(${selectedCover})` }}
           />
           <div className="relative -mt-10 flex items-center gap-3 px-4 pb-3">
-            <div
-              className="relative size-16 shrink-0 overflow-hidden rounded-2xl border-2 border-purple-500 shadow-xl"
-              style={{ background: activeProfile.avatarColor }}
-            >
-              <img
-                src={selectedAvatar}
-                alt="Selected Avatar"
-                className="size-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
+            <div className="demure-ring relative size-[68px] shrink-0 rounded-2xl p-[2px] shadow-xl">
+              <div
+                className="relative size-full overflow-hidden rounded-[14px] border-2 border-[#0c1014]"
+                style={{ background: activeProfile.avatarColor }}
+              >
+                <img
+                  src={selectedAvatar}
+                  alt="Selected Avatar"
+                  className="size-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
             </div>
             <div className="mt-6">
               <div className="text-sm font-bold text-white flex items-center gap-1.5">
@@ -359,11 +405,22 @@ export function AvatarPickerModal({ isOpen, onClose }: AvatarPickerModalProps) {
                 onClick={() => setAvatarCategory("all")}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition ${
                   avatarCategory === "all"
-                    ? "bg-white text-black shadow-sm"
+                    ? "bg-white text-[#0c1014] shadow-sm"
                     : "border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 <Users size={12} /> All ({AVATAR_OPTIONS.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setAvatarCategory("demure")}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition ${
+                  avatarCategory === "demure"
+                    ? "bg-gradient-to-r from-[#0095f6] via-[#7c3aed] to-[#d6249f] text-white shadow-md shadow-[#d6249f]/30"
+                    : "border border-[#0095f6]/35 bg-[#0095f6]/10 text-[#00d2ff] hover:bg-[#0095f6]/20"
+                }`}
+              >
+                <Sparkles size={12} /> Demure 3D ({DEMURE_AVATARS.length})
               </button>
               <button
                 type="button"
@@ -381,8 +438,8 @@ export function AvatarPickerModal({ isOpen, onClose }: AvatarPickerModalProps) {
                 onClick={() => setAvatarCategory("adults")}
                 className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition ${
                   avatarCategory === "adults"
-                    ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
-                    : "border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
+                    ? "bg-[#0095f6] text-white shadow-md shadow-[#0095f6]/30"
+                    : "border border-[#0095f6]/30 bg-[#0095f6]/10 text-[#708dff] hover:bg-[#0095f6]/20"
                 }`}
               >
                 <User size={12} /> Adults & Elders ({ADULT_AVATARS.length})

@@ -65,7 +65,7 @@ export function SiteNotice() {
         role="alertdialog"
         aria-modal="true"
         aria-label="Maintenance"
-        className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-[#08060f] px-5 py-10"
+        className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-[#0c1014] px-5 py-10"
       >
         <div
           aria-hidden

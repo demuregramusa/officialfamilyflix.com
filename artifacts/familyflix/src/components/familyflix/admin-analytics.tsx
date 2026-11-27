@@ -83,7 +83,7 @@ export function AdminAnalyticsDashboard() {
       {/* Two Columns: Trending Content & System Health */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Trending Now Table (2 cols) */}
-        <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl">
+        <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -121,7 +121,7 @@ export function AdminAnalyticsDashboard() {
         </div>
 
         {/* Rights & Catalog Summary (1 col) */}
-        <div className="rounded-3xl border border-white/10 bg-[#120e1d] p-6 shadow-xl space-y-5">
+        <div className="rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-xl space-y-5">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <ShieldCheck size={18} className="text-emerald-400" />
             <span>Catalog Operations</span>

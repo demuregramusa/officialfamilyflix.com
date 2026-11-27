@@ -160,7 +160,7 @@ export function SubscriptionModal() {
       onClick={closeSubscriptionModal}
     >
       <div
-        className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-purple-500/30 bg-gradient-to-b from-[#1c122e] via-[#120e1d] to-[#08060f] p-6 sm:p-8 shadow-2xl text-white"
+        className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-purple-500/30 bg-gradient-to-b from-[#181b20] via-[#12161b] to-[#0c1014] p-6 sm:p-8 shadow-2xl text-white"
         onClick={(e) => e.stopPropagation()}
       >
         <button

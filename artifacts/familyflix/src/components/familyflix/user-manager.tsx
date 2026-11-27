@@ -115,7 +115,7 @@ export function UserManager() {
       </div>
 
       {/* User Table */}
-      <div className="rounded-2xl border border-white/10 bg-[#120e1d] overflow-hidden shadow-xl">
+      <div className="rounded-2xl border border-white/10 bg-[#12161b] overflow-hidden shadow-xl">
         <table className="w-full text-left text-xs text-white/80">
           <thead className="border-b border-white/10 bg-white/[0.03] text-[11px] font-bold uppercase tracking-wider text-white/40">
             <tr>

@@ -163,7 +163,7 @@ export function ProfileMenu({
 
         {/* Dropdown Popover */}
         {dropdownOpen ? (
-          <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-white/15 bg-[#120e1d]/95 p-3 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in">
+          <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-white/15 bg-[#12161b]/95 p-3 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in">
             {/* Popover Header */}
             <div className="flex items-center justify-between px-2 py-1.5 border-b border-white/10">
               <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">

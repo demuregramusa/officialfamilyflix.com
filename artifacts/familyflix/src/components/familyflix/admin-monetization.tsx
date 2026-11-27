@@ -360,7 +360,7 @@ export function AdminMonetization() {
       {activeTab === "monetization" && (
         <>
           {/* -------------------- AUDIT & VERIFICATION STATUS BAR -------------------- */}
-          <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c1628] to-[#120e1d] p-6 shadow-2xl">
+          <section className="rounded-2xl border border-white/15 bg-gradient-to-br from-[#181b20] to-[#12161b] p-6 shadow-2xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-6">
           <div>
             <div className="flex items-center gap-2">
@@ -504,7 +504,7 @@ export function AdminMonetization() {
         )}
 
         {/* 1. VAST AD LINKS & INTEGRATION */}
-        <section className="rounded-2xl border border-white/10 bg-[#120e1d] p-6 shadow-xl space-y-5">
+        <section className="rounded-2xl border border-white/10 bg-[#12161b] p-6 shadow-xl space-y-5">
           <div className="flex items-center gap-2.5 border-b border-white/10 pb-4">
             <div className="grid size-9 place-items-center rounded-xl bg-purple-600/20 text-purple-400">
               <Play size={18} />
@@ -588,7 +588,7 @@ export function AdminMonetization() {
         </section>
 
         {/* 2. ADS.TXT AUTHORIZED DIGITAL SELLERS */}
-        <section className="rounded-2xl border border-white/10 bg-[#120e1d] p-6 shadow-xl space-y-5">
+        <section className="rounded-2xl border border-white/10 bg-[#12161b] p-6 shadow-xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-white/10 pb-4 gap-2">
             <div className="flex items-center gap-2.5">
               <div className="grid size-9 place-items-center rounded-xl bg-purple-600/20 text-purple-400">
@@ -672,7 +672,7 @@ export function AdminMonetization() {
         </section>
 
         {/* 3. OWNERSHIP VERIFICATION & METAS */}
-        <section className="rounded-2xl border border-white/10 bg-[#120e1d] p-6 shadow-xl space-y-5">
+        <section className="rounded-2xl border border-white/10 bg-[#12161b] p-6 shadow-xl space-y-5">
           <div className="flex items-center gap-2.5 border-b border-white/10 pb-4">
             <div className="grid size-9 place-items-center rounded-xl bg-purple-600/20 text-purple-400">
               <Globe size={18} />
@@ -759,7 +759,7 @@ export function AdminMonetization() {
         </section>
 
         {/* 4. BRAND WATERMARK & GDPR CONSENT */}
-        <section className="rounded-2xl border border-white/10 bg-[#120e1d] p-6 shadow-xl space-y-5">
+        <section className="rounded-2xl border border-white/10 bg-[#12161b] p-6 shadow-xl space-y-5">
           <div className="flex items-center gap-2.5 border-b border-white/10 pb-4">
             <div className="grid size-9 place-items-center rounded-xl bg-purple-600/20 text-purple-400">
               <Sparkles size={18} />
@@ -832,7 +832,7 @@ export function AdminMonetization() {
         </section>
 
         {/* 5. PAYMENT GATEWAYS & SUBSCRIPTIONS (PAYPAL & WHOP) */}
-        <section className="rounded-2xl border border-white/10 bg-[#120e1d] p-6 shadow-xl space-y-5" data-testid="section-admin-payments">
+        <section className="rounded-2xl border border-white/10 bg-[#12161b] p-6 shadow-xl space-y-5" data-testid="section-admin-payments">
           <div className="flex items-center gap-2.5 border-b border-white/10 pb-4">
             <div className="grid size-9 place-items-center rounded-xl bg-amber-500/20 text-amber-400">
               <DollarSign size={18} />
@@ -974,7 +974,7 @@ export function AdminMonetization() {
   {/* -------------------- TAB 2: AVOD CAMPAIGN MANAGER -------------------- */}
   {activeTab === "campaigns" && (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c1628] to-[#120e1d] p-6 shadow-xl">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-white/15 bg-gradient-to-br from-[#181b20] to-[#12161b] p-6 shadow-xl">
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-purple-500/20 px-3 py-1 text-xs font-bold text-purple-300 border border-purple-500/30 flex items-center gap-1.5">
@@ -1028,7 +1028,7 @@ export function AdminMonetization() {
           {campaigns.map((camp) => (
             <div
               key={camp.id}
-              className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-xl flex flex-col justify-between transition hover:border-purple-500/40"
+              className="rounded-2xl border border-white/10 bg-[#12161b] p-5 shadow-xl flex flex-col justify-between transition hover:border-purple-500/40"
             >
               <div>
                 <div className="flex items-center justify-between">
@@ -1082,7 +1082,7 @@ export function AdminMonetization() {
   {/* -------------------- TAB 3: AVOD ANALYTICS & FEEDS -------------------- */}
   {activeTab === "analytics" && (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-[#1c1628] to-[#120e1d] p-6 shadow-xl">
+      <div className="rounded-2xl border border-white/15 bg-gradient-to-br from-[#181b20] to-[#12161b] p-6 shadow-xl">
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
             <TrendingUp size={13} /> Real-Time AVOD Delivery Metrics
@@ -1099,22 +1099,22 @@ export function AdminMonetization() {
 
       {/* Analytics KPI Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-lg">
+        <div className="rounded-2xl border border-white/10 bg-[#12161b] p-5 shadow-lg">
           <span className="text-[11px] font-bold uppercase tracking-wider text-purple-300">Total Impressions</span>
           <div className="mt-2 text-2xl font-black text-white">{analytics?.overview?.totalImpressions ?? 0}</div>
           <div className="mt-1 text-[11px] text-white/50">Across pre-roll & mid-roll pods</div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-lg">
+        <div className="rounded-2xl border border-white/10 bg-[#12161b] p-5 shadow-lg">
           <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Completion Rate</span>
           <div className="mt-2 text-2xl font-black text-emerald-400">{analytics?.overview?.completionRate ?? "94.2%"}</div>
           <div className="mt-1 text-[11px] text-white/50">Quartile 4 (100% full watch)</div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-lg">
+        <div className="rounded-2xl border border-white/10 bg-[#12161b] p-5 shadow-lg">
           <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">Click-Through Rate (CTR)</span>
           <div className="mt-2 text-2xl font-black text-amber-300">{analytics?.overview?.clickThroughRate ?? "1.85%"}</div>
           <div className="mt-1 text-[11px] text-white/50">Direct landing page & QR scans</div>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-5 shadow-lg">
+        <div className="rounded-2xl border border-white/10 bg-[#12161b] p-5 shadow-lg">
           <span className="text-[11px] font-bold uppercase tracking-wider text-pink-400">Estimated Revenue</span>
           <div className="mt-2 text-2xl font-black text-white">{analytics?.overview?.estimatedRevenue ?? "$0.00"}</div>
           <div className="mt-1 text-[11px] text-white/50">Calculated at $8.50 AVOD CPM</div>
@@ -1122,7 +1122,7 @@ export function AdminMonetization() {
       </div>
 
       {/* Syndication Feeds & Partner Endpoints */}
-      <div className="rounded-2xl border border-white/10 bg-[#120e1d] p-6 shadow-xl space-y-4">
+      <div className="rounded-2xl border border-white/10 bg-[#12161b] p-6 shadow-xl space-y-4">
         <div className="flex items-center gap-2">
           <Tv size={18} className="text-purple-400" />
           <h3 className="text-base font-bold text-white">Programmatic Partner Feeds (VAST & VMAP)</h3>
@@ -1181,7 +1181,7 @@ export function AdminMonetization() {
       onClick={() => setShowCreateModal(false)}
     >
       <div
-        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-purple-500/30 bg-[#120e1d] p-6 shadow-2xl text-white"
+        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-purple-500/30 bg-[#12161b] p-6 shadow-2xl text-white"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/10 pb-4">

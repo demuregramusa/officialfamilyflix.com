@@ -108,7 +108,7 @@ export function ShareModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md rounded-2xl border border-white/15 bg-[#120e1d] p-6 shadow-2xl"
+        className="relative w-full max-w-md rounded-2xl border border-white/15 bg-[#12161b] p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button

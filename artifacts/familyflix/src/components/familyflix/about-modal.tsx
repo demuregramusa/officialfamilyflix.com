@@ -84,38 +84,46 @@ export function AboutModal({ isOpen, onClose, onOpenSubscribe }: AboutModalProps
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
             <div className="flex items-center gap-2.5 text-purple-300 font-bold text-sm uppercase tracking-wide">
-              <Sparkles className="w-4 h-4 text-purple-400" />
+              <Sparkles className="w-4 h-4 text-[#00d2ff]" />
               What Is DemureGram?
             </div>
-            <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0c1014]">
+              <img
+                src="/avatars/demure/demure-familyflix-crew.jpg"
+                alt="Demure FamilyFlix 3D cinema crew sharing popcorn and a glowing clapperboard"
+                loading="lazy"
+                className="aspect-video w-full object-cover object-top"
+              />
+            </div>
+            <p className="text-xs sm:text-sm text-white/75 leading-relaxed">
               <strong>DemureGram</strong> is a forward-thinking digital media, software, and artificial intelligence foundation. 
               We build ethical, human-centered digital experiences that connect families, creators, and developers worldwide.
             </p>
-            <div className="pt-1 text-xs text-purple-300 font-semibold flex items-center gap-1.5">
+            <div className="pt-1 text-xs text-[#00d2ff] font-semibold flex items-center gap-1.5">
               <Rocket className="w-3.5 h-3.5" /> Building into the future with multiple new products to come.
             </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
-            <div className="flex items-center gap-2.5 text-emerald-300 font-bold text-sm uppercase tracking-wide">
-              <Tv className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2.5 text-[#00d2ff] font-bold text-sm uppercase tracking-wide">
+              <Tv className="w-4 h-4 text-[#0095f6]" />
               What We Offer
             </div>
-            <ul className="text-xs sm:text-sm text-white/70 space-y-1.5">
+            <ul className="text-xs sm:text-sm text-white/75 space-y-1.5">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#00d2ff] shrink-0" />
                 <span><strong>23,270+ Titles</strong> curated across 44 genres</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#00d2ff] shrink-0" />
                 <span><strong>100% Free Streaming</strong> in HD with verified rights</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#00d2ff] shrink-0" />
                 <span><strong>Developer API Platform</strong> for apps and researchers</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#00d2ff] shrink-0" />
                 <span><strong>Tubi-Inspired Player</strong> with resume timestamps</span>
               </li>
             </ul>
@@ -125,16 +133,16 @@ export function AboutModal({ isOpen, onClose, onOpenSubscribe }: AboutModalProps
         {/* User Joining & Subscription Offerings */}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* For Families / Viewers */}
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-purple-900/20 to-black/40 p-5 space-y-3">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#0095f6]/15 via-[#12161b] to-[#0c1014] p-5 space-y-3">
             <div className="flex items-center gap-2 text-white font-bold text-base">
-              <Users className="w-5 h-5 text-purple-400" />
+              <Users className="w-5 h-5 text-[#00d2ff]" />
               For Families &amp; Viewers
             </div>
             <p className="text-xs text-white/70 leading-relaxed">
               FamilyFlix is <strong>always free</strong>. No credit card or payment is ever required to watch our full catalog.
             </p>
             <ul className="text-xs text-white/70 space-y-1">
-              <li>• Create free profiles for adults and kids with 20+ custom 3D avatars.</li>
+              <li>• Create free profiles for adults and kids with 24+ custom 3D Demure &amp; Family avatars.</li>
               <li>• Sync your Watchlist and Continue Watching across all devices.</li>
               <li>• Optional VIP Supporter Pass ($4.99/mo) for 100% ad-free 4K viewing.</li>
             </ul>
