@@ -1,17 +1,33 @@
+# Demure Platforms Inc. — FamilyFlix™ Multi-Search-Engine & AI Discovery Policy
+User-agent: *
+Allow: /
+Disallow: /admin
+
 User-agent: Googlebot
-Allow: /
-
-User-agent: Mediapartners-Google
-Allow: /
-
-User-agent: AdsBot-Google
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
-User-agent: *
+User-agent: Yandex
 Allow: /
-Disallow: /admin/
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
 
 Sitemap: https://familyflix.demuregram.com/sitemap.xml

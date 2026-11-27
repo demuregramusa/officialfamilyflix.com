@@ -52,7 +52,7 @@ export function CookieBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Cookie and Privacy Consent"
-      className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-4xl animate-fade-up sm:bottom-6 sm:left-6 sm:right-6"
+      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-4xl animate-fade-up sm:bottom-6 sm:left-6 sm:right-6"
     >
       <div className="flex flex-col gap-4 rounded-2xl border border-white/20 bg-[#12161b]/95 p-4 shadow-2xl backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div className="flex items-start gap-3 sm:items-center">

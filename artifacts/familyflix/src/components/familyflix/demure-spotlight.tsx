@@ -95,7 +95,7 @@ export function DemureEcosystemSpotlight() {
   return (
     <aside
       aria-label="Explore Demure Platforms"
-      className="fixed bottom-4 left-4 z-40 w-[310px] max-w-[calc(100vw-2rem)] space-y-2"
+      className="fixed bottom-20 left-4 z-30 w-[296px] max-w-[calc(100vw-6rem)] space-y-2 sm:bottom-6 sm:left-6"
     >
       {installEvent ? (
         <div className="flex items-center justify-between gap-2 rounded-2xl border border-[#0095f6]/35 bg-[#12161b]/95 px-3.5 py-2.5 shadow-2xl backdrop-blur-xl">
