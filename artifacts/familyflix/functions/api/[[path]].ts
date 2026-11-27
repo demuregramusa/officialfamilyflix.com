@@ -673,6 +673,28 @@ export async function onRequest(context: EventContext): Promise<Response> {
     return json({ user: null, session: null }, 200, "no-store");
   }
 
+  if (path === "webhooks/paypal" && request.method.toUpperCase() === "POST") {
+    const rawBody = await request.text();
+    const relay = await fetch("https://billing.demuregram.com/api/webhooks/paypal", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-paypal-webhook-id": "74U70371FW2790513",
+        "paypal-auth-algo": request.headers.get("paypal-auth-algo") || "",
+        "paypal-cert-url": request.headers.get("paypal-cert-url") || "",
+        "paypal-transmission-id": request.headers.get("paypal-transmission-id") || "",
+        "paypal-transmission-sig": request.headers.get("paypal-transmission-sig") || "",
+        "paypal-transmission-time": request.headers.get("paypal-transmission-time") || "",
+      },
+      body: rawBody,
+    });
+    const text = await relay.text();
+    return new Response(text, {
+      status: relay.status,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+
   if (path === "user/subscription") {
     const sess = await getD1Session(request, db);
     if (sess?.user?.role === "admin" || sess?.user?.unlimitedLifetime) {
