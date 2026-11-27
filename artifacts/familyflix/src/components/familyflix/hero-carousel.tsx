@@ -81,7 +81,7 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
   return (
     <section
       aria-label="Featured on FamilyFlix"
-      className="group/hero relative h-[72vh] min-h-[520px] w-full overflow-hidden bg-[#0c1014] sm:h-[76vh] lg:h-[82vh] lg:max-h-[780px]"
+      className="group/hero relative flex min-h-[540px] w-full flex-col overflow-hidden bg-[#0c1014] sm:min-h-[600px] lg:min-h-[660px]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
@@ -109,7 +109,7 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0c1014] via-[#0c1014]/60 to-transparent pointer-events-none" />
 
       {/* Hero Content Box */}
-      <div className="relative mx-auto flex h-full w-full max-w-[1600px] flex-col justify-end px-4 pb-12 sm:px-6 sm:pb-14 md:px-8 lg:pb-16 xl:px-12 z-10">
+      <div className="relative z-10 mx-auto flex w-full max-w-[1600px] flex-1 flex-col justify-end px-4 pt-20 pb-10 sm:px-6 sm:pt-24 sm:pb-12 md:px-8 lg:pb-14 xl:px-12">
         <div key={current.slug} className="max-w-[620px] xl:max-w-[700px] animate-fade-up">
           {/* Badges */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -136,7 +136,7 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
           </div>
 
           {/* Title Heading */}
-          <h1 className="text-[clamp(2.2rem,5.2vw,4.6rem)] font-black uppercase leading-[0.9] tracking-[-0.04em] text-white text-shadow-hero">
+          <h1 className="text-[clamp(2rem,4.8vw,4.25rem)] font-black uppercase leading-[1.06] tracking-[-0.03em] text-white text-shadow-hero">
             {current.name}
           </h1>
 
@@ -190,7 +190,7 @@ export function HeroCarousel({ titles: propTitles }: HeroCarouselProps = {}) {
         </div>
 
         {/* Carousel Pagination & Controls Row */}
-        <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-4">
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-4">
           {/* Animated Pagination Dots */}
           <div className="flex items-center gap-2">
             {heroTitles.map((t, idx) => (

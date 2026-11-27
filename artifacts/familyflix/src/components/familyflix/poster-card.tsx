@@ -37,21 +37,23 @@ export function PosterCard({
         className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         data-testid={`card-title-${title.slug}`}
       >
-        <PosterArt title={title} />
-        {title.type === "series" && (
-          <span className="absolute left-2 top-2 z-10 rounded-md bg-purple-600/90 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm border border-purple-400/30">
-            TV Series
+        <div className="relative overflow-hidden rounded-xl">
+          <PosterArt title={title} />
+          {title.type === "series" && (
+            <span className="absolute left-2 top-2 z-10 rounded-md bg-purple-600/90 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm border border-purple-400/30">
+              TV Series
+            </span>
+          )}
+          {title.type === "live" && (
+            <span className="absolute left-2 top-2 z-10 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm animate-pulse">
+              LIVE
+            </span>
+          )}
+          <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-t from-black/55 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />
+          <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 scale-90 place-items-center rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-black border border-amber-200/70 opacity-0 shadow-xl shadow-amber-500/50 transition duration-300 group-hover/card:scale-100 group-hover/card:opacity-100">
+            <Play className="ml-0.5 size-5" fill="currentColor" aria-hidden />
           </span>
-        )}
-        {title.type === "live" && (
-          <span className="absolute left-2 top-2 z-10 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-md backdrop-blur-sm animate-pulse">
-            LIVE
-          </span>
-        )}
-        <span className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-t from-black/55 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />
-        <span className="pointer-events-none absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 scale-90 place-items-center rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-300 text-black border border-amber-200/70 opacity-0 shadow-xl shadow-amber-500/50 transition duration-300 group-hover/card:scale-100 group-hover/card:opacity-100">
-          <Play className="ml-0.5 size-5" fill="currentColor" aria-hidden />
-        </span>
+        </div>
       </Link>
       <MyListButton
         slug={title.slug}

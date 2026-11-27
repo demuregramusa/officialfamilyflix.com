@@ -200,7 +200,7 @@ export function ContinueWatchingRow() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-950 to-[#0a0714] text-white/30">
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#181b20] to-[#0c1014] text-white/30">
                       <Sparkles size={28} />
                     </div>
                   )}
@@ -212,13 +212,14 @@ export function ContinueWatchingRow() {
                     </span>
                   </div>
 
-                  {/* Time Badge */}
-                  <div className="absolute bottom-2 left-2 rounded-md bg-black/80 px-2 py-0.5 text-[10px] font-bold text-white/90 backdrop-blur-md">
-                    Resumes {timeHms}
-                  </div>
-
-                  <div className="absolute bottom-2 right-2 rounded-md bg-purple-950/80 px-2 py-0.5 text-[10px] font-semibold text-purple-200 backdrop-blur-md">
-                    {remainingText}
+                  {/* Time Badges */}
+                  <div className="pointer-events-none absolute inset-x-2 bottom-3 flex items-center justify-between gap-2">
+                    <span className="truncate rounded-md bg-black/80 px-2 py-0.5 text-[10px] font-bold text-white/90 backdrop-blur-md">
+                      Resumes {timeHms}
+                    </span>
+                    <span className="shrink-0 rounded-md bg-[#12161b]/90 border border-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/85 backdrop-blur-md">
+                      {remainingText}
+                    </span>
                   </div>
 
                   {/* Progress Bar */}

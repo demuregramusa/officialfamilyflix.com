@@ -154,20 +154,20 @@ export function ProfileMenu({
             </span>
           )}
           {isKidsMode ? (
-            <span className="rounded-full bg-amber-400 px-1.5 py-0.2 text-[9px] font-black uppercase text-black">
+            <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black">
               Kids
             </span>
           ) : null}
-          <ChevronDown className="size-3 text-white/50" />
+          <ChevronDown className="size-3.5 shrink-0 text-white/50" />
         </button>
 
         {/* Dropdown Popover */}
         {dropdownOpen ? (
-          <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-white/15 bg-[#12161b]/95 p-3 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in">
+          <div className="absolute right-0 top-full z-50 mt-2 w-[288px] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-[#12161b]/95 p-2.5 font-sans shadow-2xl backdrop-blur-2xl animate-fade-in">
             {/* Popover Header */}
-            <div className="flex items-center justify-between px-2 py-1.5 border-b border-white/10">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">
-                Who's Watching?
+            <div className="flex items-center justify-between border-b border-white/[0.08] px-3 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#a8a8a8]">
+                Who&apos;s Watching?
               </span>
               {isKidsMode ? (
                 <button
@@ -176,7 +176,7 @@ export function ProfileMenu({
                     exitKidsMode();
                     setDropdownOpen(false);
                   }}
-                  className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 hover:bg-white/20"
+                  className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300 transition hover:bg-white/20"
                 >
                   Exit Kids
                 </button>
@@ -184,9 +184,11 @@ export function ProfileMenu({
             </div>
 
             {/* Profiles List */}
-            <div className="mt-2 space-y-1">
+            <div className="mt-1.5 space-y-1">
               {profiles.map((p) => {
                 const isActive = p.id === activeProfile.id;
+                const showKidsBadge =
+                  p.isKids && p.name.trim().toLowerCase() !== "kids";
                 return (
                   <button
                     key={p.id}
@@ -196,67 +198,76 @@ export function ProfileMenu({
                       setDropdownOpen(false);
                     }}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition",
+                      "flex h-11 w-full items-center justify-between gap-2.5 rounded-xl px-3 text-left text-[13px] font-medium leading-5 transition",
                       isActive
-                        ? "bg-white/15 font-bold text-white shadow-sm"
-                        : "text-white/75 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/[0.12] text-[#f5f5f5]"
+                        : "text-[#f5f5f5]/80 hover:bg-white/[0.07] hover:text-[#f5f5f5]"
                     )}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="grid size-7 shrink-0 place-items-center rounded-full shadow-md overflow-hidden"
-                        style={{ background: p.avatarColor }}
-                      >
-                        {p.avatar ? (
-                          <img
-                            src={p.avatar}
-                            alt={p.name}
-                            className="size-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                        ) : (
-                          <ProfileIcon icon={p.avatarIcon} className="size-4 text-white" />
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={cn(
+                          "inline-flex size-7 shrink-0 rounded-full p-[1.5px]",
+                          isActive ? "demure-ring" : "bg-white/15"
                         )}
-                      </div>
+                      >
+                        <div
+                          className="grid size-full place-items-center overflow-hidden rounded-full border border-[#0c1014]"
+                          style={{ background: p.avatarColor }}
+                        >
+                          {p.avatar ? (
+                            <img
+                              src={p.avatar}
+                              alt={p.name}
+                              className="size-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <ProfileIcon icon={p.avatarIcon} className="size-3.5 text-white" />
+                          )}
+                        </div>
+                      </span>
                       <span className="truncate">{p.name}</span>
-                      {p.isKids ? (
-                        <span className="shrink-0 rounded bg-amber-400 px-1 py-0.2 text-[8px] font-black uppercase text-black">
-                          Kids
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {showKidsBadge || p.isKids ? (
+                        <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300 border border-amber-400/30">
+                          Safe
                         </span>
                       ) : null}
+                      {isActive ? <Check className="size-4 shrink-0 text-[#00d2ff]" /> : null}
                     </div>
-                    {isActive ? <Check className="size-4 text-purple-400" /> : null}
                   </button>
                 );
               })}
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-3 pt-2 border-t border-white/10 space-y-1">
+            <div className="mt-2 space-y-0.5 border-t border-white/[0.08] pt-2">
               {profiles.length < 6 ? (
                 <>
                   <button
                     type="button"
                     onClick={() => openCreateModal(true)}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-amber-300 transition hover:bg-amber-400/10"
+                    className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-amber-300 transition hover:bg-amber-400/10"
                   >
-                    <Sparkles className="size-4 text-amber-400" />
-                    <span>Create Kids Profile</span>
+                    <Sparkles className="size-4 shrink-0 text-amber-400" />
+                    <span className="truncate">Create Kids Profile</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => openCreateModal(false)}
-                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+                    className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-[#f5f5f5]/85 transition hover:bg-white/[0.08] hover:text-[#f5f5f5]"
                   >
-                    <Plus className="size-4 text-white/60" />
-                    <span>Add Profile ({profiles.length}/6)</span>
+                    <Plus className="size-4 shrink-0 text-[#a8a8a8]" />
+                    <span className="truncate">Add Profile ({profiles.length}/6)</span>
                   </button>
                 </>
               ) : (
-                <div className="px-3 py-1.5 text-[11px] text-white/40 italic">
+                <div className="px-3 py-2 text-[12px] font-normal text-[#a8a8a8]">
                   Maximum of 6 profiles reached
                 </div>
               )}
@@ -267,10 +278,10 @@ export function ProfileMenu({
                   setDropdownOpen(false);
                   if (onOpenAvatarPicker) onOpenAvatarPicker();
                 }}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-pink-300 transition hover:bg-pink-500/10"
+                className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-[#f5f5f5]/90 transition hover:bg-white/[0.08] hover:text-[#f5f5f5]"
               >
-                <Sparkles className="size-4 text-pink-400" />
-                <span>Customize 3D Avatar & Cover</span>
+                <Sparkles className="size-4 shrink-0 text-[#d6249f]" />
+                <span className="truncate">Customize 3D Avatar &amp; Cover</span>
               </button>
 
               <button
@@ -279,10 +290,10 @@ export function ProfileMenu({
                   setDropdownOpen(false);
                   openSubscriptionModal();
                 }}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-amber-300 transition hover:bg-amber-400/10"
+                className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-amber-300 transition hover:bg-amber-400/10"
               >
-                <BadgeCheck className="size-4 text-amber-400" />
-                <span>
+                <BadgeCheck className="size-4 shrink-0 text-amber-400" />
+                <span className="truncate">
                   {isSubscribed ? "VIP Membership (Active)" : "Unlock VIP (Ad-Free & 4K)"}
                 </span>
               </button>
@@ -290,29 +301,29 @@ export function ProfileMenu({
               <Link
                 href="/my-list"
                 onClick={() => setDropdownOpen(false)}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-[#f5f5f5]/85 transition hover:bg-white/[0.08] hover:text-[#f5f5f5]"
               >
-                <Bookmark className="size-4 text-white/60" />
-                <span>My List</span>
+                <Bookmark className="size-4 shrink-0 text-[#a8a8a8]" />
+                <span className="truncate">My List</span>
               </Link>
 
               <Link
                 href="/account"
                 onClick={() => setDropdownOpen(false)}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-[#f5f5f5]/85 transition hover:bg-white/[0.08] hover:text-[#f5f5f5]"
               >
-                <Settings className="size-4 text-white/60" />
-                <span>Account & Settings</span>
+                <Settings className="size-4 shrink-0 text-[#a8a8a8]" />
+                <span className="truncate">Account &amp; Settings</span>
               </Link>
 
               {user?.role === "admin" && (
                 <Link
                   href="/admin"
                   onClick={() => setDropdownOpen(false)}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-purple-300 transition hover:bg-purple-500/20"
+                  className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-[#00d2ff] transition hover:bg-[#0095f6]/15"
                 >
-                  <Shield className="size-4 text-purple-400" />
-                  <span>Admin Studio & CMS</span>
+                  <Shield className="size-4 shrink-0 text-[#0095f6]" />
+                  <span className="truncate">Admin Studio &amp; CMS</span>
                 </Link>
               )}
 
@@ -320,16 +331,16 @@ export function ProfileMenu({
                 <Link
                   href="/admin/moderation"
                   onClick={() => setDropdownOpen(false)}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 transition hover:bg-amber-500/20"
+                  className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-amber-300 transition hover:bg-amber-400/15"
                 >
-                  <Shield className="size-4 text-amber-400" />
-                  <span>Moderator Queue</span>
+                  <Shield className="size-4 shrink-0 text-amber-400" />
+                  <span className="truncate">Moderator Queue</span>
                 </Link>
               )}
             </div>
 
             {/* Account / Sign In / Sign Out */}
-            <div className="mt-2 pt-2 border-t border-white/10">
+            <div className="mt-2 border-t border-white/[0.08] pt-2">
               {user ? (
                 <button
                   type="button"
@@ -337,19 +348,19 @@ export function ProfileMenu({
                     await authClient.signOut({});
                     setDropdownOpen(false);
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-rose-300 transition hover:bg-rose-500/10"
+                  className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-[#ff6b78] transition hover:bg-[#ff3040]/10"
                 >
-                  <LogOut className="size-4 text-rose-400" />
-                  <span>Sign out</span>
+                  <LogOut className="size-4 shrink-0 text-[#ff3040]" />
+                  <span className="truncate">Sign out</span>
                 </button>
               ) : (
                 <Link
                   href="/auth/sign-in"
                   onClick={() => setDropdownOpen(false)}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-purple-300 transition hover:bg-purple-500/10"
+                  className="flex h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-[#00d2ff] transition hover:bg-[#0095f6]/15"
                 >
-                  <LogIn className="size-4 text-purple-400" />
-                  <span>Sign in / Create Account</span>
+                  <LogIn className="size-4 shrink-0 text-[#0095f6]" />
+                  <span className="truncate">Sign in / Create Account</span>
                 </Link>
               )}
             </div>
@@ -359,8 +370,8 @@ export function ProfileMenu({
 
       {/* -------------------- TUBI CREATE PROFILE MODAL -------------------- */}
       {modalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-md rounded-3xl border border-white/20 bg-[#140f22] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c1014]/85 p-4 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#12161b] p-6 shadow-2xl">
             {/* Modal Close Button */}
             <button
               type="button"
@@ -380,15 +391,15 @@ export function ProfileMenu({
                 <ProfileIcon icon={selectedIcon} className="size-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-black text-white">Create Profile</h3>
-                <p className="text-xs text-white/50">Customize viewing preferences and age settings</p>
+                <h3 className="text-xl font-bold text-[#f5f5f5]">Create Profile</h3>
+                <p className="text-xs text-[#a8a8a8]">Customize viewing preferences and age settings</p>
               </div>
             </div>
 
             <form onSubmit={handleCreateProfile} className="mt-6 space-y-5">
               {/* Profile Name */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#a8a8a8]">
                   Profile Name
                 </label>
                 <input
@@ -397,16 +408,16 @@ export function ProfileMenu({
                   placeholder="e.g. Kids, Alex, Family Room"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full rounded-xl border border-white/15 bg-black/50 px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
+                  className="w-full rounded-xl border border-white/12 bg-[#0c1014] px-4 py-2.5 text-sm text-[#f5f5f5] placeholder-white/30 outline-none transition focus:border-[#0095f6] focus:ring-1 focus:ring-[#0095f6]"
                 />
               </div>
 
               {/* Kids Mode Toggle */}
               <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">
                 <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-amber-300">Tubi Kids Mode</span>
-                    <span className="rounded bg-amber-400 px-1 py-0.2 text-[8px] font-black uppercase text-black">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-amber-300">Kids Mode</span>
+                    <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold uppercase text-black">
                       Safe
                     </span>
                   </div>
@@ -414,7 +425,7 @@ export function ProfileMenu({
                     Only shows family-friendly movies, animation, and TV-Y / PG content. Automatically hides mature titles.
                   </p>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center shrink-0 mt-1">
+                <label className="relative mt-1 inline-flex shrink-0 cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={newIsKids}
@@ -434,7 +445,7 @@ export function ProfileMenu({
 
               {/* Avatar Color Picker */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-white/70 mb-2">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[#a8a8a8]">
                   Avatar Color
                 </label>
                 <div className="grid grid-cols-6 gap-2">
@@ -448,7 +459,7 @@ export function ProfileMenu({
                         aria-label={col.label}
                         className={cn(
                           "relative aspect-square rounded-xl shadow-md transition hover:scale-110 active:scale-95",
-                          isSelected ? "ring-2 ring-white ring-offset-2 ring-offset-[#140f22]" : "opacity-80"
+                          isSelected ? "ring-2 ring-white ring-offset-2 ring-offset-[#12161b]" : "opacity-80"
                         )}
                         style={{ background: col.bg }}
                       >

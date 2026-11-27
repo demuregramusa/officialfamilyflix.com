@@ -50,7 +50,7 @@ export function CategoriesMenu() {
       </button>
 
       {open ? (
-        <div className="absolute left-0 top-full mt-2 w-[340px] sm:w-[560px] rounded-2xl border border-white/15 bg-[#12161b]/98 p-4 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in">
+        <div className="absolute left-0 top-full mt-2 w-[340px] max-w-[calc(100vw-2rem)] sm:w-[560px] rounded-2xl border border-white/15 bg-[#12161b]/98 p-4 shadow-2xl backdrop-blur-2xl z-50 animate-fade-in">
           {/* Header & Content Type Filter */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
             <div>
@@ -58,7 +58,7 @@ export function CategoriesMenu() {
                 <span className="text-xs font-bold uppercase tracking-wider text-white/50">
                   Browse 44 Categories
                 </span>
-                <span className="rounded-full bg-purple-500/20 px-2 py-0.2 text-[9px] font-black uppercase text-purple-300">
+                <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[9px] font-black uppercase text-purple-300">
                   Tubi Discovery
                 </span>
               </div>

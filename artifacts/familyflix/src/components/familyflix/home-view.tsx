@@ -104,7 +104,7 @@ export function HomeView() {
       <HeroCarousel />
 
       {/* 2. Continue Watching Row */}
-      <div className="relative z-10 -mt-8 sm:-mt-12">
+      <div className="relative z-10 mt-6 sm:mt-8">
         <ContinueWatchingRow />
       </div>
 
@@ -154,7 +154,7 @@ export function HomeView() {
 
         {/* Free with Ads & Copyright Transparency Notice */}
         <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-8 xl:px-12 pt-4">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#120d24]/60 p-4 text-xs text-white/70 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#12161b]/80 p-4 text-xs text-white/70 backdrop-blur-sm">
             <ShieldCheck size={20} className="shrink-0 text-emerald-400" />
             <span>
               <strong className="text-white">100% Free with Ads.</strong> FamilyFlix By DemureGram

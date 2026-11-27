@@ -59,9 +59,9 @@ export function CuratedRow({
   return (
     <section className={cn("group/row relative py-4 sm:py-5", className)}>
       {/* Row Header */}
-      <div className="mx-auto flex max-w-[1600px] items-end justify-between px-4 pb-3 sm:px-6 md:px-8 xl:px-12">
-        <div>
-          <div className="flex items-center gap-2">
+      <div className="mx-auto flex max-w-[1600px] items-end justify-between gap-3 px-4 pb-3 sm:px-6 md:px-8 xl:px-12">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-black uppercase tracking-tight text-white sm:text-xl md:text-2xl">
               {title}
             </h2>
@@ -71,7 +71,7 @@ export function CuratedRow({
               </span>
             )}
             {rowTitles.length > 0 && (
-              <span className="rounded-full bg-white/10 px-2 py-0.2 text-[10px] font-bold text-white/60">
+              <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/60">
                 {rowTitles.length}
               </span>
             )}
@@ -84,7 +84,7 @@ export function CuratedRow({
         {linkHref && (
           <Link
             href={linkHref}
-            className="flex items-center gap-1 text-xs font-bold text-purple-400 hover:text-purple-300 transition group-hover/row:translate-x-0.5"
+            className="flex shrink-0 whitespace-nowrap items-center gap-1 text-xs font-bold text-[#00d2ff] hover:text-white transition group-hover/row:translate-x-0.5"
           >
             <span>See All</span>
             <ChevronRight size={14} />

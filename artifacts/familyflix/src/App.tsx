@@ -155,15 +155,15 @@ function Header() {
   return <>
     <div className="sticky top-0 z-50 w-full">
       {isKidsMode ? (
-      <div className="flex items-center justify-between px-4 py-1.5 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 text-black text-xs font-bold shadow-md">
-        <div className="flex items-center gap-2">
-          <Sparkles size={14} className="animate-spin text-amber-200" />
-          <span>You are exploring FamilyFlix Kids — Safe, age-appropriate family movies and animation!</span>
+      <div className="flex items-center justify-between gap-3 px-4 py-1.5 bg-gradient-to-r from-amber-400 via-pink-500 to-purple-600 text-black text-xs font-bold shadow-md">
+        <div className="flex min-w-0 items-center gap-2">
+          <Sparkles size={14} className="shrink-0 animate-spin text-amber-200" />
+          <span className="truncate">You are exploring FamilyFlix Kids — Safe, age-appropriate family movies and animation!</span>
         </div>
         <button
           type="button"
           onClick={exitKidsMode}
-          className="rounded-full bg-black/80 px-3 py-0.5 text-[11px] font-bold text-white transition hover:bg-black"
+          className="shrink-0 rounded-full bg-black/80 px-3 py-0.5 text-[11px] font-bold text-white transition hover:bg-black"
         >
           Exit Kids
         </button>
@@ -195,7 +195,7 @@ function Header() {
           <button
             type="button"
             onClick={openSubscriptionModal}
-            className="hidden lg:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-pink-500 px-3 py-1 text-xs font-black text-black hover:brightness-110 transition shadow-md shrink-0 whitespace-nowrap"
+            className="hidden xl:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-pink-500 px-3 py-1 text-xs font-black text-black hover:brightness-110 transition shadow-md shrink-0 whitespace-nowrap"
             title="Unlock FamilyFlix VIP (Ad-Free, 4K, Offline)"
           >
             <Sparkles size={13} />
@@ -209,15 +209,45 @@ function Header() {
         />
         <button className="quiet-button menu-toggle" onClick={() => setOpen(!open)} aria-label={open ? "Close navigation" : "Open navigation"} data-testid="button-mobile-menu">{open ? <X size={20} /> : <Menu size={20} />}</button>
       </div>
-      {open && <nav className="mobile-nav" aria-label="Mobile navigation" style={{ position: "absolute", top: "100%", left: 0, right: 0, padding: 16, flexDirection: "column", background: "hsl(258 24% 8%)", borderBottom: "1px solid hsl(260 14% 25%)" }}>
-        {[...links, ["/categories", "Categories"], ["/about", "About"]].map(([href, label]) => <Link onClick={() => setOpen(false)} key={href} className="nav-link" href={href} data-testid={`link-mobile-${label.toLowerCase().replaceAll(" ","-")}`}>{label}</Link>)}
-        <button type="button" onClick={() => { openSubscriptionModal(); setOpen(false); }} className="nav-link text-left text-amber-300 font-bold">
-          ⭐ FamilyFlix VIP (Ad-Free & 4K)
-        </button>
-        <button type="button" onClick={() => { toggleKidsMode(); setOpen(false); }} className="nav-link text-left text-amber-300 font-bold" data-testid="link-mobile-kids">
-          {isKidsMode ? "Exit Kids Mode" : "Switch to Tubi Kids Mode"}
-        </button>
-      </nav>}
+      {open && (
+        <nav
+          className="mobile-nav absolute inset-x-0 top-full z-40 flex-col gap-1 border-b border-white/10 bg-[#12161b]/95 p-3 shadow-2xl backdrop-blur-2xl animate-fade-in"
+          aria-label="Mobile navigation"
+        >
+          {[...links, ["/categories", "Categories"], ["/about", "About"]].map(([href, label]) => (
+            <Link
+              onClick={() => setOpen(false)}
+              key={href}
+              className={cn(
+                "flex h-10 w-full items-center rounded-xl px-3 text-[13px] font-medium leading-5 transition",
+                path === href
+                  ? "bg-white/[0.12] text-[#f5f5f5]"
+                  : "text-[#f5f5f5]/85 hover:bg-white/[0.08] hover:text-[#f5f5f5]"
+              )}
+              href={href}
+              data-testid={`link-mobile-${label.toLowerCase().replaceAll(" ","-")}`}
+            >
+              {label}
+            </Link>
+          ))}
+          <div className="my-1 border-t border-white/[0.08]" />
+          <button
+            type="button"
+            onClick={() => { openSubscriptionModal(); setOpen(false); }}
+            className="flex h-10 w-full items-center rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-amber-300 transition hover:bg-amber-400/10"
+          >
+            FamilyFlix VIP (Ad-Free &amp; 4K)
+          </button>
+          <button
+            type="button"
+            onClick={() => { toggleKidsMode(); setOpen(false); }}
+            className="flex h-10 w-full items-center rounded-xl px-3 text-left text-[13px] font-medium leading-5 text-amber-300 transition hover:bg-amber-400/10"
+            data-testid="link-mobile-kids"
+          >
+            {isKidsMode ? "Exit Kids Mode" : "Switch to Kids Mode"}
+          </button>
+        </nav>
+      )}
     </header>
   </div>
   <AvatarPickerModal isOpen={avatarPickerOpen} onClose={() => setAvatarPickerOpen(false)} />
