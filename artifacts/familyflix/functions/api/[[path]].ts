@@ -388,56 +388,67 @@ async function proxyUpstream(
   }
 }
 
-function categoryKeywords(slug: string): string[] {
-  const map: Record<string, string[]> = {
-    action: ["action"],
-    adventure: ["adventure"],
-    animation: ["animation"],
-    "adult-animation": ["animation"],
-    "adult-comedy": ["comedy"],
-    anime: ["animation"],
-    "arthouse-films": ["drama", "biography"],
-    biography: ["biography"],
-    "black-cinema": ["drama", "biography", "music"],
-    "british-tv": ["drama", "crime", "mystery"],
-    "classic-movies": ["drama", "romance", "western", "film-noir"],
-    comedy: ["comedy"],
-    crime: ["crime"],
-    "crime-tv": ["crime", "mystery"],
-    "cult-classics": ["horror", "sci-fi", "thriller"],
-    documentary: ["documentary"],
-    docuseries: ["documentary"],
-    drama: ["drama"],
-    family: ["family", "animation"],
-    "family-movies": ["family", "animation"],
-    fantasy: ["fantasy"],
-    "foreign-language": ["drama", "romance"],
-    history: ["history", "war", "biography"],
-    horror: ["horror"],
-    indie: ["drama", "comedy"],
-    kids: ["family", "animation"],
-    "kids-and-family": ["family", "animation"],
-    "latino-cinema": ["drama", "comedy"],
-    lgbtq: ["drama", "romance"],
-    lifestyle: ["documentary", "reality-tv"],
-    "martial-arts": ["action"],
-    music: ["music", "musical"],
-    musical: ["musical", "music"],
-    mystery: ["mystery", "thriller"],
-    "reality-tv": ["reality-tv", "talk-show"],
-    romance: ["romance"],
-    "sci-fi": ["sci-fi"],
-    "sci-fi-and-fantasy": ["sci-fi", "fantasy"],
-    "science-fiction": ["sci-fi"],
-    sports: ["sport"],
-    "stand-up-comedy": ["comedy"],
-    thriller: ["thriller"],
-    "true-crime": ["crime", "documentary"],
-    war: ["war", "history"],
-    western: ["western"],
+function categoryKeywords(slug: string): { genres: string[]; kindHint?: "movie" | "series"; maxYear?: number } {
+  const map: Record<string, { genres: string[]; kindHint?: "movie" | "series"; maxYear?: number }> = {
+    action: { genres: ["action"] },
+    adventure: { genres: ["adventure"] },
+    animation: { genres: ["animation"] },
+    "adult-animation": { genres: ["animation"] },
+    "adult-comedy": { genres: ["comedy"] },
+    anime: { genres: ["animation", "fantasy", "action"] },
+    "arthouse-films": { genres: ["drama", "biography", "history"] },
+    "based-on-true-events": { genres: ["biography", "history", "documentary", "war"] },
+    biography: { genres: ["biography"] },
+    classics: { genres: ["drama", "romance", "western", "film-noir", "comedy"], maxYear: 1989 },
+    "classic-movies": { genres: ["drama", "romance", "western", "film-noir"], maxYear: 1989 },
+    comedy: { genres: ["comedy"] },
+    crime: { genres: ["crime"] },
+    "crime-tv": { genres: ["crime", "mystery", "thriller"] },
+    documentary: { genres: ["documentary"] },
+    docuseries: { genres: ["documentary", "history", "biography"] },
+    drama: { genres: ["drama"] },
+    faith: { genres: ["family", "drama", "biography", "history"] },
+    family: { genres: ["family", "animation"] },
+    "family-movies": { genres: ["family", "animation", "adventure"], kindHint: "movie" },
+    "family-series": { genres: ["family", "animation", "comedy", "adventure"] },
+    fantasy: { genres: ["fantasy"] },
+    "film-noir": { genres: ["film-noir", "crime", "mystery", "thriller"] },
+    "foreign-films": { genres: ["drama", "romance", "thriller", "action"] },
+    "foreign-tv": { genres: ["drama", "crime", "mystery"] },
+    "heist-films": { genres: ["crime", "action", "thriller"] },
+    history: { genres: ["history", "war", "biography"] },
+    "home-garden": { genres: ["documentary", "family", "reality-tv", "comedy"] },
+    horror: { genres: ["horror"] },
+    "indie-films": { genres: ["drama", "comedy", "romance"] },
+    "italian-horror-giallo": { genres: ["horror", "mystery", "thriller"] },
+    "killer-thrillers": { genres: ["thriller", "horror", "crime"] },
+    lgbtqia: { genres: ["drama", "romance", "comedy"] },
+    lifestyle: { genres: ["documentary", "reality-tv", "talk-show", "music"] },
+    "martial-arts": { genres: ["action", "adventure"] },
+    "music-concerts": { genres: ["music", "musical", "documentary"] },
+    mystery: { genres: ["mystery", "thriller", "crime"] },
+    "myths-legends": { genres: ["fantasy", "adventure", "history", "action"] },
+    "peliculas-en-espanol": { genres: ["drama", "comedy", "action", "romance"] },
+    "reality-tv": { genres: ["reality-tv", "talk-show", "game-show", "documentary"] },
+    romance: { genres: ["romance"] },
+    "sci-fi-fantasy": { genres: ["sci-fi", "fantasy"] },
+    "sci-fi": { genres: ["sci-fi"] },
+    slashers: { genres: ["horror", "thriller"] },
+    "sports-movies-shows": { genres: ["sport", "documentary", "biography", "drama"] },
+    "spy-movies": { genres: ["action", "thriller", "mystery", "adventure"] },
+    "stand-up-comedy": { genres: ["comedy", "talk-show"] },
+    "sword-sorcery": { genres: ["fantasy", "adventure", "action"] },
+    thrillers: { genres: ["thriller", "mystery", "crime"] },
+    thriller: { genres: ["thriller"] },
+    travel: { genres: ["adventure", "documentary"] },
+    "tv-comedies": { genres: ["comedy"] },
+    "tv-dramas": { genres: ["drama"] },
+    war: { genres: ["war", "history"] },
+    westerns: { genres: ["western", "action", "adventure"] },
+    western: { genres: ["western"] },
   };
   if (map[slug]) return map[slug];
-  return [slug.replace(/-/g, " ")];
+  return { genres: [slug.replace(/-/g, " ")] };
 }
 
 export async function onRequest(context: EventContext): Promise<Response> {
@@ -938,11 +949,16 @@ export async function onRequest(context: EventContext): Promise<Response> {
     const catMatch = path.match(/^v1\/categories\/([^/]+)$/);
     if (catMatch) {
       const slug = decodeURIComponent(catMatch[1]).toLowerCase();
-      const contentType = url.searchParams.get("contentType") || "all";
+      const contentType = (url.searchParams.get("contentType") || "all").toLowerCase();
+      const subgenre = (url.searchParams.get("subgenre") || "").trim().toLowerCase();
+      const sort = (url.searchParams.get("sort") || "popular").toLowerCase();
+      const yearMin = Number(url.searchParams.get("yearMin")) || 0;
+      const yearMax = Number(url.searchParams.get("yearMax")) || 0;
       const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
-      const limit = Math.min(80, Math.max(1, Number(url.searchParams.get("limit")) || 40));
+      const limit = Math.min(80, Math.max(1, Number(url.searchParams.get("limit")) || 48));
       const offset = (page - 1) * limit;
 
+      const metaCfg = categoryKeywords(slug);
       const where: string[] = [];
       const binds: unknown[] = [];
 
@@ -950,39 +966,115 @@ export async function onRequest(context: EventContext): Promise<Response> {
         where.push("kind = 'movie'");
       } else if (contentType === "series" || slug === "tv-shows") {
         where.push("kind = 'series'");
+      } else if (metaCfg.kindHint) {
+        where.push("kind = ?");
+        binds.push(metaCfg.kindHint);
       }
 
       if (!["all", "featured", "movies", "tv-shows"].includes(slug)) {
-        const keywords = categoryKeywords(slug);
-        const orClauses = keywords.map(() => "genres_lower LIKE ?");
+        const orClauses = metaCfg.genres.map(() => "genres_lower LIKE ?");
         where.push(`(${orClauses.join(" OR ")})`);
-        for (const kw of keywords) binds.push(`%${kw.toLowerCase()}%`);
+        for (const kw of metaCfg.genres) binds.push(`%${kw.toLowerCase()}%`);
       }
 
-      const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
-      const countRow = await db
-        .prepare(`SELECT COUNT(*) AS cnt FROM titles ${whereSql}`)
-        .bind(...binds)
-        .first<{ cnt: number }>();
-      const total = Number(countRow?.cnt || 0);
+      if (yearMin > 0) {
+        where.push("year >= ?");
+        binds.push(yearMin);
+      }
+      const effectiveMaxYear = yearMax > 0 ? yearMax : (metaCfg.maxYear || 0);
+      if (effectiveMaxYear > 0) {
+        where.push("year > 0 AND year <= ?");
+        binds.push(effectiveMaxYear);
+      }
 
-      const rows = await db
+      if (subgenre) {
+        const subWord = subgenre.replace(/-/g, " ").split(" ")[0] || subgenre;
+        where.push("(genres_lower LIKE ? OR LOWER(name) LIKE ? OR LOWER(synopsis) LIKE ?)");
+        const like = `%${subWord}%`;
+        binds.push(like, like, like);
+      }
+
+      const orderSql =
+        sort === "newest"
+          ? "ORDER BY year DESC, score DESC"
+          : sort === "oldest"
+            ? "ORDER BY CASE WHEN year > 0 THEN year ELSE 9999 END ASC, score DESC"
+            : sort === "highest-rated" || sort === "rating"
+              ? "ORDER BY score DESC, year DESC"
+              : sort === "a-z" || sort === "title"
+                ? "ORDER BY LOWER(name) ASC"
+                : "ORDER BY year DESC, score DESC";
+
+      const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+      let statsRow = await db
         .prepare(
-          `SELECT * FROM titles ${whereSql} ORDER BY year DESC, score DESC LIMIT ? OFFSET ?`,
+          `SELECT COUNT(*) AS cnt, SUM(CASE WHEN kind='movie' THEN 1 ELSE 0 END) AS movies, SUM(CASE WHEN kind='series' THEN 1 ELSE 0 END) AS series FROM titles ${whereSql}`,
         )
+        .bind(...binds)
+        .first<{ cnt: number; movies: number; series: number }>();
+
+      let rows = await db
+        .prepare(`SELECT * FROM titles ${whereSql} ${orderSql} LIMIT ? OFFSET ?`)
         .bind(...binds, limit, offset)
         .all<TitleRow>();
 
+      // Graceful broadening if a strict subgenre filter yielded 0 items
+      if (rows.results.length === 0 && subgenre && !["all", "featured", "movies", "tv-shows"].includes(slug)) {
+        const broadOr = metaCfg.genres.map(() => "genres_lower LIKE ?");
+        const broadBinds = metaCfg.genres.map((kw) => `%${kw.toLowerCase()}%`);
+        const broadWhere = `WHERE (${broadOr.join(" OR ")})`;
+        statsRow = await db
+          .prepare(
+            `SELECT COUNT(*) AS cnt, SUM(CASE WHEN kind='movie' THEN 1 ELSE 0 END) AS movies, SUM(CASE WHEN kind='series' THEN 1 ELSE 0 END) AS series FROM titles ${broadWhere}`,
+          )
+          .bind(...broadBinds)
+          .first<{ cnt: number; movies: number; series: number }>();
+        rows = await db
+          .prepare(`SELECT * FROM titles ${broadWhere} ${orderSql} LIMIT ? OFFSET ?`)
+          .bind(...broadBinds, limit, offset)
+          .all<TitleRow>();
+      }
+
+      // Enrich category metadata from cached 44-category catalog when available
+      let categoryMeta: Record<string, unknown> = {
+        id: slug,
+        slug,
+        name: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        description: "Streaming free on FamilyFlix by DemureGram",
+        contentType: "both",
+        icon: "Film",
+        subgenres: [],
+      };
+      try {
+        const cachedCats = await db
+          .prepare("SELECT value_json FROM kv_cache WHERE key = ?")
+          .bind("categories")
+          .first<{ value_json: string }>();
+        if (cachedCats?.value_json) {
+          const parsed = JSON.parse(cachedCats.value_json) as {
+            categories?: Array<Record<string, unknown>>;
+          };
+          const found = parsed.categories?.find((c) => c.slug === slug);
+          if (found) categoryMeta = found;
+        }
+      } catch {
+        // Keep fallback metadata
+      }
+
+      const summaries = rows.results.map(rowToSummary);
+      const total = Number(statsRow?.cnt || summaries.length);
+      const moviesCount = Number(statsRow?.movies || 0);
+      const seriesCount = Number(statsRow?.series || 0);
+
       return json({
-        category: {
-          slug,
-          name: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-          description: "Streaming free on FamilyFlix by DemureGram",
-        },
+        category: categoryMeta,
         total,
+        moviesCount,
+        seriesCount,
         page,
         limit,
-        titles: rows.results.map(rowToSummary),
+        items: summaries,
+        titles: summaries,
       });
     }
 
