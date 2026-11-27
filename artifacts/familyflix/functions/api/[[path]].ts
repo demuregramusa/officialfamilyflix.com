@@ -681,6 +681,7 @@ export async function onRequest(context: EventContext): Promise<Response> {
           isSubscribed: true,
           tier: "lifetime-unlimited",
           plan: "Admin Lifetime Unlimited",
+          adsEnabled: false,
           unlimitedLifetime: true,
           fdicCoverageUsd: sess.user.fdicCoverageUsd || 250000,
           status: "active",
@@ -689,7 +690,38 @@ export async function onRequest(context: EventContext): Promise<Response> {
         "no-store",
       );
     }
-    return json({ isSubscribed: false, plan: "free", status: "active" }, 200, "no-store");
+    if (sess?.user?.email) {
+      try {
+        const entRes = await fetch(
+          `https://billing.demuregram.com/api/entitlements?email=${encodeURIComponent(sess.user.email)}&app=familyflix`,
+        );
+        if (entRes.ok) {
+          const ent = (await entRes.json()) as {
+            status?: string;
+            tier?: string;
+            planName?: string;
+            planSlug?: string;
+            adsEnabled?: boolean;
+          };
+          if (ent.status === "active" && ent.tier && ent.tier !== "free") {
+            return json(
+              {
+                isSubscribed: true,
+                tier: ent.tier,
+                plan: ent.planName || ent.planSlug || "FamilyFlix Pro",
+                adsEnabled: Boolean(ent.adsEnabled),
+                status: "active",
+              },
+              200,
+              "no-store",
+            );
+          }
+        }
+      } catch {
+        // Fall back to free tier
+      }
+    }
+    return json({ isSubscribed: false, plan: "free", adsEnabled: true, status: "active" }, 200, "no-store");
   }
   if (path === "user/pre-orders") {
     return json([], 200, "no-store");
@@ -702,11 +734,28 @@ export async function onRequest(context: EventContext): Promise<Response> {
   const VERIFICATION_TOKEN = "1dfb67786257b52ff8a2d3408fc53d3161faad0c";
 
   if (path === "v1/monetization/config") {
+    let adsEnabled = true;
+    const sess = await getD1Session(request, db).catch(() => null);
+    if (sess?.user?.role === "admin" || sess?.user?.unlimitedLifetime) {
+      adsEnabled = false;
+    } else if (sess?.user?.email) {
+      try {
+        const entRes = await fetch(
+          `https://billing.demuregram.com/api/entitlements?email=${encodeURIComponent(sess.user.email)}&app=familyflix`,
+        );
+        if (entRes.ok) {
+          const ent = (await entRes.json()) as { adsEnabled?: boolean; status?: string };
+          if (ent.status === "active" && ent.adsEnabled === false) adsEnabled = false;
+        }
+      } catch {
+        // Default to ad-supported
+      }
+    }
     return json({
-      adsEnabled: true,
-      preRoll: true,
-      midRoll: true,
-      postRoll: true,
+      adsEnabled,
+      preRoll: adsEnabled,
+      midRoll: adsEnabled,
+      postRoll: adsEnabled,
       skipAfterSeconds: 5,
       midRollIntervalSeconds: 480,
       vastAdTagUrl: VAST_TAG_URL,
