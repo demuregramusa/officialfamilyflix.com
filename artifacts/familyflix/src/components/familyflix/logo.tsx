@@ -36,12 +36,12 @@ export function FamilyFlixLogo({ className }: { className?: string }) {
     >
       <span
         aria-hidden
-        className="brand-mark grid shrink-0 place-items-center rounded-[10px] bg-brand shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_6px_16px_-6px_rgba(109,40,255,0.9)]"
+        className="inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] shadow-[0_6px_18px_rgba(0,149,246,0.28)]"
       >
-        <BrandLogo className="ml-0.5 text-white" />
+        <img src="/icon-192.png" alt="" className="size-full object-cover" />
       </span>
-      <span className="brand-word text-[24px] font-black leading-none tracking-[-0.055em] text-white">
-        family<b className="text-[#a78bfa]">flix</b>
+      <span className="brand-word text-[22px] font-extrabold leading-none tracking-[-0.03em] text-[#f5f5f5]">
+        family<b className="text-[#0095f6]">flix</b>
       </span>
     </Link>
   );

@@ -124,8 +124,8 @@ const isoDateTime = (value: FormDataEntryValue | null) => value ? new Date(Strin
 function Brand() {
   const { isKidsMode } = useProfile();
   return <Link href="/" className="brand-lockup" data-testid="link-familyflix-home" aria-label="FamilyFlix home">
-    <span className={cn("brand-mark", isKidsMode && "bg-gradient-to-r from-amber-400 to-pink-500 shadow-[0_0_20px_rgba(245,158,11,0.4)]")}>
-      <BrandLogo className="ml-0.5" />
+    <span className={cn("inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-[10px] shadow-[0_6px_18px_rgba(0,149,246,0.28)]", isKidsMode && "ring-2 ring-amber-400/80")}>
+      <img src="/icon-192.png" alt="" aria-hidden="true" className="size-full object-cover" />
     </span>
     <span>
       <span className="brand-word">family<b>flix</b></span>
