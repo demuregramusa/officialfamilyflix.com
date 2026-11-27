@@ -1,0 +1,11 @@
+name = "familyflix"
+compatibility_date = "2026-04-01"
+pages_build_output_dir = "dist/public"
+
+[vars]
+UPSTREAM_API_URL = "https://familyflix-origin.demuregram.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "familyflix-db"
+database_id = "d5e44a24-03e1-4bef-84ec-0bd6f639e718"

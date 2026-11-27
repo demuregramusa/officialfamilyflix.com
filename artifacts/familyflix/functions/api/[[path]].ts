@@ -1,3 +1,13 @@
+interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  first<T = Record<string, unknown>>(colName?: string): Promise<T | null>;
+  all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
+}
+
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+}
+
 interface CatalogEpisode {
   id: string;
   seasonNumber: number;
@@ -27,6 +37,10 @@ interface CatalogTitle {
   posterUrl: string;
   backdropUrl: string;
   streamUrl: string;
+  infoHash?: string;
+  magnetUrl?: string;
+  quality?: string;
+  seeders?: number;
   episodes: CatalogEpisode[];
   rights: Array<{
     assetKind: string;
@@ -36,8 +50,34 @@ interface CatalogTitle {
   }>;
 }
 
+interface TitleRow {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  year: number;
+  rating: string;
+  score: number;
+  duration_minutes: number;
+  tagline: string;
+  synopsis: string;
+  genres_json: string;
+  cast_json: string;
+  creator_attribution: string;
+  featured: number;
+  poster_url: string;
+  backdrop_url: string;
+  stream_url: string;
+  info_hash: string;
+  magnet_url: string;
+  quality: string;
+  seeders: number;
+  episodes_json: string;
+}
+
 interface Env {
   ASSETS: { fetch(request: Request | string): Promise<Response> };
+  DB?: D1Database;
   UPSTREAM_API_URL?: string;
 }
 
@@ -46,7 +86,7 @@ interface EventContext {
   env: Env;
 }
 
-let cachedCatalog: CatalogTitle[] | null = null;
+let cachedSeedCatalog: CatalogTitle[] | null = null;
 
 function json(data: unknown, status = 200, cache = "public, max-age=60") {
   return new Response(JSON.stringify(data), {
@@ -58,13 +98,81 @@ function json(data: unknown, status = 200, cache = "public, max-age=60") {
   });
 }
 
-async function getCatalog(env: Env, origin: string): Promise<CatalogTitle[]> {
-  if (cachedCatalog) return cachedCatalog;
+function safeJsonParse<T>(raw: string | null | undefined, fallback: T): T {
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function rowToTitle(row: TitleRow): CatalogTitle {
+  const genres = safeJsonParse<string[]>(row.genres_json, []);
+  const cast = safeJsonParse<string[]>(row.cast_json, []);
+  const episodes = safeJsonParse<CatalogEpisode[]>(row.episodes_json, []);
+  const kind = row.kind === "series" ? "series" : "movie";
+  const rights = [
+    {
+      assetKind: "main-video",
+      rightsHolder: "Creative Commons / DemureGram",
+      licenseType: "cc-by-4.0",
+      territory: "Worldwide",
+    },
+  ];
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    kind,
+    year: row.year || 0,
+    rating: row.rating || "NR",
+    score: row.score || 70,
+    durationMinutes: row.duration_minutes || 90,
+    tagline: row.tagline || "",
+    synopsis: row.synopsis || "",
+    genres,
+    cast,
+    creatorAttribution: row.creator_attribution || `${row.name} (${row.year || ""})`,
+    featured: Boolean(row.featured),
+    posterUrl: row.poster_url || "",
+    backdropUrl: row.backdrop_url || row.poster_url || "",
+    streamUrl: row.stream_url || `/api/playback/${row.slug}/media`,
+    ...(row.info_hash ? { infoHash: row.info_hash } : {}),
+    ...(row.magnet_url ? { magnetUrl: row.magnet_url } : {}),
+    ...(row.quality ? { quality: row.quality } : {}),
+    ...(row.seeders ? { seeders: row.seeders } : {}),
+    episodes,
+    rights,
+  };
+}
+
+function rowToSummary(row: TitleRow) {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    kind: row.kind === "series" ? "series" : "movie",
+    synopsis: row.synopsis || "",
+    year: row.year || 0,
+    rating: row.rating || "NR",
+    score: row.score || 70,
+    durationMinutes: row.duration_minutes || 90,
+    genres: safeJsonParse<string[]>(row.genres_json, []),
+    creatorAttribution: row.creator_attribution || `${row.name} (${row.year || ""})`,
+    posterUrl: row.poster_url || "",
+    backdropUrl: row.backdrop_url || row.poster_url || "",
+    featured: Boolean(row.featured),
+  };
+}
+
+async function getSeedCatalog(env: Env, origin: string): Promise<CatalogTitle[]> {
+  if (cachedSeedCatalog) return cachedSeedCatalog;
   const res = await env.ASSETS.fetch(new Request(`${origin}/catalog-seed.json`));
   if (!res.ok) return [];
   const parsed = (await res.json()) as CatalogTitle[];
-  cachedCatalog = Array.isArray(parsed) ? parsed : [];
-  return cachedCatalog;
+  cachedSeedCatalog = Array.isArray(parsed) ? parsed : [];
+  return cachedSeedCatalog;
 }
 
 function slugify(str: string): string {
@@ -74,43 +182,169 @@ function slugify(str: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+function buildForwardHeaders(request: Request): Headers {
+  const out = new Headers();
+  const allow = [
+    "accept",
+    "accept-encoding",
+    "accept-language",
+    "authorization",
+    "content-type",
+    "cookie",
+    "if-modified-since",
+    "if-none-match",
+    "if-range",
+    "range",
+    "user-agent",
+  ];
+  for (const key of allow) {
+    const val = request.headers.get(key);
+    if (val) out.set(key, val);
+  }
+  return out;
+}
+
+async function proxyUpstream(
+  request: Request,
+  upstreamBase: string,
+  timeoutMs?: number,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  const target = new URL(url.pathname + url.search, upstreamBase);
+  const controller = timeoutMs ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const upstream = await fetch(target.toString(), {
+      method: request.method,
+      headers: buildForwardHeaders(request),
+      body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+      redirect: "follow",
+      signal: controller?.signal,
+    });
+    if (upstream.status < 500 && upstream.status !== 404) {
+      return upstream;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function categoryKeywords(slug: string): string[] {
+  const map: Record<string, string[]> = {
+    action: ["action"],
+    adventure: ["adventure"],
+    animation: ["animation"],
+    "adult-animation": ["animation"],
+    "adult-comedy": ["comedy"],
+    anime: ["animation"],
+    "arthouse-films": ["drama", "biography"],
+    biography: ["biography"],
+    "black-cinema": ["drama", "biography", "music"],
+    "british-tv": ["drama", "crime", "mystery"],
+    "classic-movies": ["drama", "romance", "western", "film-noir"],
+    comedy: ["comedy"],
+    crime: ["crime"],
+    "crime-tv": ["crime", "mystery"],
+    "cult-classics": ["horror", "sci-fi", "thriller"],
+    documentary: ["documentary"],
+    docuseries: ["documentary"],
+    drama: ["drama"],
+    family: ["family", "animation"],
+    "family-movies": ["family", "animation"],
+    fantasy: ["fantasy"],
+    "foreign-language": ["drama", "romance"],
+    history: ["history", "war", "biography"],
+    horror: ["horror"],
+    indie: ["drama", "comedy"],
+    kids: ["family", "animation"],
+    "kids-and-family": ["family", "animation"],
+    "latino-cinema": ["drama", "comedy"],
+    lgbtq: ["drama", "romance"],
+    lifestyle: ["documentary", "reality-tv"],
+    "martial-arts": ["action"],
+    music: ["music", "musical"],
+    musical: ["musical", "music"],
+    mystery: ["mystery", "thriller"],
+    "reality-tv": ["reality-tv", "talk-show"],
+    romance: ["romance"],
+    "sci-fi": ["sci-fi"],
+    "sci-fi-and-fantasy": ["sci-fi", "fantasy"],
+    "science-fiction": ["sci-fi"],
+    sports: ["sport"],
+    "stand-up-comedy": ["comedy"],
+    thriller: ["thriller"],
+    "true-crime": ["crime", "documentary"],
+    war: ["war", "history"],
+    western: ["western"],
+  };
+  if (map[slug]) return map[slug];
+  return [slug.replace(/-/g, " ")];
+}
+
 export async function onRequest(context: EventContext): Promise<Response> {
   const { request, env } = context;
   const url = new URL(request.url);
-
-  // If an external FamilyFlix PostgreSQL API server URL is configured, proxy transparently to it
-  if (env.UPSTREAM_API_URL) {
-    try {
-      const target = new URL(url.pathname + url.search, env.UPSTREAM_API_URL);
-      const upstream = await fetch(target.toString(), {
-        method: request.method,
-        headers: request.headers,
-        body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
-      });
-      if (upstream.status < 500 && upstream.status !== 404) {
-        return upstream;
-      }
-    } catch {
-      // Fall back to Cloudflare Pages bundled catalog seamlessly
-    }
-  }
-
   const path = url.pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");
   const method = request.method.toUpperCase();
-  const catalog = await getCatalog(env, url.origin);
+  const db = env.DB;
 
-  // Health
+  // 1. Live Media Byte-Range Streaming (/api/playback/:slug/media & episode media)
+  // Always stream directly through the active WebTorrent Media Gateway origin when configured.
+  if (
+    env.UPSTREAM_API_URL &&
+    /^playback\/.+\/media$/.test(path)
+  ) {
+    const upstream = await proxyUpstream(request, env.UPSTREAM_API_URL);
+    if (upstream) return upstream;
+    return json(
+      {
+        error: "Media stream gateway is currently reconnecting. Please try again in a moment.",
+        retryable: true,
+      },
+      503,
+      "no-store",
+    );
+  }
+
+  // 2. Health endpoint (reports live D1 catalog count + upstream origin status)
   if (path === "healthz" || path === "health") {
+    let total = 0;
+    let movies = 0;
+    let series = 0;
+    if (db) {
+      try {
+        const stats = await db
+          .prepare(
+            "SELECT COUNT(*) AS total, SUM(CASE WHEN kind='movie' THEN 1 ELSE 0 END) AS movies, SUM(CASE WHEN kind='series' THEN 1 ELSE 0 END) AS series FROM titles",
+          )
+          .first<{ total: number; movies: number; series: number }>();
+        total = Number(stats?.total || 0);
+        movies = Number(stats?.movies || 0);
+        series = Number(stats?.series || 0);
+      } catch {
+        // Ignore and report fallback count
+      }
+    }
     return json({
       ok: true,
+      status: "ok",
       service: "FamilyFlix Cloud",
       domain: "familyflix.demuregram.com",
-      titles: catalog.length,
-      mode: env.UPSTREAM_API_URL ? "upstream-proxy+fallback" : "cloudflare-pages-catalog",
+      titles: total,
+      movies,
+      series,
+      mode: db
+        ? env.UPSTREAM_API_URL
+          ? "cloudflare-d1+torrent-origin"
+          : "cloudflare-d1"
+        : "cloudflare-pages-seed",
     });
   }
 
-  // Site config
+  // 3. Site config & lightweight user/monetization defaults
   if (path === "site-config") {
     return json({
       name: "FamilyFlix",
@@ -121,8 +355,11 @@ export async function onRequest(context: EventContext): Promise<Response> {
     });
   }
 
-  // Auth / User session & preferences (clean unauthenticated defaults)
   if (path.startsWith("auth/")) {
+    if (env.UPSTREAM_API_URL) {
+      const upstream = await proxyUpstream(request, env.UPSTREAM_API_URL, 3500);
+      if (upstream) return upstream;
+    }
     return json({ user: null, session: null }, 200, "no-store");
   }
   if (path === "user/subscription") {
@@ -134,8 +371,6 @@ export async function onRequest(context: EventContext): Promise<Response> {
   if (path === "user/preferences") {
     return json({ watchlist: [], history: [], autoplay: true }, 200, "no-store");
   }
-
-  // Monetization / Ads / Payments config
   if (path === "v1/monetization/config") {
     return json({ adsEnabled: false, preRoll: false, midRoll: false, skipAfterSeconds: 5 });
   }
@@ -146,7 +381,7 @@ export async function onRequest(context: EventContext): Promise<Response> {
     return json({ cuePoints: [], adsEnabled: false });
   }
 
-  // Image proxy
+  // 4. Image Proxy
   if (path === "v1/image-proxy") {
     const imgUrl = url.searchParams.get("url");
     if (!imgUrl || !/^https?:\/\//i.test(imgUrl)) {
@@ -169,240 +404,313 @@ export async function onRequest(context: EventContext): Promise<Response> {
     return env.ASSETS.fetch(new Request(`${url.origin}/avatars/demure/demure-familyflix-crew.jpg`));
   }
 
-  // Featured Hero Carousel
-  if (path === "v1/home/featured-hero") {
-    const featured = catalog.filter((t) => t.featured);
-    const hero = (featured.length >= 4 ? featured : catalog).slice(0, 8);
-    return json(hero);
+  // 5. D1-Backed 23,275+ Title Catalog Routes (24/7 Edge)
+  if (db) {
+    // 5a. Featured Hero Carousel
+    if (path === "v1/home/featured-hero") {
+      const cached = await db
+        .prepare("SELECT value_json FROM kv_cache WHERE key = ?")
+        .bind("featured-hero")
+        .first<{ value_json: string }>();
+      if (cached?.value_json) {
+        return new Response(cached.value_json, {
+          status: 200,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "public, max-age=300",
+          },
+        });
+      }
+      const rows = await db
+        .prepare("SELECT * FROM titles ORDER BY year DESC, score DESC LIMIT 8")
+        .all<TitleRow>();
+      return json(rows.results.map(rowToSummary), 200, "public, max-age=300");
+    }
+
+    // 5b. Curated Homepage Rows (22 collections)
+    if (path === "v1/home/curated-rows") {
+      const cachedRows = await db
+        .prepare("SELECT value_json FROM kv_cache WHERE key LIKE 'curated-row-%' ORDER BY key ASC")
+        .all<{ value_json: string }>();
+      if (cachedRows.results.length > 0) {
+        const body = `[${cachedRows.results.map((r) => r.value_json).join(",")}]`;
+        return new Response(body, {
+          status: 200,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "public, max-age=300",
+          },
+        });
+      }
+    }
+
+    // 5c. Personalized Recommendations
+    if (path === "v1/home/personalized" && method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as {
+        preferredGenres?: string[];
+        limit?: number;
+      };
+      const prefs = Array.isArray(body.preferredGenres) ? body.preferredGenres : [];
+      const limit = Math.min(48, Math.max(1, Number(body.limit) || 16));
+      if (prefs.length > 0) {
+        const clauses = prefs.slice(0, 4).map(() => "genres_lower LIKE ?");
+        const binds = prefs.slice(0, 4).map((g) => `%${g.toLowerCase()}%`);
+        const rows = await db
+          .prepare(
+            `SELECT * FROM titles WHERE ${clauses.join(" OR ")} ORDER BY year DESC, score DESC LIMIT ?`,
+          )
+          .bind(...binds, limit)
+          .all<TitleRow>();
+        if (rows.results.length > 0) {
+          return json(rows.results.map(rowToSummary), 200, "no-store");
+        }
+      }
+      const rows = await db
+        .prepare("SELECT * FROM titles ORDER BY score DESC, year DESC LIMIT ?")
+        .bind(limit)
+        .all<TitleRow>();
+      return json(rows.results.map(rowToSummary), 200, "no-store");
+    }
+
+    // 5d. Categories List (44 categories with exact counts)
+    if (path === "v1/categories") {
+      const cached = await db
+        .prepare("SELECT value_json FROM kv_cache WHERE key = ?")
+        .bind("categories")
+        .first<{ value_json: string }>();
+      if (cached?.value_json) {
+        return new Response(cached.value_json, {
+          status: 200,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "public, max-age=600",
+          },
+        });
+      }
+    }
+
+    if (path === "v1/subgenres") {
+      if (env.UPSTREAM_API_URL) {
+        const upstream = await proxyUpstream(request, env.UPSTREAM_API_URL, 3000);
+        if (upstream) return upstream;
+      }
+      return json({ total: 0, subgenres: [] });
+    }
+
+    // 5e. Single Category Browse (Paginated across all 23,275 titles)
+    const catMatch = path.match(/^v1\/categories\/([^/]+)$/);
+    if (catMatch) {
+      const slug = decodeURIComponent(catMatch[1]).toLowerCase();
+      const contentType = url.searchParams.get("contentType") || "all";
+      const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
+      const limit = Math.min(80, Math.max(1, Number(url.searchParams.get("limit")) || 40));
+      const offset = (page - 1) * limit;
+
+      const where: string[] = [];
+      const binds: unknown[] = [];
+
+      if (contentType === "movies" || slug === "movies") {
+        where.push("kind = 'movie'");
+      } else if (contentType === "series" || slug === "tv-shows") {
+        where.push("kind = 'series'");
+      }
+
+      if (!["all", "featured", "movies", "tv-shows"].includes(slug)) {
+        const keywords = categoryKeywords(slug);
+        const orClauses = keywords.map(() => "genres_lower LIKE ?");
+        where.push(`(${orClauses.join(" OR ")})`);
+        for (const kw of keywords) binds.push(`%${kw.toLowerCase()}%`);
+      }
+
+      const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+      const countRow = await db
+        .prepare(`SELECT COUNT(*) AS cnt FROM titles ${whereSql}`)
+        .bind(...binds)
+        .first<{ cnt: number }>();
+      const total = Number(countRow?.cnt || 0);
+
+      const rows = await db
+        .prepare(
+          `SELECT * FROM titles ${whereSql} ORDER BY year DESC, score DESC LIMIT ? OFFSET ?`,
+        )
+        .bind(...binds, limit, offset)
+        .all<TitleRow>();
+
+      return json({
+        category: {
+          slug,
+          name: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+          description: "Streaming free on FamilyFlix by DemureGram",
+        },
+        total,
+        page,
+        limit,
+        titles: rows.results.map(rowToSummary),
+      });
+    }
+
+    // 5f. Titles Listing & Search (Paginated across all 23,275 titles)
+    if (path === "v1/titles" || path === "titles") {
+      const q = (url.searchParams.get("query") || url.searchParams.get("q") || "").trim().toLowerCase();
+      const kind = url.searchParams.get("kind");
+      const genre = (url.searchParams.get("genre") || "").trim().toLowerCase();
+      const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
+      const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit")) || 60));
+
+      const where: string[] = [];
+      const binds: unknown[] = [];
+
+      if (kind === "movie" || kind === "series") {
+        where.push("kind = ?");
+        binds.push(kind);
+      }
+      if (genre) {
+        where.push("genres_lower LIKE ?");
+        binds.push(`%${genre}%`);
+      }
+      if (q) {
+        where.push("(LOWER(name) LIKE ? OR LOWER(synopsis) LIKE ? OR genres_lower LIKE ?)");
+        const like = `%${q}%`;
+        binds.push(like, like, like);
+      }
+
+      const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+      const countRow = await db
+        .prepare(`SELECT COUNT(*) AS cnt FROM titles ${whereSql}`)
+        .bind(...binds)
+        .first<{ cnt: number }>();
+      const total = Number(countRow?.cnt || 0);
+
+      const rows = await db
+        .prepare(
+          `SELECT * FROM titles ${whereSql} ORDER BY year DESC, score DESC LIMIT ? OFFSET ?`,
+        )
+        .bind(...binds, limit, offset)
+        .all<TitleRow>();
+
+      return new Response(JSON.stringify(rows.results.map(rowToSummary)), {
+        status: 200,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "x-catalog-total": String(total),
+          "cache-control": "public, max-age=60",
+        },
+      });
+    }
+
+    // 5g. Single Title Detail
+    const titleMatch = path.match(/^(?:v1\/)?titles\/([^/]+)$/);
+    if (titleMatch) {
+      const slug = decodeURIComponent(titleMatch[1]);
+      const row = await db
+        .prepare("SELECT * FROM titles WHERE slug = ? OR id = ? LIMIT 1")
+        .bind(slug, slug)
+        .first<TitleRow>();
+      if (!row) return json({ error: "Title not found." }, 404);
+      return json(rowToTitle(row));
+    }
+
+    // 5h. Episode Playback Manifest
+    const epPlaybackMatch = path.match(/^playback\/([^/]+)\/episodes\/([^/]+)$/);
+    if (epPlaybackMatch) {
+      if (env.UPSTREAM_API_URL) {
+        const upstream = await proxyUpstream(request, env.UPSTREAM_API_URL, 4000);
+        if (upstream) return upstream;
+      }
+      const slug = decodeURIComponent(epPlaybackMatch[1]);
+      const epId = decodeURIComponent(epPlaybackMatch[2]);
+      const row = await db
+        .prepare("SELECT * FROM titles WHERE slug = ? OR id = ? LIMIT 1")
+        .bind(slug, slug)
+        .first<TitleRow>();
+      if (!row) return json({ error: "Title not found." }, 404);
+      const title = rowToTitle(row);
+      const ep = title.episodes.find((e) => e.id === epId) || title.episodes[0];
+      if (!ep) return json({ error: "Episode not found." }, 404);
+      const isHls = ep.streamUrl.includes(".m3u8");
+      return json({
+        titleName: `${title.name} — ${ep.name}`,
+        title: `${title.name} — ${ep.name}`,
+        streamType: isHls ? "hls" : "mp4",
+        provider: isHls ? "hls" : "mp4",
+        url: ep.streamUrl || `/api/playback/${title.slug}/episodes/${ep.id}/media`,
+        posterUrl: ep.stillUrl || title.backdropUrl || title.posterUrl,
+        subtitles: [],
+        ...(title.infoHash ? { infoHash: title.infoHash } : {}),
+        ...(title.magnetUrl ? { magnetUrl: title.magnetUrl } : {}),
+      });
+    }
+
+    // 5i. Movie Playback Manifest
+    const playbackMatch = path.match(/^playback\/([^/]+)$/);
+    if (playbackMatch) {
+      if (env.UPSTREAM_API_URL) {
+        const upstream = await proxyUpstream(request, env.UPSTREAM_API_URL, 4000);
+        if (upstream) return upstream;
+      }
+      const slug = decodeURIComponent(playbackMatch[1]);
+      const row = await db
+        .prepare("SELECT * FROM titles WHERE slug = ? OR id = ? LIMIT 1")
+        .bind(slug, slug)
+        .first<TitleRow>();
+      if (!row) return json({ error: "Title not found." }, 404);
+      const title = rowToTitle(row);
+      const isHls = title.streamUrl.includes(".m3u8");
+      return json({
+        titleName: title.name,
+        title: title.name,
+        streamType: isHls ? "hls" : "mp4",
+        provider: isHls ? "hls" : "mp4",
+        url: title.streamUrl || `/api/playback/${title.slug}/media`,
+        posterUrl: title.posterUrl || title.backdropUrl,
+        subtitles: [],
+        ...(title.infoHash ? { infoHash: title.infoHash } : {}),
+        ...(title.magnetUrl ? { magnetUrl: title.magnetUrl } : {}),
+      });
+    }
   }
 
-  // Curated Home Rows
-  if (path === "v1/home/curated-rows") {
-    const movies = catalog.filter((t) => t.kind === "movie");
-    const series = catalog.filter((t) => t.kind === "series");
-    const byGenre = (g: string) =>
-      catalog.filter((t) =>
-        t.genres.some((item) => item.toLowerCase().includes(g.toLowerCase())),
-      );
+  // 6. Progress endpoints & fallback to bundled seed catalog if D1 isn't bound
+  if (path.endsWith("/progress")) {
+    return json({ progressSeconds: 0, durationSeconds: 0 }, 200, "no-store");
+  }
 
-    const rows = [
+  if (env.UPSTREAM_API_URL) {
+    const upstream = await proxyUpstream(request, env.UPSTREAM_API_URL, 5000);
+    if (upstream) return upstream;
+  }
+
+  const catalog = await getSeedCatalog(env, url.origin);
+  if (path === "v1/titles" || path === "titles") {
+    return json(catalog);
+  }
+  if (path === "v1/home/featured-hero") {
+    return json(catalog.slice(0, 8));
+  }
+  if (path === "v1/home/curated-rows") {
+    return json([
       {
         id: "trending-now",
         title: "Trending on FamilyFlix",
-        subtitle: "Popular movies and series streaming free worldwide",
+        subtitle: "Streaming free worldwide",
         slug: "featured",
         items: catalog.slice(0, 18),
       },
-      {
-        id: "featured-movies",
-        title: "Free Movies & Restored Classics",
-        subtitle: "Instant HD playback with verified rights",
-        slug: "movies",
-        items: movies.slice(0, 18),
-      },
-      {
-        id: "tv-series",
-        title: "Binge-Worthy TV Series",
-        subtitle: "Complete episodes ready to watch",
-        slug: "tv-shows",
-        items: series.slice(0, 18),
-      },
-      {
-        id: "family-animation",
-        title: "Family & Kids Favorites",
-        subtitle: "Safe, joyful entertainment for every generation",
-        slug: "family",
-        items: byGenre("family").slice(0, 18),
-      },
-      {
-        id: "action-adventure",
-        title: "Action & Adventure",
-        subtitle: "High-energy thrills and epic journeys",
-        slug: "action",
-        items: byGenre("action").slice(0, 18),
-      },
-      {
-        id: "comedy-laughs",
-        title: "Comedy & Good Vibes",
-        subtitle: "Lighthearted hits and feel-good laughs",
-        slug: "comedy",
-        items: byGenre("comedy").slice(0, 18),
-      },
-      {
-        id: "drama-stories",
-        title: "Compelling Dramas",
-        subtitle: "Character-driven stories and acclaimed performances",
-        slug: "drama",
-        items: byGenre("drama").slice(0, 18),
-      },
-      {
-        id: "documentary-history",
-        title: "Documentary & History",
-        subtitle: "Real stories and Library of Congress archival cinema",
-        slug: "documentary",
-        items: byGenre("documentary").slice(0, 18),
-      },
-      {
-        id: "thriller-mystery",
-        title: "Mystery, Sci-Fi & Thriller",
-        subtitle: "Edge-of-your-seat twists and supernatural worlds",
-        slug: "thriller",
-        items: [...byGenre("thriller"), ...byGenre("mystery"), ...byGenre("horror")].slice(0, 18),
-      },
-    ].filter((r) => r.items.length > 0);
-
-    return json(rows);
+    ]);
   }
-
-  // Personalized Recommendations
-  if (path === "v1/home/personalized" && method === "POST") {
-    const body = (await request.json().catch(() => ({}))) as {
-      preferredGenres?: string[];
-      limit?: number;
-    };
-    const prefs = Array.isArray(body.preferredGenres) ? body.preferredGenres : [];
-    const limit = Number(body.limit) || 16;
-    let pool = catalog;
-    if (prefs.length > 0) {
-      const matched = catalog.filter((t) =>
-        t.genres.some((g) => prefs.some((p) => g.toLowerCase().includes(p.toLowerCase()))),
-      );
-      if (matched.length > 0) pool = matched;
-    }
-    return json(pool.slice(0, limit));
-  }
-
-  // Categories list
   if (path === "v1/categories") {
     const counts = new Map<string, number>();
     for (const t of catalog) {
-      for (const g of t.genres) {
-        counts.set(g, (counts.get(g) || 0) + 1);
-      }
+      for (const g of t.genres) counts.set(g, (counts.get(g) || 0) + 1);
     }
-    const categories = Array.from(counts.entries())
-      .map(([name, count]) => ({
+    return json({
+      total: counts.size,
+      categories: Array.from(counts.entries()).map(([name, count]) => ({
         slug: slugify(name),
         name,
         count,
-        description: `Browse ${count} ${name} titles on FamilyFlix`,
-      }))
-      .sort((a, b) => b.count - a.count);
-    return json({ total: categories.length, categories });
-  }
-
-  if (path === "v1/subgenres") {
-    return json({ total: 0, subgenres: [] });
-  }
-
-  // Single category browse
-  const catMatch = path.match(/^v1\/categories\/([^/]+)$/);
-  if (catMatch) {
-    const slug = decodeURIComponent(catMatch[1]).toLowerCase();
-    const contentType = url.searchParams.get("contentType") || "all";
-    let matched = catalog.filter((t) => {
-      if (contentType === "movies" && t.kind !== "movie") return false;
-      if (contentType === "series" && t.kind !== "series") return false;
-      if (slug === "all" || slug === "featured" || slug === "movies" || slug === "tv-shows") {
-        if (slug === "movies") return t.kind === "movie";
-        if (slug === "tv-shows") return t.kind === "series";
-        return true;
-      }
-      return t.genres.some((g) => slugify(g) === slug || g.toLowerCase().includes(slug));
+      })),
     });
-    if (matched.length === 0) matched = catalog.slice(0, 24);
-    const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
-    const limit = Math.min(80, Math.max(1, Number(url.searchParams.get("limit")) || 40));
-    const start = (page - 1) * limit;
-    return json({
-      category: {
-        slug,
-        name: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-        description: "Streaming free on FamilyFlix by DemureGram",
-      },
-      total: matched.length,
-      page,
-      limit,
-      titles: matched.slice(start, start + limit),
-    });
-  }
-
-  // Titles listing & search
-  if (path === "v1/titles" || path === "titles") {
-    const q = (url.searchParams.get("query") || url.searchParams.get("q") || "").trim().toLowerCase();
-    const kind = url.searchParams.get("kind");
-    const genre = (url.searchParams.get("genre") || "").trim().toLowerCase();
-    const offset = Math.max(0, Number(url.searchParams.get("offset")) || 0);
-    const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit")) || 100));
-
-    let list = catalog;
-    if (kind === "movie" || kind === "series") {
-      list = list.filter((t) => t.kind === kind);
-    }
-    if (genre) {
-      list = list.filter((t) => t.genres.some((g) => g.toLowerCase().includes(genre)));
-    }
-    if (q) {
-      list = list.filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          t.synopsis.toLowerCase().includes(q) ||
-          t.genres.some((g) => g.toLowerCase().includes(q)),
-      );
-    }
-    const sliced = list.slice(offset, offset + limit);
-    return new Response(JSON.stringify(sliced), {
-      status: 200,
-      headers: {
-        "content-type": "application/json; charset=utf-8",
-        "x-catalog-total": String(list.length),
-        "cache-control": "public, max-age=60",
-      },
-    });
-  }
-
-  // Single title detail
-  const titleMatch = path.match(/^(?:v1\/)?titles\/([^/]+)$/);
-  if (titleMatch) {
-    const slug = decodeURIComponent(titleMatch[1]);
-    const found = catalog.find((t) => t.slug === slug || t.id === slug);
-    if (!found) return json({ error: "Title not found." }, 404);
-    return json(found);
-  }
-
-  // Playback endpoint (movie or episode)
-  const epPlaybackMatch = path.match(/^playback\/([^/]+)\/episodes\/([^/]+)$/);
-  if (epPlaybackMatch) {
-    const slug = decodeURIComponent(epPlaybackMatch[1]);
-    const epId = decodeURIComponent(epPlaybackMatch[2]);
-    const found = catalog.find((t) => t.slug === slug || t.id === slug);
-    const ep = found?.episodes.find((e) => e.id === epId) || found?.episodes[0];
-    if (!found || !ep) return json({ error: "Episode not found." }, 404);
-    return json({
-      url: ep.streamUrl,
-      provider: "hls",
-      title: `${found.name} — ${ep.name}`,
-      posterUrl: ep.stillUrl || found.backdropUrl,
-      subtitles: [],
-    });
-  }
-
-  const playbackMatch = path.match(/^playback\/([^/]+)$/);
-  if (playbackMatch) {
-    const slug = decodeURIComponent(playbackMatch[1]);
-    const found = catalog.find((t) => t.slug === slug || t.id === slug);
-    if (!found) return json({ error: "Title not found." }, 404);
-    return json({
-      url: found.streamUrl,
-      provider: "hls",
-      title: found.name,
-      posterUrl: found.backdropUrl || found.posterUrl,
-      subtitles: [],
-    });
-  }
-
-  if (path.endsWith("/progress")) {
-    return json({ progressSeconds: 0, durationSeconds: 0 }, 200, "no-store");
   }
 
   return json({ error: "API route not found", path }, 404, "no-store");
