@@ -78,12 +78,53 @@ interface TitleRow {
 interface Env {
   ASSETS: { fetch(request: Request | string): Promise<Response> };
   DB?: D1Database;
+  BACKUP_DB?: D1Database;
   UPSTREAM_API_URL?: string;
 }
 
 interface EventContext {
   request: Request;
   env: Env;
+}
+
+function createFailoverDb(primary?: D1Database, backup?: D1Database): D1Database | undefined {
+  if (!primary && !backup) return undefined;
+  if (!backup) return primary;
+  if (!primary) return backup;
+  return {
+    prepare(query: string): D1PreparedStatement {
+      let boundValues: unknown[] = [];
+      const stmt: D1PreparedStatement = {
+        bind(...values: unknown[]) {
+          boundValues = values;
+          return stmt;
+        },
+        async first<T = Record<string, unknown>>(colName?: string): Promise<T | null> {
+          try {
+            const p = primary.prepare(query);
+            const res = await (boundValues.length ? p.bind(...boundValues) : p).first<T>(colName);
+            if (res !== null && res !== undefined) return res;
+          } catch {
+            // Fall through to standby backup D1 database
+          }
+          const b = backup.prepare(query);
+          return (boundValues.length ? b.bind(...boundValues) : b).first<T>(colName);
+        },
+        async all<T = Record<string, unknown>>(): Promise<{ results: T[] }> {
+          try {
+            const p = primary.prepare(query);
+            const res = await (boundValues.length ? p.bind(...boundValues) : p).all<T>();
+            if (res && Array.isArray(res.results) && res.results.length > 0) return res;
+          } catch {
+            // Fall through to standby backup D1 database
+          }
+          const b = backup.prepare(query);
+          return (boundValues.length ? b.bind(...boundValues) : b).all<T>();
+        },
+      };
+      return stmt;
+    },
+  };
 }
 
 let cachedSeedCatalog: CatalogTitle[] | null = null;
@@ -289,7 +330,7 @@ export async function onRequest(context: EventContext): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");
   const method = request.method.toUpperCase();
-  const db = env.DB;
+  const db = createFailoverDb(env.DB, env.BACKUP_DB);
 
   // 1. Live Media Byte-Range Streaming (/api/playback/:slug/media & episode media)
   // Always stream directly through the active WebTorrent Media Gateway origin when configured.
@@ -309,11 +350,12 @@ export async function onRequest(context: EventContext): Promise<Response> {
     );
   }
 
-  // 2. Health endpoint (reports live D1 catalog count + upstream origin status)
+  // 2. Health endpoint (reports live primary D1 + standby backup D1 catalog counts)
   if (path === "healthz" || path === "health") {
     let total = 0;
     let movies = 0;
     let series = 0;
+    let backupTitles = 0;
     if (db) {
       try {
         const stats = await db
@@ -328,6 +370,16 @@ export async function onRequest(context: EventContext): Promise<Response> {
         // Ignore and report fallback count
       }
     }
+    if (env.BACKUP_DB) {
+      try {
+        const b = await env.BACKUP_DB
+          .prepare("SELECT COUNT(*) AS total FROM titles")
+          .first<{ total: number }>();
+        backupTitles = Number(b?.total || 0);
+      } catch {
+        // Ignore
+      }
+    }
     return json({
       ok: true,
       status: "ok",
@@ -336,10 +388,12 @@ export async function onRequest(context: EventContext): Promise<Response> {
       titles: total,
       movies,
       series,
+      backupReady: backupTitles > 0,
+      backupTitles,
       mode: db
         ? env.UPSTREAM_API_URL
-          ? "cloudflare-d1+torrent-origin"
-          : "cloudflare-d1"
+          ? "cloudflare-d1+standby-backup+torrent-origin"
+          : "cloudflare-d1+standby-backup"
         : "cloudflare-pages-seed",
     });
   }

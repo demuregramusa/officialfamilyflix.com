@@ -1,0 +1,39 @@
+{
+  "platform": "FamilyFlix by DemureGram",
+  "createdAt": "2026-11-27T07:45:15.982Z",
+  "databases": {
+    "primary": {
+      "name": "familyflix-db",
+      "id": "d5e44a24-03e1-4bef-84ec-0bd6f639e718"
+    },
+    "standbyBackup": {
+      "name": "familyflix-db-backup",
+      "id": "f838abb5-e933-48a7-9b47-1331deee5513"
+    }
+  },
+  "counts": {
+    "totalTitles": 23272,
+    "movies": 23163,
+    "series": 109,
+    "episodes": 109,
+    "curatedRows": 22,
+    "categories": 44
+  },
+  "files": [
+    {
+      "name": "familyflix-full-catalog.json.gz",
+      "bytes": 7320335,
+      "sha256": "64b147729f163bb06fa9d1f5747da0406fb30ed7d6372db2023c773458ddca07"
+    },
+    {
+      "name": "familyflix-torrents-and-endpoints.json.gz",
+      "bytes": 2526032,
+      "sha256": "e60c5ff1d92db3e848dc5be82e989ce9f03378718e0e814bfa985951b9df6cf6"
+    },
+    {
+      "name": "familyflix-collections-snapshot.json.gz",
+      "bytes": 68332,
+      "sha256": "767f1b9d72592677f9478c813659a88a20cfe600fdf5823f9c615d9efc24f220"
+    }
+  ]
+}
