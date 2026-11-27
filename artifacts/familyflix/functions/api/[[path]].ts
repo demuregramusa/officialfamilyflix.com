@@ -2,6 +2,7 @@ interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
   first<T = Record<string, unknown>>(colName?: string): Promise<T | null>;
   all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
+  run(): Promise<{ success: boolean }>;
 }
 
 interface D1Database {
@@ -75,6 +76,17 @@ interface TitleRow {
   episodes_json: string;
 }
 
+interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+  role: string;
+  tier: string;
+  fdic_coverage_usd: number;
+  created_at: number;
+}
+
 interface Env {
   ASSETS: { fetch(request: Request | string): Promise<Response> };
   DB?: D1Database;
@@ -85,6 +97,64 @@ interface Env {
 interface EventContext {
   request: Request;
   env: Env;
+}
+
+function getCookie(req: Request, name: string): string | null {
+  const raw = req.headers.get("cookie") || "";
+  for (const part of raw.split(";")) {
+    const [k, ...rest] = part.trim().split("=");
+    if (k === name) return decodeURIComponent(rest.join("="));
+  }
+  return null;
+}
+
+function randomHex(bytes = 16): string {
+  const arr = new Uint8Array(bytes);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hashPassword(password: string, saltHex?: string): Promise<string> {
+  const salt = saltHex ?? randomHex(16);
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" },
+    key,
+    256,
+  );
+  const hashHex = Array.from(new Uint8Array(bits), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${salt}:${hashHex}`;
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [salt] = stored.split(":");
+  if (!salt) return false;
+  const candidate = await hashPassword(password, salt);
+  return candidate === stored;
+}
+
+function formatSessionUser(u: Pick<UserRow, "id" | "name" | "email" | "role" | "tier" | "fdic_coverage_usd" | "created_at">) {
+  const isAdmin = u.role === "admin" || u.email.toLowerCase() === "iam23yhb@gmail.com";
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    emailVerified: true,
+    role: isAdmin ? "admin" : u.role || "user",
+    tier: isAdmin ? "lifetime-unlimited" : u.tier || "free",
+    unlimitedLifetime: isAdmin,
+    fdicCoverageUsd: isAdmin ? Math.max(250000, Number(u.fdic_coverage_usd) || 250000) : 0,
+    createdAt: new Date(u.created_at || Date.now()).toISOString(),
+  };
 }
 
 function createFailoverDb(primary?: D1Database, backup?: D1Database): D1Database | undefined {
@@ -121,10 +191,55 @@ function createFailoverDb(primary?: D1Database, backup?: D1Database): D1Database
           const b = backup.prepare(query);
           return (boundValues.length ? b.bind(...boundValues) : b).all<T>();
         },
+        async run(): Promise<{ success: boolean }> {
+          let primaryOk = false;
+          try {
+            const p = primary.prepare(query);
+            const r = await (boundValues.length ? p.bind(...boundValues) : p).run();
+            primaryOk = Boolean(r?.success);
+          } catch {
+            // Mirror write to standby backup
+          }
+          try {
+            const b = backup.prepare(query);
+            const r = await (boundValues.length ? b.bind(...boundValues) : b).run();
+            return { success: primaryOk || Boolean(r?.success) };
+          } catch {
+            return { success: primaryOk };
+          }
+        },
       };
       return stmt;
     },
   };
+}
+
+async function getD1Session(req: Request, db?: D1Database) {
+  if (!db) return null;
+  const token = getCookie(req, "ff_session");
+  if (!token) return null;
+  try {
+    const row = await db
+      .prepare(
+        `SELECT s.token, s.expires_at, u.id, u.name, u.email, u.role, u.tier, u.fdic_coverage_usd, u.created_at
+         FROM sessions s JOIN users u ON u.id = s.user_id
+         WHERE s.token = ? AND s.expires_at > ? LIMIT 1`,
+      )
+      .bind(token, Date.now())
+      .first<UserRow & { token: string; expires_at: number }>();
+    if (!row) return null;
+    return {
+      user: formatSessionUser(row),
+      session: {
+        id: row.token.slice(0, 16),
+        token: row.token,
+        userId: row.id,
+        expiresAt: new Date(row.expires_at).toISOString(),
+      },
+    };
+  } catch {
+    return null;
+  }
 }
 
 let cachedSeedCatalog: CatalogTitle[] | null = null;
@@ -409,14 +524,160 @@ export async function onRequest(context: EventContext): Promise<Response> {
     });
   }
 
-  if (path.startsWith("auth/")) {
-    if (env.UPSTREAM_API_URL) {
-      const upstream = await proxyUpstream(request, env.UPSTREAM_API_URL, 3500);
-      if (upstream) return upstream;
+  // 3a. 24/7 Cloudflare D1 Auth (Better-Auth compatible: sign-in/email, sign-up/email, get-session, sign-out)
+  if (path === "auth/get-session" && method === "GET") {
+    const sess = await getD1Session(request, db);
+    if (sess) return json(sess, 200, "no-store");
+    return json(null, 200, "no-store");
+  }
+
+  if (path === "auth/sign-in/email" && method === "POST") {
+    if (!db) return json({ message: "Auth database unavailable." }, 503, "no-store");
+    const body = (await request.json().catch(() => ({}))) as {
+      email?: string;
+      password?: string;
+    };
+    const email = (body.email || "").trim().toLowerCase();
+    const password = body.password || "";
+    if (!email || !password) {
+      return json({ code: "INVALID_CREDENTIALS", message: "Email and password are required." }, 400, "no-store");
     }
+    const row = await db
+      .prepare("SELECT * FROM users WHERE lower(email) = ? LIMIT 1")
+      .bind(email)
+      .first<UserRow>();
+    if (!row || !(await verifyPassword(password, row.password_hash))) {
+      return json({ code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password." }, 401, "no-store");
+    }
+    const token = randomHex(24);
+    const expiresAt = Date.now() + 1000 * 60 * 60 * 24 * 30;
+    await db
+      .prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)")
+      .bind(token, row.id, expiresAt)
+      .run();
+    const user = formatSessionUser(row);
+    return new Response(
+      JSON.stringify({
+        redirect: false,
+        token,
+        user,
+        session: {
+          id: token.slice(0, 16),
+          token,
+          userId: user.id,
+          expiresAt: new Date(expiresAt).toISOString(),
+        },
+      }),
+      {
+        status: 200,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "no-store",
+          "set-cookie": `ff_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
+        },
+      },
+    );
+  }
+
+  if (path === "auth/sign-up/email" && method === "POST") {
+    if (!db) return json({ message: "Auth database unavailable." }, 503, "no-store");
+    const body = (await request.json().catch(() => ({}))) as {
+      name?: string;
+      email?: string;
+      password?: string;
+    };
+    const email = (body.email || "").trim().toLowerCase();
+    const password = body.password || "";
+    const name = (body.name || email.split("@")[0] || "Member").trim();
+    if (!email.includes("@") || password.length < 8) {
+      return json({ message: "Enter a valid email and a password of at least 8 characters." }, 400, "no-store");
+    }
+    const existing = await db
+      .prepare("SELECT id FROM users WHERE lower(email) = ? LIMIT 1")
+      .bind(email)
+      .first<{ id: string }>();
+    if (existing) {
+      return json({ code: "USER_ALREADY_EXISTS", message: "An account with this email already exists." }, 422, "no-store");
+    }
+    const id = `usr_${randomHex(10)}`;
+    const passHash = await hashPassword(password);
+    const now = Date.now();
+    const isAdmin = email === "iam23yhb@gmail.com";
+    await db
+      .prepare(
+        "INSERT INTO users (id, name, email, password_hash, role, tier, fdic_coverage_usd, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .bind(
+        id,
+        name,
+        email,
+        passHash,
+        isAdmin ? "admin" : "user",
+        isAdmin ? "lifetime-unlimited" : "free",
+        isAdmin ? 250000 : 0,
+        now,
+      )
+      .run();
+    const token = randomHex(24);
+    const expiresAt = now + 1000 * 60 * 60 * 24 * 30;
+    await db
+      .prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)")
+      .bind(token, id, expiresAt)
+      .run();
+    const user = formatSessionUser({
+      id,
+      name,
+      email,
+      role: isAdmin ? "admin" : "user",
+      tier: isAdmin ? "lifetime-unlimited" : "free",
+      fdic_coverage_usd: isAdmin ? 250000 : 0,
+      created_at: now,
+    });
+    return new Response(JSON.stringify({ token, user }), {
+      status: 200,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "set-cookie": `ff_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
+      },
+    });
+  }
+
+  if (path === "auth/sign-out" && method === "POST") {
+    const token = getCookie(request, "ff_session");
+    if (token && db) {
+      await db.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
+    }
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "set-cookie": "ff_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+      },
+    });
+  }
+
+  if (path.startsWith("auth/")) {
     return json({ user: null, session: null }, 200, "no-store");
   }
+
   if (path === "user/subscription") {
+    const sess = await getD1Session(request, db);
+    if (sess?.user?.role === "admin" || sess?.user?.unlimitedLifetime) {
+      return json(
+        {
+          isSubscribed: true,
+          tier: "lifetime-unlimited",
+          plan: "Admin Lifetime Unlimited",
+          unlimitedLifetime: true,
+          fdicCoverageUsd: sess.user.fdicCoverageUsd || 250000,
+          status: "active",
+        },
+        200,
+        "no-store",
+      );
+    }
     return json({ isSubscribed: false, plan: "free", status: "active" }, 200, "no-store");
   }
   if (path === "user/pre-orders") {
