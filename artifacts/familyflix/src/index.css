@@ -339,7 +339,7 @@
 .footer-wordmark span { color:hsl(var(--brand)); }
 .footer-brand p { margin:11px 0 17px;color:hsl(var(--muted));font-size:12px;line-height:1.6; }
 .footer-brand small { color:hsl(var(--muted));font-size:10px;line-height:1.6; }
-.footer-links { display:grid;grid-template-columns:repeat(2,minmax(110px,1fr));gap:26px; }
+.footer-links { display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:26px; }
 .footer-links div { display:grid;align-content:start;gap:9px; }
 .footer-links strong { margin-bottom:3px;color:hsl(var(--text));font-size:11px; }
 .footer-links a { color:hsl(var(--muted));font-size:11px;transition:color .2s; }

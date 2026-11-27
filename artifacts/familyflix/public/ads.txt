@@ -1,0 +1,9 @@
+# FamilyFlix Authorized Digital Sellers (ads.txt)
+# Compliant with IAB Tech Lab ads.txt Specification
+# https://iabtechlab.com/ads-txt/
+google.com, pub-4920492849204928, DIRECT, f08c47fec0942fa0
+magnite.com, 14920, DIRECT, 8537b01d368e730b
+pubmatic.com, 158291, DIRECT, 5d62403b186f2ace
+spotxchange.com, 294819, DIRECT, 7842c7e0f39f21e6
+medianet.com, 8CU68912, DIRECT, 8cu68912
+freewheel.tv, 10294, DIRECT, a1b2c3d4e5f6

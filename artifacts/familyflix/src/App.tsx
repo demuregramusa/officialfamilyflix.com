@@ -83,6 +83,7 @@ import { SubscriptionModal } from "@/components/familyflix/subscription-modal";
 import { ShareModal } from "@/components/familyflix/share-modal";
 import { AvatarPickerModal } from "@/components/familyflix/avatar-picker-modal";
 import { AIAssistantModal } from "@/components/familyflix/ai-assistant-modal";
+import { DemureEcosystemSpotlight } from "@/components/familyflix/demure-spotlight";
 import { AdminMonetization } from "@/components/familyflix/admin-monetization";
 import { CookieBanner } from "@/components/familyflix/cookie-banner";
 import { AiConciergeWidget } from "@/components/familyflix/ai-concierge-widget";
@@ -263,12 +264,70 @@ function Footer() {
     </div>
     <nav className="footer-links" aria-label="Footer navigation">
       <div><strong>Explore</strong><Link href="/movies">Movies</Link><Link href="/tv-shows">TV Shows</Link><Link href="/my-list">My List</Link><Link href="/search">Search</Link></div>
+      <div>
+        <strong>Demure Platforms</strong>
+        <a href="https://demuregram.com" target="_blank" rel="noopener noreferrer">DemureGram</a>
+        <a href="https://brinn.demuregram.com" target="_blank" rel="noopener noreferrer">BRiNn Mobile</a>
+        <a href="https://cashout.demuregram.com" target="_blank" rel="noopener noreferrer">CashOut Lock &amp; Reserve</a>
+        <a href="https://chat.demuregram.com" target="_blank" rel="noopener noreferrer">ChatDPI AI</a>
+      </div>
       <div><strong>Information</strong><Link href="/about" data-testid="link-footer-about">About</Link><Link href="/terms" data-testid="link-footer-terms">Terms</Link><Link href="/privacy" data-testid="link-footer-privacy">Privacy</Link><Link href="/dmca" data-testid="link-footer-dmca">DMCA Policy</Link><Link href="/copyright/report" data-testid="link-footer-copyright">Copyright</Link></div>
     </nav>
   </footer>;
 }
+function AdminBackBar() {
+  const [path, setLocation] = useLocation();
+  const isSubpage = path !== "/admin";
+  const activeEntry = ADMIN_NAV.find(
+    ([href]) => path === href || (href !== "/admin" && path.startsWith(href)),
+  );
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      setLocation(isSubpage ? "/admin" : "/");
+    }
+  };
+  return (
+    <div
+      className="mb-5 flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-white/10 bg-[#12161b]/90 px-3.5 py-2.5 backdrop-blur-xl"
+      data-testid="admin-back-nav"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3.5 text-[13px] font-medium text-[#f5f5f5] transition hover:border-white/30 hover:bg-white/[0.12]"
+          data-testid="button-admin-back"
+        >
+          <ArrowLeft className="size-4 shrink-0" />
+          <span>Back</span>
+        </button>
+        <Link
+          href="/"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#0095f6]/35 bg-[#0095f6]/10 px-3.5 text-[13px] font-medium text-[#00d2ff] transition hover:bg-[#0095f6]/20"
+          data-testid="link-admin-exit"
+        >
+          <span>Exit Studio · FamilyFlix Home</span>
+        </Link>
+        {isSubpage ? (
+          <Link
+            href="/admin"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 text-[13px] font-medium text-[#a8a8a8] transition hover:bg-white/[0.1] hover:text-[#f5f5f5]"
+          >
+            <LayoutDashboard className="size-3.5 shrink-0" />
+            <span>Overview</span>
+          </Link>
+        ) : null}
+      </div>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#a8a8a8]">
+        DemureGram / studio{activeEntry ? ` · ${activeEntry[1]}` : ""}
+      </span>
+    </div>
+  );
+}
 function Shell({ children, admin = false, fullBleed = false }: { children: ReactNode; admin?: boolean; fullBleed?: boolean }) {
-  return <div className="site-shell"><Header /><main className={`page-content${fullBleed ? " page-content-full" : ""}`}>{admin ? <div className="admin-layout"><AdminRail />{children}</div> : children}</main><Footer /><CookieBanner /></div>;
+  return <div className="site-shell"><Header /><main className={`page-content${fullBleed ? " page-content-full" : ""}`}>{admin ? <><AdminBackBar /><div className="admin-layout"><AdminRail /><div className="min-w-0">{children}</div></div></> : children}</main><Footer /><CookieBanner /><DemureEcosystemSpotlight /></div>;
 }
 function AdminRail() {
   const [path] = useLocation();
@@ -277,7 +336,11 @@ function AdminRail() {
   const links = session?.user?.role === "admin"
     ? ADMIN_NAV
     : ADMIN_NAV.filter(([href]) => ["/admin", "/admin/library", "/admin/moderation", "/admin/activity"].includes(href));
-  return <aside className="admin-rail"><div className="admin-rail-label">DemureGram / studio</div>
+  return <aside className="admin-rail">
+    <div className="admin-rail-label">DemureGram / studio</div>
+    <Link href="/" className="admin-link" style={{ color: "#00d2ff", marginBottom: 4 }} data-testid="link-admin-rail-home">
+      <ArrowLeft size={15} aria-hidden="true" />Back to FamilyFlix
+    </Link>
     {links.map(([href, name, Icon]) => <Link key={href} href={href} className={`admin-link ${path === href || (href !== "/admin" && path.startsWith(href)) ? "active" : ""}`} data-testid={`link-admin-${name.toLowerCase().replaceAll(" ", "-")}`}><Icon size={15} aria-hidden="true"/>{name}</Link>)}
   </aside>;
 }

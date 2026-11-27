@@ -686,14 +686,136 @@ export async function onRequest(context: EventContext): Promise<Response> {
   if (path === "user/preferences") {
     return json({ watchlist: [], history: [], autoplay: true }, 200, "no-store");
   }
+  const VAST_TAG_URL =
+    "https://crookedagreement.com/d.mwFNzOdIGPN/vhZyGAUT/UeCmO9YubZkU/lJkPPdTmcx2/NTTcEMwnNpjJURtjNCzjYF1_MmT/A/2hOAQv";
+  const VERIFICATION_TOKEN = "1dfb67786257b52ff8a2d3408fc53d3161faad0c";
+
   if (path === "v1/monetization/config") {
-    return json({ adsEnabled: false, preRoll: false, midRoll: false, skipAfterSeconds: 5 });
+    return json({
+      adsEnabled: true,
+      preRoll: true,
+      midRoll: true,
+      postRoll: true,
+      skipAfterSeconds: 5,
+      midRollIntervalSeconds: 480,
+      vastAdTagUrl: VAST_TAG_URL,
+      vastTagUrl: VAST_TAG_URL,
+      zoneId: "7651065",
+      adNetwork: "Monetag / HilltopAds (VAST 3.0/4.0 + Google IMA)",
+      watermarkEnabled: true,
+      watermarkText: "FamilyFlix by DemureGram",
+      verificationToken: VERIFICATION_TOKEN,
+      medianetVerifyToken: "medianet-site-verify-familyflix-982749",
+    });
   }
   if (path === "v1/payments/config") {
     return json({ paypalEnabled: false, whopEnabled: false, vipPriceUsd: 4.99 });
   }
+  if (path === "v1/ads/decision") {
+    const placement = (url.searchParams.get("placement") || "preroll").toLowerCase();
+    const titleSlug = url.searchParams.get("titleSlug") || "";
+    const currentTime = Number(url.searchParams.get("currentTime")) || 0;
+    return json(
+      {
+        ok: true,
+        data: {
+          placement,
+          titleSlug,
+          currentTime,
+          adsEnabled: true,
+          ads: [
+            {
+              id: `ff-zone-7651065-${placement}-${Date.now()}`,
+              placement,
+              zoneId: "7651065",
+              adNetwork: "Monetag / HilltopAds",
+              vastTagUrl: VAST_TAG_URL,
+              durationSeconds: 15,
+              skipAfterSeconds: 5,
+              clickThroughUrl: "https://familyflix.demuregram.com",
+            },
+          ],
+        },
+      },
+      200,
+      "no-store",
+    );
+  }
+  if (path === "v1/ads/vast") {
+    const vastXml = `<?xml version="1.0" encoding="UTF-8"?>
+<VAST version="3.0">
+  <Ad id="familyflix-zone-7651065">
+    <Wrapper>
+      <AdSystem>FamilyFlix by DemureGram</AdSystem>
+      <VASTAdTagURI><![CDATA[${VAST_TAG_URL}]]></VASTAdTagURI>
+      <Impression><![CDATA[https://familyflix.demuregram.com/api/v1/ads/decision?placement=impression]]></Impression>
+      <Creatives />
+    </Wrapper>
+  </Ad>
+</VAST>`;
+    return new Response(vastXml, {
+      status: 200,
+      headers: {
+        "content-type": "application/xml; charset=utf-8",
+        "cache-control": "no-store",
+        "access-control-allow-origin": "*",
+      },
+    });
+  }
+  if (path.startsWith("v1/ads/vmap/")) {
+    const slug = decodeURIComponent(path.replace("v1/ads/vmap/", ""));
+    const vastUrl = `https://familyflix.demuregram.com/api/v1/ads/vast?slug=${encodeURIComponent(slug)}`;
+    const vmapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0">
+  <vmap:AdBreak timeOffset="start" breakType="linear" breakId="preroll">
+    <vmap:AdSource id="preroll-source" allowMultipleAds="true" followRedirects="true">
+      <vmap:AdTagURI templateType="vast3"><![CDATA[${vastUrl}&placement=preroll]]></vmap:AdTagURI>
+    </vmap:AdSource>
+  </vmap:AdBreak>
+  <vmap:AdBreak timeOffset="00:08:00" breakType="linear" breakId="midroll-1">
+    <vmap:AdSource id="midroll-1-source" allowMultipleAds="true" followRedirects="true">
+      <vmap:AdTagURI templateType="vast3"><![CDATA[${vastUrl}&placement=midroll]]></vmap:AdTagURI>
+    </vmap:AdSource>
+  </vmap:AdBreak>
+  <vmap:AdBreak timeOffset="00:18:00" breakType="linear" breakId="midroll-2">
+    <vmap:AdSource id="midroll-2-source" allowMultipleAds="true" followRedirects="true">
+      <vmap:AdTagURI templateType="vast3"><![CDATA[${vastUrl}&placement=midroll]]></vmap:AdTagURI>
+    </vmap:AdSource>
+  </vmap:AdBreak>
+  <vmap:AdBreak timeOffset="00:30:00" breakType="linear" breakId="midroll-3">
+    <vmap:AdSource id="midroll-3-source" allowMultipleAds="true" followRedirects="true">
+      <vmap:AdTagURI templateType="vast3"><![CDATA[${vastUrl}&placement=midroll]]></vmap:AdTagURI>
+    </vmap:AdSource>
+  </vmap:AdBreak>
+  <vmap:AdBreak timeOffset="end" breakType="linear" breakId="postroll">
+    <vmap:AdSource id="postroll-source" allowMultipleAds="true" followRedirects="true">
+      <vmap:AdTagURI templateType="vast3"><![CDATA[${vastUrl}&placement=postroll]]></vmap:AdTagURI>
+    </vmap:AdSource>
+  </vmap:AdBreak>
+</vmap:VMAP>`;
+    return new Response(vmapXml, {
+      status: 200,
+      headers: {
+        "content-type": "application/xml; charset=utf-8",
+        "cache-control": "no-store",
+        "access-control-allow-origin": "*",
+      },
+    });
+  }
   if (path.startsWith("v1/ads/cue-points/")) {
-    return json({ cuePoints: [], adsEnabled: false });
+    const slug = decodeURIComponent(path.replace("v1/ads/cue-points/", ""));
+    return json({
+      slug,
+      adsEnabled: true,
+      vastAdTagUrl: VAST_TAG_URL,
+      cuePoints: [
+        { timestampSeconds: 480, label: "Commercial Break 1" },
+        { timestampSeconds: 1080, label: "Commercial Break 2" },
+        { timestampSeconds: 1800, label: "Commercial Break 3" },
+        { timestampSeconds: 2700, label: "Commercial Break 4" },
+        { timestampSeconds: 3600, label: "Commercial Break 5" },
+      ],
+    });
   }
 
   // 4. Image Proxy
