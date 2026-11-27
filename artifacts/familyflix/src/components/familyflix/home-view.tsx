@@ -62,21 +62,24 @@ export function HomeView() {
 
         const [rowsData, recData] = await Promise.all([rowsPromise, recPromise]);
 
-        if (Array.isArray(rowsData) && rowsData.length > 0) {
-          cachedHomeCollections[cacheKey] = rowsData;
+        const safeRows = Array.isArray(rowsData) ? rowsData : [];
+        const safeRecs = Array.isArray(recData) ? recData : [];
+
+        if (safeRows.length > 0) {
+          cachedHomeCollections[cacheKey] = safeRows;
         }
-        if (Array.isArray(recData)) {
-          cachedHomePersonalized[cacheKey] = recData;
+        if (safeRecs.length > 0) {
+          cachedHomePersonalized[cacheKey] = safeRecs;
         }
 
         if (isMounted) {
-          setCollections(rowsData);
-          setPersonalizedItems(recData);
+          setCollections(safeRows);
+          setPersonalizedItems(safeRecs);
 
           // Update seen titles in session storage for repeat suppression
           const allNewSlugs = [
-            ...recData.map((t: any) => t.slug),
-            ...rowsData.flatMap((r: any) => (r.items || []).slice(0, 3).map((t: any) => t.slug)),
+            ...safeRecs.map((t: any) => t.slug),
+            ...safeRows.flatMap((r: any) => (r.items || []).slice(0, 3).map((t: any) => t.slug)),
           ];
           const combinedSeen = Array.from(new Set([...seenSlugs, ...allNewSlugs])).slice(0, 200);
           sessionStorage.setItem("familyflix_seen_titles", JSON.stringify(combinedSeen));
@@ -96,7 +99,7 @@ export function HomeView() {
   }, [isKidsMode]);
 
   return (
-    <div className="min-h-screen bg-[#07050d] text-white">
+    <div className="min-h-screen bg-[#0c1014] text-[#f5f5f5]">
       {/* 1. Tubi-Inspired Hero Carousel (5-8 rotating picks) */}
       <HeroCarousel />
 

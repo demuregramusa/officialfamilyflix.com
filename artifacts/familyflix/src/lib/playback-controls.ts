@@ -42,7 +42,9 @@ export function getNextPlaybackTarget(options: {
   episodes: ApprovedEpisode[];
   titles: ApprovedNextTitle[];
 }): NextPlaybackTarget | null {
-  const { slug, episodeId, episodes, titles } = options;
+  const { slug, episodeId } = options;
+  const episodes = Array.isArray(options.episodes) ? options.episodes : [];
+  const titles = Array.isArray(options.titles) ? options.titles : [];
   if (episodeId) {
     const currentEpisodeIndex = episodes.findIndex((episode) => episode.id === episodeId);
     const nextEpisode = currentEpisodeIndex >= 0 ? episodes[currentEpisodeIndex + 1] : undefined;
