@@ -63,6 +63,7 @@ import { ArchiveImportPanel } from "@/components/admin/archive-import-panel";
 import { ArchiveSourcePanel } from "@/components/admin/archive-source-panel";
 import { SeriesEpisodeManager } from "@/components/admin/series-episode-manager";
 import { ProductionImporterDashboard } from "@/components/admin/production-importer-dashboard";
+import { StudioAdminShell } from "@/components/admin/studio-admin-shell";
 import { curatedPublicDomainTitles } from "@/lib/curated-public-domain-titles";
 import {
   getNextPlaybackTarget,
@@ -101,22 +102,6 @@ import { DeveloperDocs } from "@/components/developer/developer-docs";
 import { AdminDeveloperManager } from "@/components/familyflix/admin-developer-manager";
 
 const genres = ["Adventure", "Animation", "Comedy", "Documentary", "Drama", "Family", "Fantasy", "History", "Mystery", "Music", "Science fiction"];
-const ADMIN_NAV: [string, string, typeof LayoutDashboard][] = [
-  ["/admin", "Overview & Analytics", LayoutDashboard],
-  ["/admin/library", "Library & rights", LibraryBig],
-  ["/admin/developer", "Developer Platform", Code2],
-  ["/admin/moderation", "Moderation Queue", ShieldCheck],
-  ["/admin/ads", "Ad Breaks & Cues", Sparkles],
-  ["/admin/monetization", "Monetization & Ads", DollarSign],
-  ["/admin/ai-concierge", "AI Concierge", Bot],
-  ["/admin/users", "User Management", UsersRound],
-  ["/admin/import", "Import titles", Upload],
-  ["/admin/copyright", "Copyright cases", Copyright],
-  ["/admin/repeat-infringers", "Repeat infringers", ShieldAlert],
-  ["/admin/settings", "Site settings", Settings2],
-  ["/admin/staff", "Staff access", UsersRound],
-  ["/admin/activity", "Activity log", History],
-];
 const inputClass = "field";
 const MAX_UPLOAD_BYTES = 30 * 1024 * 1024 * 1024;
 const stamp = (s?: string | null) => s ? new Date(s).toLocaleDateString() : "Not specified";
@@ -275,82 +260,19 @@ function Footer() {
     </nav>
   </footer>;
 }
-function AdminBackBar() {
-  const [path, setLocation] = useLocation();
-  const isSubpage = path !== "/admin";
-  const activeEntry = ADMIN_NAV.find(
-    ([href]) => path === href || (href !== "/admin" && path.startsWith(href)),
-  );
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      setLocation(isSubpage ? "/admin" : "/");
-    }
-  };
-  return (
-    <div
-      className="mb-5 flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-white/10 bg-[#12161b]/90 px-3.5 py-2.5 backdrop-blur-xl"
-      data-testid="admin-back-nav"
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3.5 text-[13px] font-medium text-[#f5f5f5] transition hover:border-white/30 hover:bg-white/[0.12]"
-          data-testid="button-admin-back"
-        >
-          <ArrowLeft className="size-4 shrink-0" />
-          <span>Back</span>
-        </button>
-        <Link
-          href="/"
-          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#0095f6]/35 bg-[#0095f6]/10 px-3.5 text-[13px] font-medium text-[#00d2ff] transition hover:bg-[#0095f6]/20"
-          data-testid="link-admin-exit"
-        >
-          <span>Exit Studio · FamilyFlix Home</span>
-        </Link>
-        {isSubpage ? (
-          <Link
-            href="/admin"
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 text-[13px] font-medium text-[#a8a8a8] transition hover:bg-white/[0.1] hover:text-[#f5f5f5]"
-          >
-            <LayoutDashboard className="size-3.5 shrink-0" />
-            <span>Overview</span>
-          </Link>
-        ) : null}
-      </div>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#a8a8a8]">
-        DemureGram / studio{activeEntry ? ` · ${activeEntry[1]}` : ""}
-      </span>
-    </div>
-  );
-}
 function Shell({ children, admin = false, fullBleed = false }: { children: ReactNode; admin?: boolean; fullBleed?: boolean }) {
-  return <div className="site-shell"><Header /><main className={`page-content${fullBleed ? " page-content-full" : ""}`}>{admin ? <><AdminBackBar /><div className="admin-layout"><AdminRail /><div className="min-w-0">{children}</div></div></> : children}</main><Footer /><CookieBanner /><DemureEcosystemSpotlight /></div>;
-}
-function AdminRail() {
-  const [path] = useLocation();
-  const { data: sessionData } = authClient.useSession();
-  const session = sessionData as unknown as { user?: { role?: string } } | null | undefined;
-  const links = session?.user?.role === "admin"
-    ? ADMIN_NAV
-    : ADMIN_NAV.filter(([href]) => ["/admin", "/admin/library", "/admin/moderation", "/admin/activity"].includes(href));
-  return <aside className="admin-rail">
-    <div className="admin-rail-label">DemureGram / studio</div>
-    <Link href="/" className="admin-link" style={{ color: "#00d2ff", marginBottom: 4 }} data-testid="link-admin-rail-home">
-      <ArrowLeft size={15} aria-hidden="true" />Back to FamilyFlix
-    </Link>
-    {links.map(([href, name, Icon]) => <Link key={href} href={href} className={`admin-link ${path === href || (href !== "/admin" && path.startsWith(href)) ? "active" : ""}`} data-testid={`link-admin-${name.toLowerCase().replaceAll(" ", "-")}`}><Icon size={15} aria-hidden="true"/>{name}</Link>)}
-  </aside>;
+  if (admin) {
+    return <StudioAdminShell>{children}</StudioAdminShell>;
+  }
+  return <div className="site-shell"><Header /><main className={`page-content${fullBleed ? " page-content-full" : ""}`}>{children}</main><Footer /><CookieBanner /><DemureEcosystemSpotlight /></div>;
 }
 function AdminGate({ children, adminOnly = false }: { children: ReactNode; adminOnly?: boolean }) {
   const { data: sessionData, isPending } = authClient.useSession();
   const session = sessionData as unknown as { user?: { role?: string } } | null | undefined;
   const role = session?.user?.role;
-  if (isPending) return <Shell><div className="skeleton" style={{ height: 240 }} aria-label="Checking studio access" /></Shell>;
+  if (isPending) return <Shell admin><div className="skeleton" style={{ height: 240 }} aria-label="Checking studio access" /></Shell>;
   if (!session?.user) return <Redirect to="/auth/sign-in" />;
-  if ((role !== "admin" && role !== "moderator") || (adminOnly && role !== "admin")) return <Shell><div className="permission-card" role="alert" data-testid="status-admin-forbidden"><span className="status warn">Permission required</span><h1>{adminOnly ? "Administrator access required." : "Staff access only."}</h1><p>You’re signed in, but this account does not have permission for this studio area. Contact an administrator through the configured platform process. The server remains authoritative for every admin operation.</p><Link href="/" className="button-secondary">Return to catalog</Link></div></Shell>;
+  if ((role !== "admin" && role !== "moderator") || (adminOnly && role !== "admin")) return <Shell admin><div className="permission-card" role="alert" data-testid="status-admin-forbidden"><span className="status warn">Permission required</span><h1>{adminOnly ? "Administrator access required." : "Staff access only."}</h1><p>You’re signed in, but this account does not have permission for this studio area. Contact an administrator through the configured platform process. The server remains authoritative for every admin operation.</p><Link href="/" className="button-secondary">Return to catalog</Link></div></Shell>;
   return <>{children}</>;
 }
 function Heading({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: ReactNode }) {
@@ -1675,29 +1597,192 @@ function AdminTitleDetail({id}:{id:string}) {
   </div></Shell>;
 }
 function AdminImport() {
-  const qc=useQueryClient(); const mutation=useImportTitles(); const [text,setText]=useState(""); const [format,setFormat]=useState<"csv"|"json">("csv"); const [dryRun,setDryRun]=useState(true); const [updateExisting,setUpdateExisting]=useState(false); const [attest,setAttest]=useState(false); const [report,setReport]=useState<import("@workspace/api-client-react").ImportReport|null>(null); const [message,setMessage]=useState(""); const [curatedLoading,setCuratedLoading]=useState(false);
-   const csvHeader="name,kind,synopsis,year,creatorAttribution,assetLabel,assetUrl,rightsHolder,rightsCreatorAttribution,licenseType,licenseVersion,licenseUrl,usageRestrictions,sourceUrl,evidenceUrl,evidenceNotes,territory,expiresAt,mp4Url,hlsUrl";
-  function download(){const blob=new Blob([format==="csv"?csvHeader+"\n":"[]"],{type:format==="csv"?"text/csv":"application/json"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=`familyflix-template.${format}`;a.click();URL.revokeObjectURL(u);}
-  async function loadCurated(){setMessage("");setCuratedLoading(true);try{const records=await getCuratedPublicDomainTitles();setText(JSON.stringify(records,null,2));setFormat("json");setDryRun(true);setUpdateExisting(false);setAttest(false);setReport(null);}catch(e){setMessage(errorText(e));}finally{setCuratedLoading(false);}}
-  function run(){setMessage("");mutation.mutate({data:{format:format as ImportInputFormat,payload:text,dryRun,updateExisting,uploaderAttested:true}},{onSuccess:r=>{setReport(r);if(!dryRun)qc.invalidateQueries({queryKey:getListAdminTitlesQueryKey()});},onError:e=>setMessage(errorText(e))});}
-  return <Shell admin><div><Heading eyebrow="Studio / import" title="Production Catalog Importer & Publisher" description="Select additions → Validate Preflight → Dry Run → Import into Production → Review Rights → Publish → Verify Live Catalog." />
-    <div style={{marginBottom:24}}>
-      <ProductionImporterDashboard onCatalogUpdated={() => {
-        qc.invalidateQueries({queryKey:getListAdminTitlesQueryKey()});
-        qc.invalidateQueries({queryKey:getListPublicTitlesQueryKey()});
-      }} />
-    </div>
-    <div className="notice" style={{marginBottom:16}}><ShieldCheck size={17}/><span>Start with a dry run. Imported records remain subject to separate rights approval. A torrent or magnet reference is never a playable source or proof of rights.</span></div>
-    <ArchiveImportPanel/>
-    <div className="panel"><div className="notice" style={{marginBottom:14}}><Info size={17}/><span>The three NASA candidates remain withheld because their creator/employment basis and complete audiovisual contents have not been verified. The LOC films below have item-specific records stating that their collection is public domain and free to reuse; they still require administrator rights review and explicit publication.</span></div><div className="helper" style={{marginBottom:14}}>Source records: {curatedPublicDomainTitles.map((title,index)=><span key={title.sourceUrl}>{index>0?" · ":""}<a href={title.sourceUrl} target="_blank" rel="noreferrer">{title.name} ({title.year})</a></span>)}</div><div className="form-actions" style={{marginTop:0,marginBottom:15}}><button className="button-secondary" disabled={curatedLoading} onClick={()=>void loadCurated()} data-testid="button-load-curated-public-domain">{curatedLoading?"Loading source records…":`Load LOC films (${curatedPublicDomainTitles.length})`}</button><button className={format==="csv"?"button":"button-secondary"} onClick={()=>setFormat("csv")} data-testid="button-format-csv">CSV</button><button className={format==="json"?"button":"button-secondary"} onClick={()=>setFormat("json")} data-testid="button-format-json">JSON</button><button className="button-secondary" onClick={download} data-testid="button-download-template">Download blank template</button><label className="button-secondary" style={{cursor:"pointer"}}>Load file<input type="file" accept=".csv,.json,application/json,text/csv" hidden onChange={e=>{const file=e.target.files?.[0];if(file){setFormat(file.name.endsWith(".json")?"json":"csv");file.text().then(setText);setReport(null);}}} data-testid="input-import-file"/></label></div>
-      <div className="field"><label>Import payload</label><textarea rows={12} value={text} onChange={e=>{setText(e.target.value);setReport(null);}} spellCheck={false} placeholder={format==="csv"?csvHeader+"\n":"[]"} data-testid="input-import-payload"/></div>
-      <div className="field-grid" style={{marginTop:14}}><label className="helper"><input type="checkbox" checked={dryRun} onChange={e=>{setDryRun(e.target.checked);setReport(null);}} data-testid="input-import-dryrun"/> Validate only (dry run)</label><label className="helper"><input type="checkbox" checked={updateExisting} onChange={e=>setUpdateExisting(e.target.checked)} data-testid="input-import-update"/> Update matching titles</label></div>
-      {!dryRun&&<label className="notice" style={{marginTop:14}}><input type="checkbox" checked={attest} onChange={e=>setAttest(e.target.checked)} data-testid="input-import-attest"/> I confirm I am authorized to submit these titles and all associated rights evidence.</label>}
-      {message&&<p className="form-message error" role="alert" data-testid="status-import-error">{message}</p>}
-      <div className="form-actions"><button className="button" disabled={mutation.isPending||!text.trim()||(!dryRun&&!attest)} onClick={run} data-testid="button-run-import">{mutation.isPending?"Validating…":dryRun?"Validate payload":"Import titles"}</button><button className="button-secondary" onClick={()=>{setText("");setReport(null);setMessage("");}} data-testid="button-clear-import">Clear</button><span className="helper">No records are created during a dry run.</span></div>
-      {report&&<div className="panel" style={{marginTop:20}} data-testid="status-import-report"><h2>{report.dryRun?"Validation report":"Import report"}</h2><div className="metric-grid"><div className="metric"><span>Total</span><strong>{report.total}</strong></div><div className="metric"><span>Created</span><strong>{report.created}</strong></div><div className="metric"><span>Updated</span><strong>{report.updated}</strong></div><div className="metric"><span>Skipped</span><strong>{report.skipped}</strong></div></div>{report.pendingReview!==undefined&&<p className="helper">Pending review: {report.pendingReview}</p>}{report.issues?.length>0&&<div className="table-wrap"><table className="data-table"><thead><tr><th>Row</th><th>Title</th><th>Issue</th></tr></thead><tbody>{report.issues.map((i,n)=><tr key={`${i.row}-${n}`}><td>{i.row}</td><td>{i.title||"Not identified"}</td><td>{i.message}</td></tr>)}</tbody></table></div>}</div>}
-    </div>
-  </div></Shell>;
+  const qc = useQueryClient();
+  const mutation = useImportTitles();
+  const [text, setText] = useState("");
+  const [format, setFormat] = useState<"csv" | "json">("csv");
+  const [dryRun, setDryRun] = useState(true);
+  const [updateExisting, setUpdateExisting] = useState(false);
+  const [attest, setAttest] = useState(false);
+  const [report, setReport] = useState<import("@workspace/api-client-react").ImportReport | null>(null);
+  const [message, setMessage] = useState("");
+  const [curatedLoading, setCuratedLoading] = useState(false);
+  const csvHeader = "name,kind,synopsis,year,creatorAttribution,assetLabel,assetUrl,rightsHolder,rightsCreatorAttribution,licenseType,licenseVersion,licenseUrl,usageRestrictions,sourceUrl,evidenceUrl,evidenceNotes,territory,expiresAt,mp4Url,hlsUrl";
+  function download() {
+    const blob = new Blob([format === "csv" ? csvHeader + "\n" : "[]"], { type: format === "csv" ? "text/csv" : "application/json" });
+    const u = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = u;
+    a.download = `familyflix-template.${format}`;
+    a.click();
+    URL.revokeObjectURL(u);
+  }
+  async function loadCurated() {
+    setMessage("");
+    setCuratedLoading(true);
+    try {
+      const records = await getCuratedPublicDomainTitles();
+      setText(JSON.stringify(records, null, 2));
+      setFormat("json");
+      setDryRun(true);
+      setUpdateExisting(false);
+      setAttest(false);
+      setReport(null);
+    } catch (e) {
+      setMessage(errorText(e));
+    } finally {
+      setCuratedLoading(false);
+    }
+  }
+  function run() {
+    setMessage("");
+    mutation.mutate(
+      { data: { format: format as ImportInputFormat, payload: text, dryRun, updateExisting, uploaderAttested: true } },
+      {
+        onSuccess: (r) => {
+          setReport(r);
+          if (!dryRun) qc.invalidateQueries({ queryKey: getListAdminTitlesQueryKey() });
+        },
+        onError: (e) => setMessage(errorText(e)),
+      },
+    );
+  }
+  const archiveCsvTabContent = (
+    <>
+      <div className="notice">
+        <ShieldCheck size={17} className="shrink-0 text-[#00D2FF]" />
+        <span>Start with a dry run. Imported records remain subject to separate rights approval. A torrent or magnet reference is never a playable source or proof of rights.</span>
+      </div>
+      <ArchiveImportPanel />
+      <div className="panel space-y-5">
+        <div>
+          <h2>CSV &amp; Curated JSON Importer</h2>
+          <p className="helper">Import structured CSV spreadsheets or curated Library of Congress records into draft review.</p>
+        </div>
+        <div className="notice">
+          <Info size={17} className="shrink-0 text-[#00D2FF]" />
+          <span>The three NASA candidates remain withheld because their creator/employment basis and complete audiovisual contents have not been verified. The LOC films below have item-specific records stating that their collection is public domain and free to reuse; they still require administrator rights review and explicit publication.</span>
+        </div>
+        <div className="helper">
+          Source records:{" "}
+          {curatedPublicDomainTitles.map((title, index) => (
+            <span key={title.sourceUrl}>
+              {index > 0 ? " · " : ""}
+              <a href={title.sourceUrl} target="_blank" rel="noreferrer" className="text-[#00D2FF] hover:underline">
+                {title.name} ({title.year})
+              </a>
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button className="button-secondary" disabled={curatedLoading} onClick={() => void loadCurated()} data-testid="button-load-curated-public-domain">
+            {curatedLoading ? "Loading source records…" : `Load LOC films (${curatedPublicDomainTitles.length})`}
+          </button>
+          <button className={format === "csv" ? "button" : "button-secondary"} onClick={() => setFormat("csv")} data-testid="button-format-csv">CSV</button>
+          <button className={format === "json" ? "button" : "button-secondary"} onClick={() => setFormat("json")} data-testid="button-format-json">JSON</button>
+          <button className="button-secondary" onClick={download} data-testid="button-download-template">Download blank template</button>
+          <label className="button-secondary inline-flex cursor-pointer items-center">
+            Load file
+            <input
+              type="file"
+              accept=".csv,.json,application/json,text/csv"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setFormat(file.name.endsWith(".json") ? "json" : "csv");
+                  file.text().then(setText);
+                  setReport(null);
+                }
+              }}
+              data-testid="input-import-file"
+            />
+          </label>
+        </div>
+        <div className="field">
+          <label>Import payload</label>
+          <textarea
+            rows={10}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setReport(null);
+            }}
+            spellCheck={false}
+            placeholder={format === "csv" ? csvHeader + "\n" : "[]"}
+            className="font-mono text-[12.5px]"
+            data-testid="input-import-payload"
+          />
+        </div>
+        <div className="field-grid">
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-white/[0.08] bg-[#0B0D12] px-3.5 py-2.5 text-[13.5px] text-slate-200">
+            <input type="checkbox" checked={dryRun} onChange={(e) => { setDryRun(e.target.checked); setReport(null); }} className="size-4 accent-[#FF3B5C]" data-testid="input-import-dryrun" />
+            <span>Validate only (dry run)</span>
+          </label>
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-white/[0.08] bg-[#0B0D12] px-3.5 py-2.5 text-[13.5px] text-slate-200">
+            <input type="checkbox" checked={updateExisting} onChange={(e) => setUpdateExisting(e.target.checked)} className="size-4 accent-[#FF3B5C]" data-testid="input-import-update" />
+            <span>Update matching titles</span>
+          </label>
+        </div>
+        {!dryRun && (
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[13.5px] text-amber-200">
+            <input type="checkbox" checked={attest} onChange={(e) => setAttest(e.target.checked)} className="mt-1 size-4 accent-[#FF3B5C]" data-testid="input-import-attest" />
+            <span>I confirm I am authorized to submit these titles and all associated rights evidence.</span>
+          </label>
+        )}
+        {message && <p className="form-message error" role="alert" data-testid="status-import-error">{message}</p>}
+        <div className="flex flex-wrap items-center gap-2.5 border-t border-white/[0.08] pt-4">
+          <button className="button" disabled={mutation.isPending || !text.trim() || (!dryRun && !attest)} onClick={run} data-testid="button-run-import">
+            {mutation.isPending ? "Validating…" : dryRun ? "Validate payload" : "Import titles"}
+          </button>
+          <button className="button-secondary" onClick={() => { setText(""); setReport(null); setMessage(""); }} data-testid="button-clear-import">Clear</button>
+          <span className="helper">No records are created during a dry run.</span>
+        </div>
+        {report && (
+          <div className="space-y-4 border-t border-white/[0.08] pt-5" data-testid="status-import-report">
+            <h3>{report.dryRun ? "Validation report" : "Import report"}</h3>
+            <div className="metric-grid">
+              <div className="metric"><span>Total</span><strong>{report.total}</strong></div>
+              <div className="metric"><span>Created</span><strong className="text-emerald-400">{report.created}</strong></div>
+              <div className="metric"><span>Updated</span><strong className="text-[#00D2FF]">{report.updated}</strong></div>
+              <div className="metric"><span>Skipped</span><strong className="text-amber-400">{report.skipped}</strong></div>
+            </div>
+            {report.pendingReview !== undefined && <p className="helper">Pending review: {report.pendingReview}</p>}
+            {report.issues?.length > 0 && (
+              <div className="table-wrap rounded-xl border border-white/[0.08] bg-[#0B0D12]">
+                <table className="data-table">
+                  <thead><tr><th>Row</th><th>Title</th><th>Issue</th></tr></thead>
+                  <tbody>
+                    {report.issues.map((i, n) => (
+                      <tr key={`${i.row}-${n}`}><td>{i.row}</td><td>{i.title || "Not identified"}</td><td>{i.message}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+  return (
+    <Shell admin>
+      <div>
+        <Heading
+          eyebrow="Catalog & Rights · Import"
+          title="Production Catalog Importer & Publisher"
+          description="Validate additions, import draft records, complete rights review, and publish verified titles to the live catalog."
+        />
+        <ProductionImporterDashboard
+          archiveCsvTabContent={archiveCsvTabContent}
+          onCatalogUpdated={() => {
+            qc.invalidateQueries({ queryKey: getListAdminTitlesQueryKey() });
+            qc.invalidateQueries({ queryKey: getListPublicTitlesQueryKey() });
+          }}
+        />
+      </div>
+    </Shell>
+  );
 }
 function CopyrightCases() {
   const [status,setStatus]=useState("");

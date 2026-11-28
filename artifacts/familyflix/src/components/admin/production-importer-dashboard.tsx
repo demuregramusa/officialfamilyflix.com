@@ -1,24 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import {
-  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
   BadgeCheck,
   Check,
   CheckCircle2,
   Clapperboard,
+  Copy,
+  Database,
   Download,
   ExternalLink,
   FileCheck2,
-  Film,
+  FileSpreadsheet,
   History,
+  Layers,
   Loader2,
   Play,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
+  Table2,
   Upload,
   XCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TenPointVerificationResult {
   passed: boolean;
@@ -149,6 +154,9 @@ interface ProductionImportJob {
   updatedAt: string;
 }
 
+type StudioImportTab = "batch" | "archive" | "ledger";
+type PipelineStep = 1 | 2 | 3 | 4;
+
 const EMPTY_METRICS: ProductionImportMetrics = {
   totalRecordsSubmitted: 0,
   newTitlesDetected: 0,
@@ -167,7 +175,77 @@ const EMPTY_METRICS: ProductionImportMetrics = {
   playbackSourcesAwaitingApproval: 0,
 };
 
-export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpdated?: () => void }) {
+const PIPELINE_STEPS: { id: PipelineStep; title: string; subtitle: string }[] = [
+  { id: 1, title: "Upload & Validate", subtitle: "Preflight & Dry Run" },
+  { id: 2, title: "Production Import", subtitle: "Insert Draft Records" },
+  { id: 3, title: "Rights Review", subtitle: "Chain-of-Title Audit" },
+  { id: 4, title: "Publish & Verify", subtitle: "10-Point Live Check" },
+];
+
+function semanticStatusTone(status: string): "good" | "warn" | "error" | "neutral" {
+  const s = status.toLowerCase();
+  if (
+    s.includes("verified") ||
+    s.includes("published") ||
+    s.includes("approved") ||
+    s === "completed"
+  ) {
+    return "good";
+  }
+  if (s.includes("failed") || s.includes("reject") || s.includes("error")) {
+    return "error";
+  }
+  if (s.includes("pending") || s.includes("review") || s.includes("await") || s.includes("restrict")) {
+    return "warn";
+  }
+  return "neutral";
+}
+
+function formatStatusLabel(status: string): string {
+  return status.replace(/_/g, " ");
+}
+
+function CopyBadge({ value, label, truncate = 12 }: { value: string; label?: string; truncate?: number }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    if (!navigator.clipboard) return;
+    void navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    });
+  }
+
+  const display = value.length > truncate ? `${value.slice(0, truncate)}…` : value;
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={`Copy ${label ?? "value"}: ${value}`}
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-white/[0.1] bg-[#0B0D12] px-2 py-1 font-mono text-[11.5px] text-slate-300 transition hover:border-[#00D2FF]/50 hover:text-white"
+    >
+      {label && <span className="font-sans text-[11px] font-medium text-slate-500">{label}</span>}
+      <span>{display}</span>
+      {copied ? (
+        <Check size={11} className="shrink-0 text-emerald-400" />
+      ) : (
+        <Copy size={11} className="shrink-0 text-slate-500" />
+      )}
+    </button>
+  );
+}
+
+export function ProductionImporterDashboard({
+  onCatalogUpdated,
+  archiveCsvTabContent,
+}: {
+  onCatalogUpdated?: () => void;
+  archiveCsvTabContent?: ReactNode;
+}) {
+  const [activeTab, setActiveTab] = useState<StudioImportTab>("batch");
+  const [activeStep, setActiveStep] = useState<PipelineStep>(1);
+
   const [jobName, setJobName] = useState("Production Catalog Additions Batch");
   const [payloadText, setPayloadText] = useState("");
   const [jobs, setJobs] = useState<ProductionImportJob[]>([]);
@@ -218,7 +296,7 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
       const data = await res.json();
       setPayloadText(JSON.stringify(data, null, 2));
       setSuccessMsg(
-        `Loaded ${Array.isArray(data) ? data.length : 0} source-documented Library of Congress additions (3 movies + 1 multi-episode TV series). Click "1. Validate Import (Preflight)" to begin.`,
+        `Loaded ${Array.isArray(data) ? data.length : 0} source-documented Library of Congress additions (3 movies + 1 multi-episode TV series). Run Preflight Validation to continue.`,
       );
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Failed to load starter additions.");
@@ -256,8 +334,11 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
       setConfirmPublishLive(false);
       await fetchJobs(false);
       setSuccessMsg(
-        `Phase A Preflight complete: ${createdJob.metrics.newTitlesDetected} new eligible title(s), ${createdJob.metrics.existingDuplicatesSkipped} existing duplicate(s) protected/skipped.`,
+        `Preflight complete: ${createdJob.metrics.newTitlesDetected} new eligible title(s) detected, ${createdJob.metrics.existingDuplicatesSkipped} existing duplicate(s) protected.`,
       );
+      if (createdJob.metrics.newTitlesDetected > 0) {
+        setActiveStep(2);
+      }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Preflight validation failed.");
     } finally {
@@ -280,7 +361,7 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
       if (!res.ok) throw new Error(data.error || "Dry run failed.");
       setActiveJob(data as ProductionImportJob);
       await fetchJobs(false);
-      setSuccessMsg("Phase B Dry Run succeeded across all 5MB-bounded batches with 0 database writes.");
+      setSuccessMsg("Dry run succeeded across all 5MB-bounded batches with 0 database writes.");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Dry run failed.");
     } finally {
@@ -291,7 +372,7 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
   async function handleProductionImport(retryFailedOnly = false) {
     if (!activeJob) return;
     if (!confirmProductionWrite) {
-      setErrorMsg("Check the administrator confirmation box before importing into production.");
+      setErrorMsg("Confirm administrator authorization before importing into production.");
       return;
     }
     setLoadingAction(retryFailedOnly ? "retry" : "import");
@@ -314,8 +395,11 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
       await fetchJobs(false);
       onCatalogUpdated?.();
       setSuccessMsg(
-        `Phase B & D Production Import complete: ${updated.metrics.successfullyImported} title(s) and ${updated.metrics.tvEpisodesImported} TV episode(s) created in production as draft pending rights review.`,
+        `Production import complete: ${updated.metrics.successfullyImported} title(s) and ${updated.metrics.tvEpisodesImported} TV episode(s) staged as draft pending rights review.`,
       );
+      if (updated.metrics.successfullyImported > 0) {
+        setActiveStep(3);
+      }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Production import failed.");
     } finally {
@@ -326,7 +410,7 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
   async function handleReviewRights() {
     if (!activeJob) return;
     if (!confirmRightsReview) {
-      setErrorMsg("Check the administrator rights-review confirmation box before submitting.");
+      setErrorMsg("Confirm the administrator rights-review attestation before submitting.");
       return;
     }
     if (!reviewerNote.trim()) {
@@ -354,8 +438,11 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
       await fetchJobs(false);
       onCatalogUpdated?.();
       setSuccessMsg(
-        `Phase C Rights Review complete: ${updated.metrics.approvedTitles} title(s) approved with documented reviewer attribution.`,
+        `Rights review recorded: ${updated.metrics.approvedTitles} title(s) approved with reviewer attribution.`,
       );
+      if (updated.metrics.approvedTitles > 0) {
+        setActiveStep(4);
+      }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Rights review failed.");
     } finally {
@@ -366,7 +453,7 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
   async function handlePublishAndVerify() {
     if (!activeJob) return;
     if (!confirmPublishLive) {
-      setErrorMsg("Check the administrator publication confirmation box before publishing to the live catalog.");
+      setErrorMsg("Confirm live catalog publication before running publish and verification.");
       return;
     }
     setLoadingAction("publish");
@@ -389,7 +476,7 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
       await fetchJobs(false);
       onCatalogUpdated?.();
       setSuccessMsg(
-        `Phase F & G Complete: ${updated.metrics.verifiedLiveTitles} title(s) published and passed all 10 post-publication live catalog verification checks!`,
+        `Publication complete: ${updated.metrics.verifiedLiveTitles} title(s) published and passed all 10 live catalog verification checks.`,
       );
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Publication failed.");
@@ -405,649 +492,1033 @@ export function ProductionImporterDashboard({ onCatalogUpdated }: { onCatalogUpd
 
   const metrics = activeJob?.metrics ?? EMPTY_METRICS;
 
+  const stepCompleted: Record<PipelineStep, boolean> = {
+    1: Boolean(activeJob),
+    2: metrics.successfullyImported > 0,
+    3: metrics.approvedTitles > 0,
+    4: metrics.verifiedLiveTitles > 0,
+  };
+
+  const activeJobTone = activeJob ? semanticStatusTone(activeJob.status) : "neutral";
+
   return (
     <div className="space-y-6" data-testid="panel-production-importer-dashboard">
-      {/* Workflow Stage Banner */}
-      <div className="panel border border-purple-500/30 bg-gradient-to-r from-purple-950/40 via-[#120d1d] to-indigo-950/30 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <span className="eyebrow flex items-center gap-1.5 text-purple-300">
-              <Sparkles size={14} /> Production Catalog Importer & Publisher Pipeline
-            </span>
-            <h2 className="mt-1 text-xl font-black text-white">
-              Select Additions → Validate → Dry Run → Import → Review Rights → Publish → Verify Live
-            </h2>
-            <p className="mt-1 text-xs text-white/65">
-              Protected additions-only mode (`updateExisting: false`): all 23,272 existing published titles are strictly protected against overwrite or deletion.
-            </p>
-          </div>
-          {activeJob && (
-            <div className="flex items-center gap-2.5">
-              <span className="rounded-full border border-purple-400/40 bg-purple-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-purple-200">
-                Job Status: {activeJob.status.replace(/_/g, " ")}
+      {/* Studio Tab Bar + Active Job Context */}
+      <div className="flex flex-col gap-4 rounded-xl border border-white/[0.08] bg-[#161922] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          role="tablist"
+          aria-label="Catalog importer workspaces"
+          className="flex flex-wrap items-center gap-1.5 rounded-lg bg-[#0B0D12] p-1"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "batch"}
+            onClick={() => setActiveTab("batch")}
+            data-testid="tab-importer-batch"
+            className={cn(
+              "inline-flex h-9 items-center gap-2 rounded-md px-3.5 text-[13.5px] font-semibold transition",
+              activeTab === "batch"
+                ? "bg-[#161922] text-white shadow-[0_1px_8px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.12]"
+                : "text-slate-400 hover:text-slate-200",
+            )}
+          >
+            <Layers size={15} className={activeTab === "batch" ? "text-[#00D2FF]" : "text-slate-500"} />
+            <span>JSON Batch Importer</span>
+          </button>
+
+          {archiveCsvTabContent && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "archive"}
+              onClick={() => setActiveTab("archive")}
+              data-testid="tab-importer-archive"
+              className={cn(
+                "inline-flex h-9 items-center gap-2 rounded-md px-3.5 text-[13.5px] font-semibold transition",
+                activeTab === "archive"
+                  ? "bg-[#161922] text-white shadow-[0_1px_8px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.12]"
+                  : "text-slate-400 hover:text-slate-200",
+              )}
+            >
+              <FileSpreadsheet
+                size={15}
+                className={activeTab === "archive" ? "text-[#00D2FF]" : "text-slate-500"}
+              />
+              <span>Archive / CSV Importer</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "ledger"}
+            onClick={() => setActiveTab("ledger")}
+            data-testid="tab-importer-ledger"
+            className={cn(
+              "inline-flex h-9 items-center gap-2 rounded-md px-3.5 text-[13.5px] font-semibold transition",
+              activeTab === "ledger"
+                ? "bg-[#161922] text-white shadow-[0_1px_8px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.12]"
+                : "text-slate-400 hover:text-slate-200",
+            )}
+          >
+            <Table2 size={15} className={activeTab === "ledger" ? "text-[#00D2FF]" : "text-slate-500"} />
+            <span>Job Audit Ledger</span>
+            {activeJob && (
+              <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11px] font-semibold text-slate-300">
+                {activeJob.items.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          {activeJob ? (
+            <>
+              <span
+                className={cn(
+                  "status",
+                  activeJobTone === "good" && "good",
+                  activeJobTone === "warn" && "warn",
+                  activeJobTone === "error" && "error",
+                )}
+              >
+                {formatStatusLabel(activeJob.status)}
               </span>
               <button
                 type="button"
                 onClick={downloadImportReport}
-                className="button-secondary flex items-center gap-1.5 text-xs"
+                className="button-secondary flex items-center gap-1.5"
                 data-testid="button-download-production-report"
               >
-                <Download size={14} /> Download Import Report
+                <Download size={14} />
+                <span>Report (.json)</span>
               </button>
-            </div>
+            </>
+          ) : (
+            <span className="text-[12.5px] text-slate-400">
+              Additions-only protection · existing catalog locked
+            </span>
           )}
         </div>
       </div>
 
-      {/* 12 Required Production Import KPI Metrics Cards */}
-      <div
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
-        data-testid="grid-production-import-metrics"
-      >
-        <div className="metric">
-          <span>Total submitted</span>
-          <strong data-testid="metric-total-submitted">{metrics.totalRecordsSubmitted}</strong>
+      {/* Inline Feedback Banner */}
+      {errorMsg && (
+        <div
+          className="flex items-start gap-3 rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-3 text-[13.5px] font-medium text-rose-200"
+          role="alert"
+          data-testid="status-production-importer-error"
+        >
+          <XCircle size={17} className="mt-0.5 shrink-0 text-rose-400" />
+          <span>{errorMsg}</span>
         </div>
-        <div className="metric">
-          <span>New titles detected</span>
-          <strong className="text-purple-300" data-testid="metric-new-detected">
-            {metrics.newTitlesDetected}
-          </strong>
+      )}
+      {successMsg && (
+        <div
+          className="flex items-start gap-3 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-[13.5px] font-medium text-emerald-200"
+          role="status"
+          data-testid="status-production-importer-success"
+        >
+          <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-400" />
+          <span>{successMsg}</span>
         </div>
-        <div className="metric">
-          <span>Duplicates skipped</span>
-          <strong className="text-amber-300" data-testid="metric-duplicates-skipped">
-            {metrics.existingDuplicatesSkipped + metrics.batchDuplicatesSkipped}
-          </strong>
-        </div>
-        <div className="metric">
-          <span>Successfully imported</span>
-          <strong className="text-sky-300" data-testid="metric-successfully-imported">
-            {metrics.successfullyImported}
-          </strong>
-        </div>
-        <div className="metric">
-          <span>Pending rights review</span>
-          <strong className="text-amber-300" data-testid="metric-pending-review">
-            {metrics.pendingRightsReview}
-          </strong>
-        </div>
-        <div className="metric">
-          <span>Approved titles</span>
-          <strong className="text-emerald-300" data-testid="metric-approved-titles">
-            {metrics.approvedTitles}
-          </strong>
-        </div>
-        <div className="metric">
-          <span>Published & verified</span>
-          <strong className="text-emerald-400" data-testid="metric-published-titles">
-            {metrics.verifiedLiveTitles} / {metrics.publishedTitles}
-          </strong>
-        </div>
-        <div className="metric">
-          <span>Failed imports</span>
-          <strong className="text-rose-400" data-testid="metric-failed-imports">
-            {metrics.failedImports}
-          </strong>
-        </div>
-        <div className="metric">
-          <span>Missing media assets</span>
-          <strong data-testid="metric-missing-media">{metrics.missingMediaAssets}</strong>
-        </div>
-        <div className="metric">
-          <span>Missing metadata</span>
-          <strong data-testid="metric-missing-metadata">{metrics.missingMetadata}</strong>
-        </div>
-        <div className="metric">
-          <span>TV seasons / episodes</span>
-          <strong className="text-purple-300" data-testid="metric-tv-seasons-episodes">
-            {metrics.tvSeasonsImported}S / {metrics.tvEpisodesImported}E
-          </strong>
-        </div>
-        <div className="metric">
-          <span>Playback awaiting approval</span>
-          <strong className="text-amber-300" data-testid="metric-playback-awaiting">
-            {metrics.playbackSourcesAwaitingApproval}
-          </strong>
-        </div>
-      </div>
+      )}
 
-      {/* Step 1 & 2: Input Additions Payload, Validate Preflight, and Run Dry Run */}
-      <div className="panel space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-base font-bold text-white">
-              Phase A & B — Select Additions, Validate Preflight & Run Dry Run
-            </h3>
-            <p className="text-xs text-white/60">
-              Load the verified Library of Congress movies + TV series pack or upload a custom JSON additions file.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void loadVerifiedAdditionsPack()}
-              disabled={loadingAction !== null}
-              className="button-secondary flex items-center gap-1.5 text-xs"
-              data-testid="button-load-verified-additions"
-            >
-              {loadingAction === "load-starter" ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Clapperboard size={14} />
-              )}
-              Load Verified Movies + TV Series Additions Pack (4 Titles)
-            </button>
-            <label className="button-secondary flex cursor-pointer items-center gap-1.5 text-xs">
-              <Upload size={14} /> Upload JSON File
-              <input
-                type="file"
-                accept=".json,application/json"
-                hidden
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setJobName(`Import: ${file.name}`);
-                    file.text().then(setPayloadText);
-                  }
-                }}
-                data-testid="input-production-additions-file"
-              />
-            </label>
-          </div>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="field">
-            <label>Import Batch Label</label>
-            <input
-              value={jobName}
-              onChange={(e) => setJobName(e.target.value)}
-              placeholder="e.g., November 2026 Public Domain Additions"
-              data-testid="input-production-job-name"
-            />
-          </div>
-          <div className="field">
-            <label>Select Existing Import Job Ledger</label>
-            <select
-              value={activeJob?.id ?? ""}
-              onChange={(e) => {
-                const found = jobs.find((j) => j.id === e.target.value);
-                if (found) setActiveJob(found);
-              }}
-              data-testid="select-production-import-job"
-            >
-              <option value="">— Select a recent import job ({jobs.length}) —</option>
-              {jobs.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.name} · [{j.status}] · ({j.metrics.totalRecordsSubmitted} records)
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="field">
-          <label>Additions JSON Payload (Movies & TV Series with Seasons/Episodes & Rights)</label>
-          <textarea
-            rows={8}
-            value={payloadText}
-            onChange={(e) => setPayloadText(e.target.value)}
-            spellCheck={false}
-            placeholder='[ { "name": "...", "kind": "movie" | "series", "rights": [...], "stream": {...}, "seasons": [...] } ]'
-            className="font-mono text-xs"
-            data-testid="textarea-production-additions-payload"
-          />
-        </div>
-
-        {errorMsg && (
+      {/* TAB 1: JSON BATCH IMPORTER */}
+      {activeTab === "batch" && (
+        <div className="space-y-6">
+          {/* Strict CSS Grid KPI Stat Cards */}
           <div
-            className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-xs font-semibold text-rose-200"
-            role="alert"
-            data-testid="status-production-importer-error"
+            className="metric-grid"
+            data-testid="grid-production-import-metrics"
           >
-            {errorMsg}
-          </div>
-        )}
-        {successMsg && (
-          <div
-            className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-200"
-            role="status"
-            data-testid="status-production-importer-success"
-          >
-            {successMsg}
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => void handleValidatePreflight()}
-            disabled={loadingAction !== null || !payloadText.trim()}
-            className="button flex items-center gap-1.5"
-            data-testid="button-validate-preflight"
-          >
-            {loadingAction === "preflight" ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : (
-              <ShieldCheck size={15} />
-            )}
-            1. Validate Import (Preflight)
-          </button>
-
-          <button
-            type="button"
-            onClick={() => void handleDryRun()}
-            disabled={loadingAction !== null || !activeJob}
-            className="button-secondary flex items-center gap-1.5"
-            data-testid="button-run-dry-run"
-          >
-            {loadingAction === "dry-run" ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : (
-              <FileCheck2 size={15} />
-            )}
-            2. Run Dry Run
-          </button>
-
-          {activeJob && (
-            <button
-              type="button"
-              onClick={downloadImportReport}
-              className="button-secondary flex items-center gap-1.5"
-            >
-              <Download size={15} /> Download Report (.json)
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Step 3, 4 & 5: Production Import, Rights Review & Live Publishing Gates */}
-      {activeJob && (
-        <div className="grid gap-4 lg:grid-cols-3">
-          {/* Gate 1: Import into Production */}
-          <div className="panel flex flex-col justify-between space-y-4">
-            <div>
-              <span className="eyebrow text-sky-300">Phase B & D · Database Insertion</span>
-              <h3 className="mt-1 text-base font-bold text-white">3. Import into Production</h3>
-              <p className="mt-1 text-xs text-white/65">
-                Creates draft movie and TV series records, imports season & episode hierarchies, and binds playback assets without overwriting any existing titles.
-              </p>
-              <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5 text-xs text-white/85">
-                <input
-                  type="checkbox"
-                  checked={confirmProductionWrite}
-                  onChange={(e) => setConfirmProductionWrite(e.target.checked)}
-                  className="mt-0.5"
-                  data-testid="checkbox-confirm-production-import"
-                />
-                <span>
-                  I confirm administrator authorization to insert{" "}
-                  <strong>{metrics.newTitlesDetected}</strong> validated addition(s) into the production database.
-                </span>
-              </label>
+            <div className="metric">
+              <span>Total submitted</span>
+              <strong data-testid="metric-total-submitted">{metrics.totalRecordsSubmitted}</strong>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void handleProductionImport(false)}
-                disabled={
-                  loadingAction !== null ||
-                  !confirmProductionWrite ||
-                  metrics.newTitlesDetected === 0
-                }
-                className="button flex-1 justify-center"
-                data-testid="button-execute-production-import"
-              >
-                {loadingAction === "import" ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <Upload size={15} />
-                )}
-                Import into Production
-              </button>
-              {metrics.failedImports > 0 && (
-                <button
-                  type="button"
-                  onClick={() => void handleProductionImport(true)}
-                  disabled={loadingAction !== null || !confirmProductionWrite}
-                  className="button-secondary flex items-center gap-1 text-xs"
-                  data-testid="button-retry-failed-records"
-                >
-                  <RefreshCw size={13} /> Retry Failed Only
-                </button>
-              )}
+            <div className="metric">
+              <span>New titles detected</span>
+              <strong className="text-[#00D2FF]" data-testid="metric-new-detected">
+                {metrics.newTitlesDetected}
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Duplicates skipped</span>
+              <strong className="text-amber-400" data-testid="metric-duplicates-skipped">
+                {metrics.existingDuplicatesSkipped + metrics.batchDuplicatesSkipped}
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Successfully imported</span>
+              <strong className="text-sky-300" data-testid="metric-successfully-imported">
+                {metrics.successfullyImported}
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Pending rights review</span>
+              <strong className="text-amber-400" data-testid="metric-pending-review">
+                {metrics.pendingRightsReview}
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Approved titles</span>
+              <strong className="text-emerald-400" data-testid="metric-approved-titles">
+                {metrics.approvedTitles}
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Published &amp; verified</span>
+              <strong className="text-emerald-400" data-testid="metric-published-titles">
+                {metrics.verifiedLiveTitles} / {metrics.publishedTitles}
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Failed imports</span>
+              <strong className="text-rose-400" data-testid="metric-failed-imports">
+                {metrics.failedImports}
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Missing media assets</span>
+              <strong data-testid="metric-missing-media">{metrics.missingMediaAssets}</strong>
+            </div>
+            <div className="metric">
+              <span>Missing metadata</span>
+              <strong data-testid="metric-missing-metadata">{metrics.missingMetadata}</strong>
+            </div>
+            <div className="metric">
+              <span>TV seasons / episodes</span>
+              <strong className="text-[#00D2FF]" data-testid="metric-tv-seasons-episodes">
+                {metrics.tvSeasonsImported}S / {metrics.tvEpisodesImported}E
+              </strong>
+            </div>
+            <div className="metric">
+              <span>Playback awaiting approval</span>
+              <strong className="text-amber-400" data-testid="metric-playback-awaiting">
+                {metrics.playbackSourcesAwaitingApproval}
+              </strong>
             </div>
           </div>
 
-          {/* Gate 2: Explicit Administrator Rights Review */}
-          <div className="panel flex flex-col justify-between space-y-4">
-            <div>
-              <span className="eyebrow text-amber-300">Phase C · Chain-of-Title Review</span>
-              <h3 className="mt-1 text-base font-bold text-white">4. Review Media Rights</h3>
-              <p className="mt-1 text-xs text-white/65">
-                Review rights evidence for all imported titles and TV episodes. Rights are never auto-approved during import.
-              </p>
-              <div className="mt-3 space-y-2">
-                <div className="field">
-                  <label className="text-xs">Review Decision</label>
-                  <select
-                    value={reviewDecision}
-                    onChange={(e) =>
-                      setReviewDecision(e.target.value as "approve" | "reject" | "restrict")
-                    }
-                    data-testid="select-production-rights-decision"
-                  >
-                    <option value="approve">Approve Rights Evidence</option>
-                    <option value="restrict">Restrict</option>
-                    <option value="reject">Reject</option>
-                  </select>
+          {/* 4-Step Horizontal Progressive Stepper */}
+          <div className="panel space-y-6">
+            <nav aria-label="Import pipeline steps">
+              <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {PIPELINE_STEPS.map((step) => {
+                  const isActive = activeStep === step.id;
+                  const isDone = stepCompleted[step.id];
+                  return (
+                    <li key={step.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveStep(step.id)}
+                        data-testid={`stepper-step-${step.id}`}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition",
+                          isActive
+                            ? "border-[#FF3B5C]/60 bg-[#FF3B5C]/[0.08] shadow-[0_0_0_1px_rgba(255,59,92,0.25)]"
+                            : isDone
+                              ? "border-emerald-500/30 bg-emerald-500/[0.06] hover:border-emerald-400/50"
+                              : "border-white/[0.08] bg-[#0B0D12] hover:border-white/20",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "grid size-8 shrink-0 place-items-center rounded-lg text-[13px] font-bold",
+                            isActive
+                              ? "bg-gradient-to-br from-[#FF3B5C] to-[#E11D48] text-white"
+                              : isDone
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : "bg-white/[0.06] text-slate-400",
+                          )}
+                        >
+                          {isDone && !isActive ? <Check size={15} /> : step.id}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="truncate text-[13.5px] font-semibold text-white">
+                            {step.title}
+                          </div>
+                          <div className="truncate text-[12px] text-slate-400">{step.subtitle}</div>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </nav>
+
+            {/* STEP 1: UPLOAD & VALIDATE */}
+            {activeStep === 1 && (
+              <div className="space-y-6 border-t border-white/[0.08] pt-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-[17px] font-semibold text-white">
+                      Step 1 · Upload &amp; Validate Payload
+                    </h3>
+                    <p className="mt-1 text-[13.5px] text-slate-400">
+                      Load the source-documented Library of Congress pack or upload a custom JSON batch. Existing published titles are strictly protected (
+                      <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[12px] text-slate-200">
+                        updateExisting: false
+                      </code>
+                      ).
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => void loadVerifiedAdditionsPack()}
+                      disabled={loadingAction !== null}
+                      className="button-secondary flex items-center gap-2"
+                      data-testid="button-load-verified-additions"
+                    >
+                      {loadingAction === "load-starter" ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <Clapperboard size={15} className="text-[#00D2FF]" />
+                      )}
+                      <span>Load Verified Pack (4 Titles)</span>
+                    </button>
+                    <label className="button-secondary inline-flex cursor-pointer items-center gap-2">
+                      <Upload size={15} />
+                      <span>Upload JSON</span>
+                      <input
+                        type="file"
+                        accept=".json,application/json"
+                        hidden
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setJobName(`Import: ${file.name}`);
+                            file.text().then(setPayloadText);
+                          }
+                        }}
+                        data-testid="input-production-additions-file"
+                      />
+                    </label>
+                  </div>
                 </div>
+
+                <div className="field-grid">
+                  <div className="field">
+                    <label htmlFor="prod-job-name">Import batch label</label>
+                    <input
+                      id="prod-job-name"
+                      value={jobName}
+                      onChange={(e) => setJobName(e.target.value)}
+                      placeholder="e.g., November 2026 Public Domain Additions"
+                      data-testid="input-production-job-name"
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="prod-job-select">Resume existing import job</label>
+                    <select
+                      id="prod-job-select"
+                      value={activeJob?.id ?? ""}
+                      onChange={(e) => {
+                        const found = jobs.find((j) => j.id === e.target.value);
+                        if (found) setActiveJob(found);
+                      }}
+                      data-testid="select-production-import-job"
+                    >
+                      <option value="">Select a recent import job ({jobs.length})</option>
+                      {jobs.map((j) => (
+                        <option key={j.id} value={j.id}>
+                          {j.name} · {formatStatusLabel(j.status)} ({j.metrics.totalRecordsSubmitted} records)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="field">
-                  <label className="text-xs">Mandatory Reviewer Note</label>
+                  <label htmlFor="prod-payload-json">
+                    Additions JSON payload (movies, series, seasons, episodes &amp; rights)
+                  </label>
                   <textarea
-                    rows={2}
-                    value={reviewerNote}
-                    onChange={(e) => setReviewerNote(e.target.value)}
-                    className="text-xs"
-                    data-testid="textarea-production-reviewer-note"
+                    id="prod-payload-json"
+                    rows={9}
+                    value={payloadText}
+                    onChange={(e) => setPayloadText(e.target.value)}
+                    spellCheck={false}
+                    placeholder='[ { "name": "...", "kind": "movie" | "series", "rights": [...], "stream": {...}, "seasons": [...] } ]'
+                    className="font-mono text-[12.5px]"
+                    data-testid="textarea-production-additions-payload"
                   />
                 </div>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5 text-xs text-white/85">
+
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-5">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => void handleValidatePreflight()}
+                      disabled={loadingAction !== null || !payloadText.trim()}
+                      className="button flex items-center gap-2"
+                      data-testid="button-validate-preflight"
+                    >
+                      {loadingAction === "preflight" ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <ShieldCheck size={15} />
+                      )}
+                      <span>1. Validate Import (Preflight)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleDryRun()}
+                      disabled={loadingAction !== null || !activeJob}
+                      className="button-secondary flex items-center gap-2"
+                      data-testid="button-run-dry-run"
+                    >
+                      {loadingAction === "dry-run" ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <FileCheck2 size={15} />
+                      )}
+                      <span>Run Dry Run</span>
+                    </button>
+                  </div>
+
+                  {activeJob && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveStep(2)}
+                      className="button-secondary flex items-center gap-2"
+                    >
+                      <span>Continue to Production Import</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: PRODUCTION IMPORT */}
+            {activeStep === 2 && (
+              <div className="space-y-6 border-t border-white/[0.08] pt-6">
+                <div>
+                  <h3 className="text-[17px] font-semibold text-white">
+                    Step 2 · Import into Production Database
+                  </h3>
+                  <p className="mt-1 text-[13.5px] text-slate-400">
+                    Inserts validated movies, TV series, seasons, episodes, and playback bindings as unpublished drafts pending rights review. Existing catalog titles are never overwritten.
+                  </p>
+                </div>
+
+                {!activeJob ? (
+                  <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-6 text-center">
+                    <p className="text-[14px] text-slate-300">
+                      Run Step 1 Preflight Validation or select an existing import job first.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveStep(1)}
+                      className="button-secondary mt-4 inline-flex items-center gap-2"
+                    >
+                      <ArrowLeft size={15} />
+                      <span>Return to Step 1</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-4">
+                        <span className="text-[12px] font-medium text-slate-400">Eligible new titles</span>
+                        <div className="mt-1.5 text-2xl font-bold text-[#00D2FF]">
+                          {metrics.newTitlesDetected}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-4">
+                        <span className="text-[12px] font-medium text-slate-400">Protected duplicates skipped</span>
+                        <div className="mt-1.5 text-2xl font-bold text-amber-400">
+                          {metrics.existingDuplicatesSkipped + metrics.batchDuplicatesSkipped}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-4">
+                        <span className="text-[12px] font-medium text-slate-400">Staged in production</span>
+                        <div className="mt-1.5 text-2xl font-bold text-emerald-400">
+                          {metrics.successfullyImported}
+                        </div>
+                      </div>
+                    </div>
+
+                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.1] bg-[#0B0D12] p-4 text-[13.5px] text-slate-200 transition hover:border-white/20">
+                      <input
+                        type="checkbox"
+                        checked={confirmProductionWrite}
+                        onChange={(e) => setConfirmProductionWrite(e.target.checked)}
+                        className="mt-1 size-4 shrink-0 accent-[#FF3B5C]"
+                        data-testid="checkbox-confirm-production-import"
+                      />
+                      <span>
+                        I confirm administrator authorization to insert{" "}
+                        <strong className="text-white">{metrics.newTitlesDetected}</strong> validated addition(s) into the production database as draft records.
+                      </span>
+                    </label>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveStep(1)}
+                        className="button-secondary flex items-center gap-2"
+                      >
+                        <ArrowLeft size={15} />
+                        <span>Back</span>
+                      </button>
+
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        {metrics.failedImports > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => void handleProductionImport(true)}
+                            disabled={loadingAction !== null || !confirmProductionWrite}
+                            className="button-secondary flex items-center gap-2"
+                            data-testid="button-retry-failed-records"
+                          >
+                            <RefreshCw size={14} />
+                            <span>Retry Failed Only</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => void handleProductionImport(false)}
+                          disabled={
+                            loadingAction !== null ||
+                            !confirmProductionWrite ||
+                            metrics.newTitlesDetected === 0
+                          }
+                          className="button flex items-center gap-2"
+                          data-testid="button-execute-production-import"
+                        >
+                          {loadingAction === "import" ? (
+                            <Loader2 size={15} className="animate-spin" />
+                          ) : (
+                            <Database size={15} />
+                          )}
+                          <span>Import into Production</span>
+                        </button>
+                        {metrics.successfullyImported > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveStep(3)}
+                            className="button-secondary flex items-center gap-2"
+                          >
+                            <span>Continue to Rights Review</span>
+                            <ArrowRight size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* STEP 3: RIGHTS REVIEW */}
+            {activeStep === 3 && (
+              <div className="space-y-6 border-t border-white/[0.08] pt-6">
+                <div>
+                  <h3 className="text-[17px] font-semibold text-white">
+                    Step 3 · Chain-of-Title Rights Review
+                  </h3>
+                  <p className="mt-1 text-[13.5px] text-slate-400">
+                    Review rights holder attribution, license URLs, and playback streams for all staged titles and episodes. Rights are never auto-approved during import.
+                  </p>
+                </div>
+
+                {!activeJob || metrics.successfullyImported === 0 ? (
+                  <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-6 text-center">
+                    <p className="text-[14px] text-slate-300">
+                      Complete Step 2 Production Import to stage records before submitting a rights decision.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveStep(2)}
+                      className="button-secondary mt-4 inline-flex items-center gap-2"
+                    >
+                      <ArrowLeft size={15} />
+                      <span>Return to Step 2</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="field-grid">
+                      <div className="field">
+                        <label htmlFor="rights-decision">Review decision</label>
+                        <select
+                          id="rights-decision"
+                          value={reviewDecision}
+                          onChange={(e) =>
+                            setReviewDecision(e.target.value as "approve" | "reject" | "restrict")
+                          }
+                          data-testid="select-production-rights-decision"
+                        >
+                          <option value="approve">Approve rights evidence</option>
+                          <option value="restrict">Restrict</option>
+                          <option value="reject">Reject</option>
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label>Records awaiting decision</label>
+                        <div className="flex h-10 items-center justify-between rounded-lg border border-white/[0.1] bg-[#0B0D12] px-3 text-[13.5px] text-slate-200">
+                          <span>Pending review</span>
+                          <strong className="text-amber-400">{metrics.pendingRightsReview}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="rights-reviewer-note">Mandatory reviewer note</label>
+                      <textarea
+                        id="rights-reviewer-note"
+                        rows={3}
+                        value={reviewerNote}
+                        onChange={(e) => setReviewerNote(e.target.value)}
+                        data-testid="textarea-production-reviewer-note"
+                      />
+                    </div>
+
+                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.1] bg-[#0B0D12] p-4 text-[13.5px] text-slate-200 transition hover:border-white/20">
+                      <input
+                        type="checkbox"
+                        checked={confirmRightsReview}
+                        onChange={(e) => setConfirmRightsReview(e.target.checked)}
+                        className="mt-1 size-4 shrink-0 accent-[#FF3B5C]"
+                        data-testid="checkbox-confirm-rights-review"
+                      />
+                      <span>
+                        I have independently reviewed the rights holder, license URL, source documentation, and usage restrictions for these titles and TV episodes.
+                      </span>
+                    </label>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-5">
+                      <button
+                        type="button"
+                        onClick={() => setActiveStep(2)}
+                        className="button-secondary flex items-center gap-2"
+                      >
+                        <ArrowLeft size={15} />
+                        <span>Back</span>
+                      </button>
+
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => void handleReviewRights()}
+                          disabled={
+                            loadingAction !== null ||
+                            !confirmRightsReview ||
+                            !reviewerNote.trim() ||
+                            metrics.successfullyImported === 0
+                          }
+                          className="button flex items-center gap-2"
+                          data-testid="button-execute-rights-review"
+                        >
+                          {loadingAction === "review" ? (
+                            <Loader2 size={15} className="animate-spin" />
+                          ) : (
+                            <ShieldCheck size={15} />
+                          )}
+                          <span>Record Rights Review ({reviewDecision})</span>
+                        </button>
+                        {metrics.approvedTitles > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setActiveStep(4)}
+                            className="button-secondary flex items-center gap-2"
+                          >
+                            <span>Continue to Publish &amp; Verify</span>
+                            <ArrowRight size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* STEP 4: PUBLISH & VERIFY */}
+            {activeStep === 4 && (
+              <div className="space-y-6 border-t border-white/[0.08] pt-6">
+                <div>
+                  <h3 className="text-[17px] font-semibold text-white">
+                    Step 4 · Publish Approved Titles &amp; Run 10-Point Verification
+                  </h3>
+                  <p className="mt-1 text-[13.5px] text-slate-400">
+                    Publishes approved titles and TV episodes to the public FamilyFlix catalog, refreshes the O(1) catalog cache, and runs the 10-point live verification suite.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-4">
+                    <span className="text-[12px] font-medium text-slate-400">Approved &amp; ready</span>
+                    <div className="mt-1.5 text-2xl font-bold text-emerald-400">
+                      {metrics.approvedTitles}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-4">
+                    <span className="text-[12px] font-medium text-slate-400">Published titles</span>
+                    <div className="mt-1.5 text-2xl font-bold text-white">
+                      {metrics.publishedTitles}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-4">
+                    <span className="text-[12px] font-medium text-slate-400">10/10 verified live</span>
+                    <div className="mt-1.5 text-2xl font-bold text-[#00D2FF]">
+                      {metrics.verifiedLiveTitles}
+                    </div>
+                  </div>
+                </div>
+
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.1] bg-[#0B0D12] p-4 text-[13.5px] text-slate-200 transition hover:border-white/20">
                   <input
                     type="checkbox"
-                    checked={confirmRightsReview}
-                    onChange={(e) => setConfirmRightsReview(e.target.checked)}
-                    className="mt-0.5"
-                    data-testid="checkbox-confirm-rights-review"
+                    checked={confirmPublishLive}
+                    onChange={(e) => setConfirmPublishLive(e.target.checked)}
+                    disabled={metrics.approvedTitles === 0}
+                    className="mt-1 size-4 shrink-0 accent-[#FF3B5C]"
+                    data-testid="checkbox-confirm-publish-live"
                   />
                   <span>
-                    I have reviewed the rights holder, license URL, source evidence, and usage restrictions for these titles and episodes.
+                    I confirm publication of{" "}
+                    <strong className="text-white">{metrics.approvedTitles}</strong> approved title(s) and their episodes to the live FamilyFlix catalog.
+                    {metrics.approvedTitles === 0 && (
+                      <span className="mt-1 block text-[12.5px] text-amber-400">
+                        Approve rights in Step 3 before publishing.
+                      </span>
+                    )}
                   </span>
                 </label>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => void handleReviewRights()}
-              disabled={
-                loadingAction !== null ||
-                !confirmRightsReview ||
-                metrics.successfullyImported === 0
-              }
-              className="button w-full justify-center"
-              data-testid="button-execute-rights-review"
-            >
-              {loadingAction === "review" ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <ShieldCheck size={15} />
-              )}
-              Record Rights Review ({reviewDecision})
-            </button>
-          </div>
 
-          {/* Gate 3: Publish Approved Titles & Run 10-Point Verification */}
-          <div className="panel flex flex-col justify-between space-y-4">
-            <div>
-              <span className="eyebrow text-emerald-300">Phase F & G · Live Publication</span>
-              <h3 className="mt-1 text-base font-bold text-white">
-                5. Publish & Verify Live Catalog
-              </h3>
-              <p className="mt-1 text-xs text-white/65">
-                Publishes approved titles and TV episodes via official publication checks, refreshes the $O(1)$ catalog cache, and executes the 10-point live catalog verification suite.
-              </p>
-              <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5 text-xs text-white/85">
-                <input
-                  type="checkbox"
-                  checked={confirmPublishLive}
-                  onChange={(e) => setConfirmPublishLive(e.target.checked)}
-                  className="mt-0.5"
-                  data-testid="checkbox-confirm-publish-live"
-                />
-                <span>
-                  I confirm publication of <strong>{metrics.approvedTitles}</strong> approved title(s) and their episodes to the live FamilyFlix catalog.
-                </span>
-              </label>
-            </div>
-            <button
-              type="button"
-              onClick={() => void handlePublishAndVerify()}
-              disabled={
-                loadingAction !== null ||
-                !confirmPublishLive ||
-                metrics.approvedTitles === 0
-              }
-              className="button w-full justify-center"
-              data-testid="button-execute-publish-verify"
-            >
-              {loadingAction === "publish" ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <BadgeCheck size={15} />
-              )}
-              Publish Approved & Verify Live Catalog
-            </button>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-5">
+                  <button
+                    type="button"
+                    onClick={() => setActiveStep(3)}
+                    className="button-secondary flex items-center gap-2"
+                  >
+                    <ArrowLeft size={15} />
+                    <span>Back</span>
+                  </button>
+
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => void handlePublishAndVerify()}
+                      disabled={
+                        loadingAction !== null ||
+                        !confirmPublishLive ||
+                        metrics.approvedTitles === 0
+                      }
+                      className="button flex items-center gap-2"
+                      data-testid="button-execute-publish-verify"
+                    >
+                      {loadingAction === "publish" ? (
+                        <Loader2 size={15} className="animate-spin" />
+                      ) : (
+                        <BadgeCheck size={15} />
+                      )}
+                      <span>Publish Approved &amp; Verify Live Catalog</span>
+                    </button>
+
+                    {activeJob && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("ledger")}
+                        className="button-secondary flex items-center gap-2"
+                      >
+                        <Table2 size={15} />
+                        <span>Inspect Job Audit Ledger</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Import-Job Detail Page: Per-Title Results, Episodes, Errors & 10-Point Verification */}
-      {activeJob && (
-        <div className="panel space-y-4" data-testid="panel-production-job-detail">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-base font-bold text-white">
-                Import-Job Detail Ledger · {activeJob.name}
-              </h3>
-              <p className="text-xs text-white/50">
-                Job ID: <code className="text-purple-300">{activeJob.id}</code> · SHA-256:{" "}
-                <code>{activeJob.payloadSha256.slice(0, 16)}…</code> · Created by{" "}
-                {activeJob.createdByEmail}
-              </p>
-            </div>
-          </div>
+      {/* TAB 2: ARCHIVE / CSV IMPORTER */}
+      {activeTab === "archive" && archiveCsvTabContent && (
+        <div className="space-y-6" data-testid="panel-archive-csv-tab">
+          {archiveCsvTabContent}
+        </div>
+      )}
 
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Row / Title</th>
-                  <th>Classification</th>
-                  <th>Pipeline Status</th>
-                  <th>Production ID / Slug</th>
-                  <th>Rights & Episodes</th>
-                  <th>10-Point Live Verification</th>
-                  <th>Live Links</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeJob.items.map((item) => {
-                  const v = item.verification;
-                  return (
-                    <tr key={item.row} data-testid={`row-production-import-item-${item.row}`}>
-                      <td>
-                        <strong>{item.normalizedName}</strong>
-                        <div className="helper">
-                          Row #{item.row} · {item.year ?? "N/A"}
-                          {item.imdbCode ? ` · ${item.imdbCode}` : ""}
-                        </div>
-                        {item.duplicateMatchBasis && (
-                          <div className="mt-1 text-xs text-amber-300">
-                            Matched: {item.duplicateMatchBasis}
-                          </div>
-                        )}
-                        {item.errors.length > 0 && (
-                          <div className="mt-1 space-y-0.5 text-xs text-rose-400">
-                            {item.errors.map((err, i) => (
-                              <div key={i}>• {err}</div>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <span className="rounded border border-white/20 bg-white/5 px-2 py-0.5 text-xs font-bold uppercase">
-                          {item.kind}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`status ${
-                            item.status === "published_verified" || item.status === "rights_approved"
-                              ? "good"
-                              : item.status.includes("failed")
-                                ? ""
-                                : "warn"
-                          }`}
-                          data-testid={`status-production-item-${item.row}`}
-                        >
-                          {item.status.replace(/_/g, " ")}
-                        </span>
-                      </td>
-                      <td className="text-xs">
-                        {item.productionMovieId ? (
-                          <div>
-                            <div className="font-mono text-[11px] text-purple-300">
-                              {item.productionMovieId}
-                            </div>
-                            <div className="helper">/{item.productionSlug}</div>
-                          </div>
-                        ) : item.existingMovieId ? (
-                          <div className="helper">
-                            Existing ID: <code>{item.existingMovieId.slice(0, 8)}…</code>
-                          </div>
-                        ) : (
-                          <span className="helper">—</span>
-                        )}
-                      </td>
-                      <td className="text-xs">
-                        <div>
-                          Rights:{" "}
-                          <strong
-                            className={
-                              item.rightsReviewStatus === "approved"
-                                ? "text-emerald-300"
-                                : "text-amber-300"
-                            }
-                          >
-                            {item.rightsReviewStatus}
-                          </strong>
-                        </div>
-                        {item.reviewerEmail && (
-                          <div className="helper">Reviewed by {item.reviewerEmail}</div>
-                        )}
-                        {item.kind === "series" && (
-                          <div className="mt-1 text-purple-300">
-                            {item.seasonsCount} Season(s) · {item.importedEpisodes.length || item.episodesCount} Episode(s)
-                          </div>
-                        )}
-                      </td>
-                      <td className="text-xs">
-                        {v ? (
-                          <div>
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                                v.passed
-                                  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                                  : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                              }`}
-                              data-testid={`badge-verification-${item.row}`}
-                            >
-                              {v.passed ? (
-                                <>
-                                  <CheckCircle2 size={12} /> 10/10 Checks Passed
-                                </>
-                              ) : (
-                                <>
-                                  <XCircle size={12} /> Verification Failed
-                                </>
-                              )}
-                            </span>
-                            <details className="mt-1">
-                              <summary className="cursor-pointer text-[11px] text-white/60 hover:text-white">
-                                View 10-point checklist
-                              </summary>
-                              <ul className="mt-1 space-y-0.5 text-[11px] text-white/75">
-                                {Object.entries(v.checks).map(([k, ok]) => (
-                                  <li key={k} className="flex items-center gap-1">
-                                    {ok ? (
-                                      <Check size={11} className="text-emerald-400" />
-                                    ) : (
-                                      <XCircle size={11} className="text-rose-400" />
-                                    )}
-                                    <span>{k}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </details>
-                          </div>
-                        ) : (
-                          <span className="helper">Awaiting publication</span>
-                        )}
-                      </td>
-                      <td className="text-xs">
-                        {item.productionMovieId && (
-                          <div className="flex flex-wrap gap-1.5">
-                            <Link
-                              href={`/admin/library/${item.productionMovieId}`}
-                              className="button-secondary px-2.5 py-1 text-xs"
-                            >
-                              Admin Record
-                            </Link>
-                            {item.status === "published_verified" && item.productionSlug && (
-                              <>
-                                <Link
-                                  href={`/title/${item.productionSlug}`}
-                                  className="button-secondary flex items-center gap-1 px-2.5 py-1 text-xs"
-                                  data-testid={`link-verified-detail-${item.row}`}
-                                >
-                                  Detail <ExternalLink size={11} />
-                                </Link>
-                                <Link
-                                  href={`/watch/${item.productionSlug}`}
-                                  className="button flex items-center gap-1 px-2.5 py-1 text-xs"
-                                  data-testid={`link-verified-watch-${item.row}`}
-                                >
-                                  <Play size={11} fill="currentColor" /> Watch
-                                </Link>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Audit Trail History */}
-          {activeJob.auditTrail.length > 0 && (
-            <div className="mt-4 border-t border-white/10 pt-4">
-              <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white/70">
-                <History size={13} /> Import Job Audit Trail
-              </h4>
-              <div className="mt-2 space-y-1.5">
-                {activeJob.auditTrail.map((ev, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs"
-                  >
-                    <div>
-                      <span className="mr-2 rounded bg-purple-500/20 px-2 py-0.5 font-mono text-[10px] uppercase text-purple-300">
-                        {ev.phase}
-                      </span>
-                      <span className="text-white/85">{ev.summary}</span>
-                    </div>
-                    <span className="text-[11px] text-white/45">
-                      {ev.actorEmail} · {new Date(ev.timestamp).toLocaleTimeString()}
+      {/* TAB 3: JOB AUDIT LEDGER */}
+      {activeTab === "ledger" && (
+        <div className="space-y-6" data-testid="panel-production-job-detail">
+          <div className="panel space-y-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="min-w-0">
+                <h3 className="text-[17px] font-semibold text-white">
+                  {activeJob ? activeJob.name : "Import-Job Detail Ledger"}
+                </h3>
+                {activeJob ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <CopyBadge label="Job" value={activeJob.id} truncate={12} />
+                    <CopyBadge label="SHA-256" value={activeJob.payloadSha256} truncate={14} />
+                    <span className="text-[12.5px] text-slate-400">
+                      Created by {activeJob.createdByEmail}
                     </span>
                   </div>
-                ))}
+                ) : (
+                  <p className="mt-1 text-[13.5px] text-slate-400">
+                    Run a preflight validation or select an existing import job to inspect row-level results and audit events.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5 sm:flex-nowrap">
+                <div className="field w-full sm:w-64">
+                  <select
+                    aria-label="Select import job ledger"
+                    value={activeJob?.id ?? ""}
+                    onChange={(e) => {
+                      const found = jobs.find((j) => j.id === e.target.value);
+                      if (found) setActiveJob(found);
+                    }}
+                  >
+                    <option value="">Select import job ({jobs.length})</option>
+                    {jobs.map((j) => (
+                      <option key={j.id} value={j.id}>
+                        {j.name} · {formatStatusLabel(j.status)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {activeJob && (
+                  <button
+                    type="button"
+                    onClick={downloadImportReport}
+                    className="button-secondary flex shrink-0 items-center gap-1.5"
+                  >
+                    <Download size={14} />
+                    <span>Export JSON</span>
+                  </button>
+                )}
               </div>
             </div>
-          )}
+
+            {!activeJob ? (
+              <div className="rounded-xl border border-white/[0.08] bg-[#0B0D12] p-10 text-center">
+                <p className="text-[14px] text-slate-300">No import job selected yet.</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("batch")}
+                  className="button mt-4 inline-flex items-center gap-2"
+                >
+                  <Layers size={15} />
+                  <span>Open JSON Batch Importer</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="table-wrap rounded-xl border border-white/[0.08] bg-[#0B0D12]">
+                  <table className="data-table min-w-[880px]">
+                    <thead>
+                      <tr>
+                        <th>Row / Title</th>
+                        <th>Type</th>
+                        <th>Pipeline status</th>
+                        <th>Production ID &amp; slug</th>
+                        <th>Rights &amp; episodes</th>
+                        <th>10-Point verification</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeJob.items.map((item) => {
+                        const v = item.verification;
+                        const statusTone = semanticStatusTone(item.status);
+                        const rightsTone = semanticStatusTone(item.rightsReviewStatus);
+                        return (
+                          <tr key={item.row} data-testid={`row-production-import-item-${item.row}`}>
+                            <td>
+                              <div className="font-semibold text-white">{item.normalizedName}</div>
+                              <div className="mt-0.5 text-[12px] text-slate-400">
+                                Row #{item.row} · {item.year ?? "N/A"}
+                                {item.imdbCode ? ` · ${item.imdbCode}` : ""}
+                              </div>
+                              {item.duplicateMatchBasis && (
+                                <div className="mt-1 text-[12px] text-amber-400">
+                                  Matched: {item.duplicateMatchBasis}
+                                </div>
+                              )}
+                              {item.errors.length > 0 && (
+                                <div className="mt-1 space-y-0.5 text-[12px] text-rose-400">
+                                  {item.errors.map((err, i) => (
+                                    <div key={i}>• {err}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <span className="status">{item.kind}</span>
+                            </td>
+                            <td>
+                              <span
+                                className={cn(
+                                  "status",
+                                  statusTone === "good" && "good",
+                                  statusTone === "warn" && "warn",
+                                  statusTone === "error" && "error",
+                                )}
+                                data-testid={`status-production-item-${item.row}`}
+                              >
+                                {formatStatusLabel(item.status)}
+                              </span>
+                            </td>
+                            <td>
+                              {item.productionMovieId ? (
+                                <div className="space-y-1">
+                                  <CopyBadge value={item.productionMovieId} truncate={12} />
+                                  {item.productionSlug && (
+                                    <div className="font-mono text-[11.5px] text-slate-400">
+                                      /{item.productionSlug}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : item.existingMovieId ? (
+                                <CopyBadge label="Existing" value={item.existingMovieId} truncate={10} />
+                              ) : (
+                                <span className="text-slate-500">—</span>
+                              )}
+                            </td>
+                            <td>
+                              <span
+                                className={cn(
+                                  "status",
+                                  rightsTone === "good" && "good",
+                                  rightsTone === "warn" && "warn",
+                                  rightsTone === "error" && "error",
+                                )}
+                              >
+                                {formatStatusLabel(item.rightsReviewStatus)}
+                              </span>
+                              {item.reviewerEmail && (
+                                <div className="mt-1 text-[12px] text-slate-400">
+                                  {item.reviewerEmail}
+                                </div>
+                              )}
+                              {item.kind === "series" && (
+                                <div className="mt-1 text-[12px] text-[#00D2FF]">
+                                  {item.seasonsCount} season(s) · {item.importedEpisodes.length || item.episodesCount} episode(s)
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              {v ? (
+                                <div>
+                                  <span
+                                    className={cn("status", v.passed ? "good" : "error")}
+                                    data-testid={`badge-verification-${item.row}`}
+                                  >
+                                    {v.passed ? (
+                                      <>
+                                        <CheckCircle2 size={12} /> 10/10 Passed
+                                      </>
+                                    ) : (
+                                      <>
+                                        <XCircle size={12} /> Failed
+                                      </>
+                                    )}
+                                  </span>
+                                  <details className="mt-1.5">
+                                    <summary className="cursor-pointer text-[12px] text-slate-400 hover:text-white">
+                                      View checklist
+                                    </summary>
+                                    <ul className="mt-1.5 space-y-1 text-[11.5px] text-slate-300">
+                                      {Object.entries(v.checks).map(([k, ok]) => (
+                                        <li key={k} className="flex items-center gap-1.5 font-mono">
+                                          {ok ? (
+                                            <Check size={11} className="shrink-0 text-emerald-400" />
+                                          ) : (
+                                            <XCircle size={11} className="shrink-0 text-rose-400" />
+                                          )}
+                                          <span>{k}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </details>
+                                </div>
+                              ) : (
+                                <span className="text-[12.5px] text-slate-500">Awaiting publication</span>
+                              )}
+                            </td>
+                            <td>
+                              {item.productionMovieId ? (
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <Link
+                                    href={`/admin/library/${item.productionMovieId}`}
+                                    className="inline-flex h-8 items-center rounded-md border border-white/[0.12] bg-[#161922] px-2.5 text-[12px] font-semibold text-slate-200 transition hover:border-[#00D2FF]/50 hover:text-white"
+                                  >
+                                    Record
+                                  </Link>
+                                  {item.status === "published_verified" && item.productionSlug && (
+                                    <>
+                                      <Link
+                                        href={`/title/${item.productionSlug}`}
+                                        className="inline-flex h-8 items-center gap-1 rounded-md border border-white/[0.12] bg-[#161922] px-2.5 text-[12px] font-semibold text-slate-200 transition hover:border-[#00D2FF]/50 hover:text-white"
+                                        data-testid={`link-verified-detail-${item.row}`}
+                                      >
+                                        <span>Detail</span>
+                                        <ExternalLink size={11} />
+                                      </Link>
+                                      <Link
+                                        href={`/watch/${item.productionSlug}`}
+                                        className="inline-flex h-8 items-center gap-1 rounded-md bg-[#FF3B5C] px-2.5 text-[12px] font-semibold text-white transition hover:bg-[#FF4D6D]"
+                                        data-testid={`link-verified-watch-${item.row}`}
+                                      >
+                                        <Play size={11} fill="currentColor" />
+                                        <span>Watch</span>
+                                      </Link>
+                                    </>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-500">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Audit Trail History */}
+                {activeJob.auditTrail.length > 0 && (
+                  <div className="space-y-3 border-t border-white/[0.08] pt-5">
+                    <h4 className="flex items-center gap-2 text-[14px] font-semibold text-white">
+                      <History size={15} className="text-[#00D2FF]" />
+                      <span>Import Job Audit Trail</span>
+                    </h4>
+                    <div className="space-y-2">
+                      {activeJob.auditTrail.map((ev, idx) => (
+                        <div
+                          key={idx}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/[0.08] bg-[#0B0D12] px-3.5 py-2.5 text-[13px]"
+                        >
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <span className="rounded-md border border-[#00D2FF]/30 bg-[#00D2FF]/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-[#00D2FF]">
+                              {ev.phase}
+                            </span>
+                            <span className="text-slate-200">{ev.summary}</span>
+                          </div>
+                          <span className="text-[12px] text-slate-400">
+                            {ev.actorEmail} · {new Date(ev.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

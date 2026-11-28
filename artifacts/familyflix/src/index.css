@@ -406,3 +406,361 @@
  .button,.button-secondary { padding-inline:13px; }
  .hero { min-height:490px; }
 }
+
+/* ==========================================================================
+   FamilyFlix Studio Admin Design System (Scoped strictly to /admin/* routes)
+   Public storefront, catalog, and player styles above remain 100% untouched.
+   ========================================================================== */
+.ff-admin-studio {
+  background: #0B0D12;
+  color: #F1F5F9;
+  font-family: var(--font-body);
+}
+
+.ff-admin-studio .page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ff-admin-studio .page-heading .eyebrow,
+.ff-admin-studio .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: #00D2FF;
+}
+
+.ff-admin-studio .eyebrow::before {
+  display: none;
+}
+
+.ff-admin-studio .page-heading h1 {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+}
+
+.ff-admin-studio .page-heading p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #94A3B8;
+  max-width: 68ch;
+}
+
+.ff-admin-studio .panel {
+  background: #161922;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+.ff-admin-studio .panel + .panel {
+  margin-top: 20px;
+}
+
+.ff-admin-studio .panel h2,
+.ff-admin-studio .panel h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #FFFFFF;
+}
+
+.ff-admin-studio .metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.ff-admin-studio .metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 104px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #161922;
+}
+
+.ff-admin-studio .metric span {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #94A3B8;
+}
+
+.ff-admin-studio .metric strong {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.ff-admin-studio .metric strong:not([class*="text-"]) {
+  color: #FFFFFF;
+}
+
+.ff-admin-studio .field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 767px) {
+  .ff-admin-studio .field-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ff-admin-studio .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ff-admin-studio .field label {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: #CBD5E1;
+}
+
+.ff-admin-studio .field input:not([type="checkbox"]):not([type="radio"]),
+.ff-admin-studio .field select,
+.ff-admin-studio .search-box {
+  height: 40px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0B0D12;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #F8FAFC;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ff-admin-studio .field textarea {
+  width: 100%;
+  min-height: 112px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0B0D12;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #F8FAFC;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ff-admin-studio .field input:focus,
+.ff-admin-studio .field select:focus,
+.ff-admin-studio .field textarea:focus,
+.ff-admin-studio .search-box:focus {
+  border-color: #00D2FF;
+  box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.18);
+}
+
+.ff-admin-studio .field input[type="file"] {
+  padding-top: 7px;
+  font-size: 13px;
+}
+
+.ff-admin-studio .helper {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #94A3B8;
+}
+
+.ff-admin-studio .notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 210, 255, 0.22);
+  background: rgba(0, 210, 255, 0.06);
+  color: #CBD5E1;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.ff-admin-studio .notice strong {
+  color: #F8FAFC;
+}
+
+.ff-admin-studio .button {
+  min-height: 40px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #FF3B5C 0%, #E11D48 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 59, 92, 0.55) !important;
+  box-shadow: 0 4px 16px rgba(255, 59, 92, 0.28) !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+
+.ff-admin-studio .button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FF4D6D 0%, #F43F5E 100%) !important;
+  color: #FFFFFF !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 59, 92, 0.42) !important;
+}
+
+.ff-admin-studio .button:disabled {
+  opacity: 0.42 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.ff-admin-studio .button-secondary {
+  min-height: 40px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: #1E2230 !important;
+  color: #F1F5F9 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  backdrop-filter: none;
+}
+
+.ff-admin-studio .button-secondary:hover:not(:disabled) {
+  border-color: rgba(0, 210, 255, 0.5) !important;
+  background: #252B3B !important;
+  color: #FFFFFF !important;
+  box-shadow: none;
+}
+
+.ff-admin-studio .button-secondary:disabled {
+  opacity: 0.42 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.ff-admin-studio .button-danger {
+  min-height: 40px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px !important;
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #FCA5A5 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  box-shadow: none !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+}
+
+.ff-admin-studio .button-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.28) !important;
+  color: #FFFFFF !important;
+}
+
+.ff-admin-studio .table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ff-admin-studio .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.ff-admin-studio .data-table th {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94A3B8;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  white-space: nowrap;
+  background: rgba(11, 13, 18, 0.45);
+}
+
+.ff-admin-studio .data-table td {
+  padding: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13.5px;
+  color: #E2E8F0;
+  vertical-align: middle;
+}
+
+.ff-admin-studio .data-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ff-admin-studio .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: capitalize;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  background: rgba(100, 116, 139, 0.14);
+  color: #CBD5E1;
+  white-space: nowrap;
+}
+
+.ff-admin-studio .status.good {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+  color: #34D399;
+}
+
+.ff-admin-studio .status.warn {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+  color: #FBBF24;
+}
+
+.ff-admin-studio .status.error,
+.ff-admin-studio .status.danger {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  color: #F87171;
+}
+
